@@ -1,8 +1,6 @@
 from datetime import date
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from app.biomarkers import repository
 
 
@@ -29,8 +27,20 @@ def test_upsert_returns_ids_in_order(mock_db):
         ]
     )
     biomarkers = [
-        {"name_no": "B-Ferritin", "ref_range_raw": "30 - 470", "ref_low": 30.0, "ref_high": 470.0, "ref_type": "bounded"},
-        {"name_no": "B-Hemoglobin", "ref_range_raw": "13,4 - 17,0", "ref_low": 13.4, "ref_high": 17.0, "ref_type": "bounded"},
+        {
+            "name_no": "B-Ferritin",
+            "ref_range_raw": "30 - 470",
+            "ref_low": 30.0,
+            "ref_high": 470.0,
+            "ref_type": "bounded",
+        },
+        {
+            "name_no": "B-Hemoglobin",
+            "ref_range_raw": "13,4 - 17,0",
+            "ref_low": 13.4,
+            "ref_high": 17.0,
+            "ref_type": "bounded",
+        },
     ]
     result = repository.upsert_biomarkers("user-1", biomarkers)
     assert result == ["id-a", "id-b"]
@@ -42,7 +52,8 @@ def test_upsert_calls_table_biomarkers(mock_db):
     mock_db.return_value = db
     repository.upsert_biomarkers(
         "user-1",
-        [{"name_no": "B-Hemoglobin", "ref_range_raw": "", "ref_low": None, "ref_high": None, "ref_type": "none"}],
+        [{"name_no": "B-Hemoglobin", "ref_range_raw": "", "ref_low": None,
+          "ref_high": None, "ref_type": "none"}],
     )
     db.table.assert_any_call("biomarkers")
 

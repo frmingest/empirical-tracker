@@ -23,6 +23,7 @@ export default function BiomarkerDetailPage({ params }: { params: { id: string }
 
   useEffect(() => {
     if (!session?.access_token) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDataLoading(true);
     getBiomarkerResults(session.access_token)
       .then((data) => {
@@ -96,6 +97,9 @@ export default function BiomarkerDetailPage({ params }: { params: { id: string }
 
         {/* Biomarker header */}
         <div className="space-y-2">
+          <p className="text-xs text-[var(--text-muted)]">
+            {isLive ? "Your data" : "Sample data"} · {category}
+          </p>
           <div className="flex items-start justify-between gap-4">
             <h1 className="text-xl font-semibold text-[var(--text-primary)] leading-tight">
               {shortLabel(biomarker.name_no)}

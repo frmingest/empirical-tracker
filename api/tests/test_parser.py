@@ -4,7 +4,6 @@ from pathlib import Path
 import pytest
 
 from app.biomarkers.parser import (
-    ParsedSheet,
     _parse_ref_range,
     _parse_value,
     parse_xlsx,

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { getBiomarkerResults } from "@/lib/api";
 import type { BiomarkerWithSeries } from "@/lib/api";
@@ -29,7 +28,6 @@ function derivedStats(results: BiomarkerWithSeries[]) {
 
 export default function DashboardPage() {
   const { session, loading, signOut } = useAuth();
-  const router = useRouter();
   const [showImport, setShowImport] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const [results, setResults] = useState<BiomarkerWithSeries[]>(MOCK_RESULTS);
@@ -39,6 +37,7 @@ export default function DashboardPage() {
   // Once we have a session, swap mock data for real data
   useEffect(() => {
     if (!session?.access_token) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDataLoading(true);
     getBiomarkerResults(session.access_token)
       .then((data) => {

@@ -49,6 +49,7 @@ export default function PanelsPage() {
 
   useEffect(() => {
     if (!session?.access_token) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDataLoading(true);
     getBiomarkerResults(session.access_token)
       .then((data) => {

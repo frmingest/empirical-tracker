@@ -63,7 +63,7 @@ def _parse_ref_range(raw: object) -> tuple[float | None, float | None, str]:
 def _parse_value(v: object) -> float | None:
     if v is None:
         return None
-    if isinstance(v, (int, float)):
+    if isinstance(v, int | float):
         return float(v)
     s = str(v).strip()
     if not s or s == "-":
