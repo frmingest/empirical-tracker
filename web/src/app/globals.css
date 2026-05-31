@@ -1,22 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  --bg-base:     #F8FAFC;
-  --bg-surface:  #FFFFFF;
-  --bg-card:     #FFFFFF;
-  --bg-elevated: #F1F5F9;
+  --bg-base:     #E8EBF0;
+  --bg-surface:  #F6F7F9;
+  --bg-card:     #F6F7F9;
+  --bg-elevated: #DDE1E8;
 
-  --text-primary:   #0F172A;
-  --text-secondary: #475569;
-  --text-muted:     #94A3B8;
+  --text-primary:   #1A2333;
+  --text-secondary: #4B5563;
+  --text-muted:     #8A94A6;
 
-  --color-in-range:  #059669;
-  --color-out-range: #DC2626;
-  --color-accent:    #0284C7;
-  --color-warning:   #D97706;
+  --color-in-range:  #2F8568;
+  --color-out-range: #C24A43;
+  --color-accent:    #2C6E9C;
+  --color-warning:   #B47A2E;
 
-  --border-subtle: #E2E8F0;
-  --border-card:   #CBD5E1;
+  --border-subtle: #D3D8E0;
+  --border-card:   #BFC6D0;
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
@@ -79,9 +79,9 @@ input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
-  -webkit-text-fill-color: #0F172A !important;
-  caret-color: #0F172A;
+  -webkit-box-shadow: 0 0 0 1000px #F6F7F9 inset !important;
+  -webkit-text-fill-color: #1A2333 !important;
+  caret-color: #1A2333;
 }
 
 /* ── Autofill — dark mode override ──────────────────── */
