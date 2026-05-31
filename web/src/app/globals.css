@@ -54,3 +54,13 @@ body {
 
 /* ── Recharts override — remove default SVG overflow ─ */
 .recharts-wrapper { overflow: visible !important; }
+
+/* ── Autofill — keep dark background when browser fills a field ─ */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #09090b inset !important;
+  -webkit-text-fill-color: #fafafa !important;
+  caret-color: #fafafa;
+}
