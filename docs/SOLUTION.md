@@ -46,6 +46,10 @@ This is the website you see in your browser. It:
 - Draws sparkline trend charts on each biomarker card
 - Shows a full chart when you click on a biomarker
 - Has an upload screen for importing new Excel files
+- Lets you focus the view on the biomarkers relevant to your diet (carnivore, low-carb,
+  fasting, or a custom hand-picked set)
+- Can switch between English and Norwegian, and shows plain-language tooltips explaining
+  each biomarker group
 
 **Technology:** Next.js (React). React is the most popular way to build interactive websites.
 Next.js adds server-side rendering on top of React, which makes pages load faster.
@@ -80,18 +84,24 @@ the GitHub repository — when you push new code, it automatically redeploys.
 
 ## The database structure
 
-Three tables work together:
+Four tables work together:
 
 ```
-biomarkers:  What is being measured
-             "P-HDL-kolesterol | ref: 0.9 - 2.0 | type: bounded"
+biomarkers:    What is being measured
+               "P-HDL-kolesterol | ref: 0.9 - 2.0 | type: bounded"
 
-panels:      When a blood draw happened
-             "tested_at: 2026-05-22 | source: xlsx_import"
+panels:        When a blood draw happened
+               "tested_at: 2026-05-22 | source: xlsx_import"
 
-results:     The actual measurement
-             "biomarker: HDL | panel: May 2026 | value: 1.3 | in_range: true"
+results:       The actual measurement
+               "biomarker: HDL | panel: May 2026 | value: 1.3 | in_range: true"
+
+user_settings: Your dashboard preferences
+               "diet: carnivore | custom_markers: [...]"
 ```
+
+The first three tables hold your blood-test data. `user_settings` holds one row per user with
+your dashboard preferences (which diet focus is active, and any custom marker selection).
 
 Every row in every table has a `user_id` column. This means your data and someone else's data
 are completely separate — the database itself enforces this (not just the application code).
@@ -136,6 +146,34 @@ The 34 biomarkers from your blood panel are grouped into 8 categories:
 
 ---
 
+## Diet focus
+
+The dashboard has a **Diet focus** control that hides biomarkers which aren't clinically
+informative for your chosen eating pattern, so you see a focused view instead of all 34 markers
+at once:
+
+| Focus | Shows |
+|-------|-------|
+| **All** | Every biomarker |
+| **Carnivore** | Lipids, iron studies, renal/liver load, electrolytes, B-vitamin/folate status, HbA1c, Hgb/Hct |
+| **Low carb** | HbA1c, full lipid panel, liver enzymes, electrolytes, ferritin |
+| **Fasting** | Electrolytes, glucose, kidney/liver, hydration-sensitive blood counts, lipids |
+| **Custom** | Any markers you hand-pick |
+
+The clinical reasoning behind each list is documented in `docs/DIET_BIOMARKERS.md`. Your choice
+is saved per user (in the `user_settings` table when signed in, or `localStorage` for the demo
+view). Custom selections are stored by biomarker name, so they survive re-imports and new panels.
+
+---
+
+## Language and tooltips
+
+The UI can switch between **English and Norwegian** via a toggle in the header (your choice is
+remembered). Each biomarker group also has an "i" tooltip with a plain-language explanation of
+what those markers measure, in both languages.
+
+---
+
 ## The import format
 
 The app understands the standard Norwegian blood panel Excel format:
@@ -154,11 +192,15 @@ The app understands the standard Norwegian blood panel Excel format:
 |--------|----------------|
 | 0 ✅ | Server setup, deployment pipeline, Supabase wired |
 | 1 ✅ | Biomarker import, dashboard UI, sparkline trend charts, auth wired |
-| 2 🔄 | **Panel timeline, per-marker trend charts, in/out-of-range highlighting, manual entry** (this sprint) |
+| 2 ✅ | Panel timeline, per-marker trend charts, in/out-of-range highlighting, manual entry |
 | 3 | Correlation overlay — draw a diet annotation on top of a biomarker chart |
 | 4 | Food diary — log what you eat each day |
 | 5 | Meal plans and calendar |
 | 6 | Doctor sharing, GDPR data export, security audit |
+
+Additional UX enhancements shipped alongside Sprint 2 (outside the original roadmap): diet-focus
+biomarker filtering (ADR-008) and English/Norwegian internationalization with category tooltips
+(ADR-009).
 
 ---
 
@@ -184,7 +226,7 @@ npm run dev   # opens http://localhost:3000
 **Run the tests:**
 ```bash
 cd api
-pytest -v   # 29 tests, should all pass
+pytest -v   # 37 tests, should all pass
 ```
 
 ---
@@ -194,15 +236,23 @@ pytest -v   # 29 tests, should all pass
 | File | What it does |
 |------|-------------|
 | `api/app/main.py` | Entry point — FastAPI app, CORS config, router registration |
+| `api/app/auth.py` | Shared `current_user_id` dependency — resolves the bearer token |
 | `api/app/biomarkers/parser.py` | Reads your Excel file and extracts the data |
 | `api/app/biomarkers/repository.py` | Saves and retrieves data from Supabase |
 | `api/app/biomarkers/router.py` | HTTP endpoints: import, delete, list, chart data |
-| `api/supabase/migrations/001_biomarkers.sql` | Creates the three database tables |
+| `api/app/settings/router.py` | HTTP endpoints: read/write per-user dashboard settings |
+| `api/supabase/migrations/001_biomarkers.sql` | Creates the three blood-test tables |
+| `api/supabase/migrations/003_user_settings.sql` | Creates the `user_settings` table |
 | `web/src/app/page.tsx` | The main dashboard page |
 | `web/src/app/biomarkers/[id]/page.tsx` | The detail page for one biomarker |
 | `web/src/app/import/page.tsx` | The file upload page |
 | `web/src/lib/api.ts` | All the API calls from the frontend |
 | `web/src/lib/mockData.ts` | Realistic test data (all 30+ biomarkers with real values) |
+| `web/src/lib/dietProfiles.ts` | Diet → biomarker focus sets + name classifier |
+| `web/src/lib/i18n.ts` | English/Norwegian string dictionary |
 | `web/src/app/panels/page.tsx` | Panel timeline — list of all blood draw sessions |
 | `web/src/components/ManualEntryModal.tsx` | Manual entry form for adding individual results |
+| `web/src/components/DietFilter.tsx` | Diet-focus segmented control |
+| `web/src/components/LanguageProvider.tsx` | Language context + EN/NO toggle state |
+| `docs/DIET_BIOMARKERS.md` | Clinical rationale for each diet's biomarker focus list |
 | `docs/adr/` | Architectural Decision Records — why we made the choices we made |

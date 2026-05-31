@@ -19,7 +19,7 @@ This applies to all changes — code, docs, migrations, single-file edits.
 
 ## Sprint order
 
-0 ✅ → 1 ✅ → 2 🔄 → 3 → 4 → 5 → 6
+0 ✅ → 1 ✅ → 2 ✅ → 3 🔄 → 4 → 5 → 6
 
 See `docs/SOLUTION.md` for full sprint descriptions.
 
@@ -35,4 +35,4 @@ See `docs/SOLUTION.md` for full sprint descriptions.
 - All frontend colors use CSS custom properties (`var(--bg-card)`, `var(--text-primary)`, etc.) — never hardcode zinc/slate Tailwind classes
 - TypeScript strict mode — no `any`
 - DB migrations live in `api/supabase/migrations/` — numbered sequentially, run manually in Supabase SQL editor
-- Tests: `cd api && pytest -v` (29 tests, all must pass)
+- Tests: `cd api && pytest -v` (37 tests, all must pass)
