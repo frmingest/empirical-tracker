@@ -32,12 +32,15 @@ export default function DashboardPage() {
   const [showManual, setShowManual] = useState(false);
   const [results, setResults] = useState<BiomarkerWithSeries[]>(MOCK_RESULTS);
   const [isLive, setIsLive] = useState(false);
-  const [dataLoading, setDataLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
 
-  // Once we have a session, swap mock data for real data
+  // Once auth settles, swap mock data for real data when a session exists.
   useEffect(() => {
-    if (!session?.access_token) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (loading) return; // auth not settled yet
+    if (!session?.access_token) {
+      setDataLoading(false); // no session → stick with mock data
+      return;
+    }
     setDataLoading(true);
     getBiomarkerResults(session.access_token)
       .then((data) => {
@@ -48,7 +51,7 @@ export default function DashboardPage() {
       })
       .catch(() => {}) // keep showing mock data on error
       .finally(() => setDataLoading(false));
-  }, [session]);
+  }, [session, loading]);
 
   const stats = isLive ? derivedStats(results) : getMockStats();
   const grouped = groupByCategory(results);
