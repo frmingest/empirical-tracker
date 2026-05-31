@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { getBiomarkerResults } from "@/lib/api";
@@ -14,16 +14,21 @@ import {
   shortLabel,
 } from "@/lib/biomarkerCategories";
 
-export default function BiomarkerDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function BiomarkerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const { session, loading } = useAuth();
   const [results, setResults] = useState<BiomarkerWithSeries[]>(MOCK_RESULTS);
   const [isLive, setIsLive] = useState(false);
-  const [dataLoading, setDataLoading] = useState(false);
+  // Start true so the first render never reaches the "not found" branch while
+  // auth is still settling or the real-data fetch hasn't fired yet.
+  const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
-    if (!session?.access_token) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (loading) return; // auth not settled yet — keep the spinner
+    if (!session?.access_token) {
+      setDataLoading(false); // no session → show mock data
+      return;
+    }
     setDataLoading(true);
     getBiomarkerResults(session.access_token)
       .then((data) => {
@@ -34,7 +39,7 @@ export default function BiomarkerDetailPage({ params }: { params: { id: string }
       })
       .catch(() => {})
       .finally(() => setDataLoading(false));
-  }, [session]);
+  }, [session, loading]);
 
   if (loading || dataLoading) {
     return (
