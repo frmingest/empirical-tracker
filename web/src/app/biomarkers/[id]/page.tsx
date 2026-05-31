@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { getBiomarkerResults } from "@/lib/api";
@@ -14,8 +14,8 @@ import {
   shortLabel,
 } from "@/lib/biomarkerCategories";
 
-export default function BiomarkerDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function BiomarkerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const { session, loading } = useAuth();
   const [results, setResults] = useState<BiomarkerWithSeries[]>(MOCK_RESULTS);
   const [isLive, setIsLive] = useState(false);
