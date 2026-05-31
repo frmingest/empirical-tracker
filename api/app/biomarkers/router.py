@@ -16,7 +16,7 @@ _bearer = HTTPBearer()
 
 
 async def _current_user_id(
-    credentials: HTTPAuthorizationCredentials = Security(_bearer),
+    credentials: HTTPAuthorizationCredentials = Security(_bearer),  # noqa: B008
 ) -> str:
     token = credentials.credentials
     try:
@@ -103,7 +103,12 @@ async def import_xlsx(
         panels_created += 1
 
         flags = [
-            _in_range(col_values[i], sheet.biomarkers[i].ref_low, sheet.biomarkers[i].ref_high, sheet.biomarkers[i].ref_type)
+            _in_range(
+                col_values[i],
+                sheet.biomarkers[i].ref_low,
+                sheet.biomarkers[i].ref_high,
+                sheet.biomarkers[i].ref_type,
+            )
             for i in range(len(sheet.biomarkers))
         ]
         results_inserted += repository.insert_results(
