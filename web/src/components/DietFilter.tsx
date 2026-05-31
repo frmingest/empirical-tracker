@@ -1,6 +1,7 @@
 "use client";
 
 import { DIET_OPTIONS, type DietKey } from "@/lib/dietProfiles";
+import { useLanguage } from "./LanguageProvider";
 
 interface Props {
   diet: DietKey;
@@ -21,6 +22,7 @@ export function DietFilter({
   visibleCount,
   totalCount,
 }: Props) {
+  const { t } = useLanguage();
   const active = DIET_OPTIONS.find((o) => o.key === diet);
 
   return (
@@ -28,11 +30,11 @@ export function DietFilter({
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mr-1 select-none">
-            Diet focus
+            {t("diet.focus")}
           </span>
           <div
             role="group"
-            aria-label="Diet focus"
+            aria-label={t("diet.focus")}
             className="flex items-center gap-1 flex-wrap"
           >
             {DIET_OPTIONS.map((opt) => {
@@ -42,14 +44,14 @@ export function DietFilter({
                   key={opt.key}
                   onClick={() => onSelect(opt.key)}
                   aria-pressed={isActive}
-                  title={opt.description}
+                  title={t(`diet.${opt.key}.desc`)}
                   className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
                     isActive
                       ? "bg-[var(--color-accent)] text-white border-transparent"
                       : "border-[var(--border-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
                   }`}
                 >
-                  {opt.label}
+                  {t(`diet.${opt.key}.label`)}
                 </button>
               );
             })}
@@ -59,7 +61,7 @@ export function DietFilter({
         <div className="flex items-center gap-3">
           <span className="text-xs text-[var(--text-muted)] font-mono tabular-nums">
             {diet === "all"
-              ? `${totalCount} markers`
+              ? `${totalCount} ${t("diet.markers")}`
               : `${visibleCount} / ${totalCount}`}
           </span>
           {diet !== "all" && (
@@ -67,7 +69,7 @@ export function DietFilter({
               onClick={onCustomize}
               className="text-xs font-medium text-[var(--color-accent)] hover:underline"
             >
-              {diet === "custom" ? "Edit selection" : "Customize"}
+              {diet === "custom" ? t("diet.edit") : t("diet.customize")}
             </button>
           )}
         </div>
@@ -75,7 +77,7 @@ export function DietFilter({
 
       {active && diet !== "all" && (
         <p className="mt-2 text-xs text-[var(--text-secondary)] leading-relaxed">
-          {active.description}
+          {t(`diet.${diet}.desc`)}
         </p>
       )}
     </div>

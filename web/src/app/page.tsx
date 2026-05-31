@@ -23,6 +23,8 @@ import { CustomMarkerModal } from "@/components/CustomMarkerModal";
 import { ImportModal } from "@/components/ImportModal";
 import { ManualEntryModal } from "@/components/ManualEntryModal";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { useLanguage } from "@/components/LanguageProvider";
 
 function derivedStats(results: BiomarkerWithSeries[]) {
   const allDates = new Set(results.flatMap((r) => r.series.map((p) => p.tested_at)));
@@ -35,6 +37,7 @@ function derivedStats(results: BiomarkerWithSeries[]) {
 }
 
 export default function DashboardPage() {
+  const { t } = useLanguage();
   const { session, loading, signOut } = useAuth();
   const [showImport, setShowImport] = useState(false);
   const [showManual, setShowManual] = useState(false);
@@ -53,6 +56,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (loading) return; // auth not settled yet
     if (!session?.access_token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDataLoading(false); // no session → stick with mock data
       return;
     }
@@ -119,12 +123,13 @@ export default function DashboardPage() {
             Empirical
           </span>
           <nav className="flex items-center gap-1">
+            <LanguageToggle />
             <ThemeToggle />
             <Link
               href="/panels"
               className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] px-2 py-1.5 rounded transition-colors"
             >
-              Panels
+              {t("nav.panels")}
             </Link>
             {session ? (
               <>
@@ -135,20 +140,20 @@ export default function DashboardPage() {
                   onClick={() => setShowManual(true)}
                   className="text-xs font-medium border border-[var(--border-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] px-3 py-1.5 rounded-lg transition-colors"
                 >
-                  Add result
+                  {t("nav.addResult")}
                 </button>
                 <button
                   onClick={() => setShowImport(true)}
                   className="flex items-center gap-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg transition-colors"
                 >
                   <span className="text-base leading-none">↑</span>
-                  Import
+                  {t("nav.import")}
                 </button>
                 <button
                   onClick={signOut}
                   className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] px-2 py-1.5 rounded transition-colors"
                 >
-                  Sign out
+                  {t("nav.signOut")}
                 </button>
               </>
             ) : (
@@ -156,7 +161,7 @@ export default function DashboardPage() {
                 href="/login"
                 className="text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg transition-colors ml-1"
               >
-                Sign in
+                {t("nav.signIn")}
               </Link>
             )}
           </nav>
@@ -168,11 +173,11 @@ export default function DashboardPage() {
         {!session && (
           <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 px-4 py-3 flex items-center justify-between gap-4">
             <p className="text-sm text-[var(--text-secondary)]">
-              Showing mock data.{" "}
+              {t("banner.mock")}{" "}
               <Link href="/login" className="text-blue-400 hover:text-blue-300">
-                Sign in
+                {t("nav.signIn")}
               </Link>{" "}
-              to see your real results.
+              {t("banner.signInPrompt")}
             </p>
           </div>
         )}
@@ -180,11 +185,11 @@ export default function DashboardPage() {
         {/* ── Hero ─────────────────────────────────────────────────────────── */}
         <div className="space-y-1">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-400 via-blue-300 to-emerald-400 bg-clip-text text-transparent">
-            Blood biomarkers
+            {t("hero.title")}
           </h1>
           <p className="text-[var(--text-secondary)] text-sm">
-            {isLive ? "Your data" : "Sample data"} · personal health tracking
-            for elimination diets
+            {isLive ? t("hero.yourData") : t("hero.sampleData")} ·{" "}
+            {t("hero.subtitle")}
           </p>
         </div>
 
@@ -199,15 +204,15 @@ export default function DashboardPage() {
 
         {/* ── Stats bar ────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard label="Biomarkers" value={stats.biomarkerCount.toString()} />
-          <StatCard label="Test panels" value={stats.panelCount.toString()} />
+          <StatCard label={t("stats.biomarkers")} value={stats.biomarkerCount.toString()} />
+          <StatCard label={t("stats.panels")} value={stats.panelCount.toString()} />
           <StatCard
-            label="Last tested"
+            label={t("stats.lastTested")}
             value={stats.lastTestedAt ? fmtDateLong(stats.lastTestedAt) : "—"}
             mono={false}
           />
           <StatCard
-            label="Out of range"
+            label={t("stats.outOfRange")}
             value={
               dataLoading ? "…" : outOfRangeTotal.toString()
             }
@@ -219,13 +224,13 @@ export default function DashboardPage() {
         {visible.length === 0 ? (
           <div className="rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] px-4 py-10 text-center">
             <p className="text-sm text-[var(--text-secondary)]">
-              No markers selected for this view.
+              {t("empty.none")}
             </p>
             <button
               onClick={() => setShowCustom(true)}
               className="mt-3 text-xs font-medium text-[var(--color-accent)] hover:underline"
             >
-              Choose markers
+              {t("empty.choose")}
             </button>
           </div>
         ) : (
@@ -238,7 +243,7 @@ export default function DashboardPage() {
 
         <footer className="border-t border-[var(--border-subtle)] pt-6 pb-4">
           <p className="text-xs text-[var(--text-muted)] text-center font-mono">
-            {isLive ? "Live data from Supabase" : "Mock data — sign in to load your results"}
+            {isLive ? t("footer.live") : t("footer.mock")}
           </p>
         </footer>
       </main>
