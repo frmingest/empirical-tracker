@@ -5,13 +5,21 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { getBiomarkerResults } from "@/lib/api";
 import type { BiomarkerWithSeries } from "@/lib/api";
-import { MOCK_RESULTS, getMockStats } from "@/lib/mockData";
+import { MOCK_RESULTS } from "@/lib/mockData";
 import {
   fmtDateLong,
   groupByCategory,
   CATEGORY_ORDER,
 } from "@/lib/biomarkerCategories";
+import {
+  filterByDiet,
+  visibleMarkerNames,
+  type DietKey,
+} from "@/lib/dietProfiles";
+import { loadSettings, persistSettings } from "@/lib/dietSettings";
 import { CategorySection } from "@/components/CategorySection";
+import { DietFilter } from "@/components/DietFilter";
+import { CustomMarkerModal } from "@/components/CustomMarkerModal";
 import { ImportModal } from "@/components/ImportModal";
 import { ManualEntryModal } from "@/components/ManualEntryModal";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -34,6 +42,13 @@ export default function DashboardPage() {
   const [isLive, setIsLive] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
 
+  // Diet focus preference (DB-backed when signed in, localStorage otherwise).
+  const [diet, setDiet] = useState<DietKey>("all");
+  const [customMarkers, setCustomMarkers] = useState<string[]>([]);
+  const [showCustom, setShowCustom] = useState(false);
+
+  const token = session?.access_token ?? null;
+
   // Once auth settles, swap mock data for real data when a session exists.
   useEffect(() => {
     if (loading) return; // auth not settled yet
@@ -53,9 +68,37 @@ export default function DashboardPage() {
       .finally(() => setDataLoading(false));
   }, [session, loading]);
 
-  const stats = isLive ? derivedStats(results) : getMockStats();
-  const grouped = groupByCategory(results);
-  const outOfRangeTotal = results.filter(
+  // Load the saved diet focus once auth settles.
+  useEffect(() => {
+    if (loading) return;
+    loadSettings(session?.access_token ?? null)
+      .then((s) => {
+        setDiet(s.diet);
+        setCustomMarkers(s.custom_markers);
+      })
+      .catch(() => {});
+  }, [session, loading]);
+
+  // Persist + apply a new diet selection.
+  const applySelection = (nextDiet: DietKey, nextCustom = customMarkers) => {
+    setDiet(nextDiet);
+    setCustomMarkers(nextCustom);
+    persistSettings(token, { diet: nextDiet, custom_markers: nextCustom });
+  };
+
+  const handleSelectDiet = (nextDiet: DietKey) => {
+    if (nextDiet === "custom") {
+      setShowCustom(true); // configure before committing to custom
+      return;
+    }
+    applySelection(nextDiet);
+  };
+
+  const visible = filterByDiet(results, diet, customMarkers);
+
+  const stats = derivedStats(visible);
+  const grouped = groupByCategory(visible);
+  const outOfRangeTotal = visible.filter(
     (r) => r.series.at(-1)?.in_range === false
   ).length;
 
@@ -145,6 +188,15 @@ export default function DashboardPage() {
           </p>
         </div>
 
+        {/* ── Diet focus filter ────────────────────────────────────────────── */}
+        <DietFilter
+          diet={diet}
+          onSelect={handleSelectDiet}
+          onCustomize={() => setShowCustom(true)}
+          visibleCount={visible.length}
+          totalCount={results.length}
+        />
+
         {/* ── Stats bar ────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard label="Biomarkers" value={stats.biomarkerCount.toString()} />
@@ -164,11 +216,25 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Biomarker categories ─────────────────────────────────────────── */}
-        <div className="space-y-10">
-          {CATEGORY_ORDER.map((cat) => (
-            <CategorySection key={cat} category={cat} items={grouped[cat]} />
-          ))}
-        </div>
+        {visible.length === 0 ? (
+          <div className="rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] px-4 py-10 text-center">
+            <p className="text-sm text-[var(--text-secondary)]">
+              No markers selected for this view.
+            </p>
+            <button
+              onClick={() => setShowCustom(true)}
+              className="mt-3 text-xs font-medium text-[var(--color-accent)] hover:underline"
+            >
+              Choose markers
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-10">
+            {CATEGORY_ORDER.map((cat) => (
+              <CategorySection key={cat} category={cat} items={grouped[cat]} />
+            ))}
+          </div>
+        )}
 
         <footer className="border-t border-[var(--border-subtle)] pt-6 pb-4">
           <p className="text-xs text-[var(--text-muted)] text-center font-mono">
@@ -190,6 +256,18 @@ export default function DashboardPage() {
                 })
                 .catch(() => {});
             }
+          }}
+        />
+      )}
+
+      {showCustom && (
+        <CustomMarkerModal
+          results={results}
+          initialSelected={visibleMarkerNames(results, diet, customMarkers)}
+          onClose={() => setShowCustom(false)}
+          onSave={(selected) => {
+            applySelection("custom", selected);
+            setShowCustom(false);
           }}
         />
       )}

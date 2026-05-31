@@ -26,6 +26,13 @@ export interface ImportResult {
   results_inserted: number;
 }
 
+export interface UserSettings {
+  /** Which diet focus is active; see lib/dietProfiles.ts. */
+  diet: "all" | "carnivore" | "low_carb" | "fasting" | "custom";
+  /** Biomarker names (name_no) hand-picked for the 'custom' view. */
+  custom_markers: string[];
+}
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 function bearerHeaders(token: string): HeadersInit {
@@ -76,6 +83,31 @@ export async function deletePanelImport(
   });
   if (!res.ok)
     throw new Error(`DELETE /biomarkers/import/${panelId} → ${res.status}`);
+}
+
+export async function getSettings(token: string): Promise<UserSettings> {
+  const res = await fetch(`${API_BASE}/settings`, {
+    headers: bearerHeaders(token),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`GET /settings → ${res.status}`);
+  return res.json() as Promise<UserSettings>;
+}
+
+export async function updateSettings(
+  token: string,
+  settings: UserSettings
+): Promise<UserSettings> {
+  const res = await fetch(`${API_BASE}/settings`, {
+    method: "PUT",
+    headers: {
+      ...bearerHeaders(token),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(settings),
+  });
+  if (!res.ok) throw new Error(`PUT /settings → ${res.status}`);
+  return res.json() as Promise<UserSettings>;
 }
 
 export async function addManualResult(

@@ -4,31 +4,14 @@ import tempfile
 from collections import defaultdict
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Security, UploadFile
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from pydantic import BaseModel
 
+from app.auth import current_user_id
 from app.biomarkers import parser, repository
 from app.db import get_supabase
 
 router = APIRouter(prefix="/biomarkers", tags=["biomarkers"])
-_bearer = HTTPBearer()
-
-
-async def _current_user_id(
-    credentials: HTTPAuthorizationCredentials = Security(_bearer),  # noqa: B008
-) -> str:
-    token = credentials.credentials
-    try:
-        db = get_supabase()
-        resp = db.auth.get_user(token)
-        if not resp.user:
-            raise HTTPException(status_code=401, detail="Invalid or expired token")
-        return resp.user.id
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
 
 
 def _in_range(
@@ -59,7 +42,7 @@ class ManualResultIn(BaseModel):
 @router.post("/import")
 async def import_xlsx(
     file: UploadFile,
-    user_id: str = Depends(_current_user_id),
+    user_id: str = Depends(current_user_id),
 ) -> dict:
     if not file.filename or not file.filename.lower().endswith(".xlsx"):
         raise HTTPException(status_code=400, detail="Only .xlsx files are accepted")
@@ -121,7 +104,7 @@ async def import_xlsx(
 @router.delete("/import/{panel_id}")
 async def delete_panel(
     panel_id: str,
-    user_id: str = Depends(_current_user_id),
+    user_id: str = Depends(current_user_id),
 ) -> dict:
     repository.delete_panel(user_id, panel_id)
     return {"deleted": panel_id}
@@ -129,7 +112,7 @@ async def delete_panel(
 
 @router.delete("/import")
 async def delete_all_imports(
-    user_id: str = Depends(_current_user_id),
+    user_id: str = Depends(current_user_id),
 ) -> dict:
     repository.delete_all_panels(user_id)
     return {"deleted": "all"}
@@ -140,7 +123,7 @@ async def delete_all_imports(
 @router.post("/results/manual", status_code=201)
 async def add_manual_result(
     body: ManualResultIn,
-    user_id: str = Depends(_current_user_id),
+    user_id: str = Depends(current_user_id),
 ) -> dict:
     """Upsert a single manually-entered result."""
     try:
@@ -158,7 +141,7 @@ async def add_manual_result(
 # ── Read ───────────────────────────────────────────────────────────────────────
 
 @router.get("")
-async def list_biomarkers(user_id: str = Depends(_current_user_id)) -> list:
+async def list_biomarkers(user_id: str = Depends(current_user_id)) -> list:
     db = get_supabase()
     resp = (
         db.table("biomarkers")
@@ -171,7 +154,7 @@ async def list_biomarkers(user_id: str = Depends(_current_user_id)) -> list:
 
 
 @router.get("/results")
-async def get_results(user_id: str = Depends(_current_user_id)) -> list:
+async def get_results(user_id: str = Depends(current_user_id)) -> list:
     """Return all biomarkers with their per-panel time-series for charting."""
     db = get_supabase()
 
