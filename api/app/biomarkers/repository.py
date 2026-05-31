@@ -89,3 +89,72 @@ def delete_all_panels(user_id: str) -> None:
     """Wipe all panels (and cascading results) for a user."""
     db = get_supabase()
     db.table("panels").delete().eq("user_id", user_id).execute()
+
+
+def add_manual_result(
+    user_id: str,
+    biomarker_id: str,
+    tested_at: str,
+    value: float,
+) -> dict:
+    """Add or update a single result for a given biomarker + date.
+
+    Steps:
+    1. Fetch the biomarker to get ref_type, ref_low, ref_high.
+    2. Compute in_range.
+    3. Upsert the panel for (user_id, tested_at).
+    4. Upsert the result on (biomarker_id, panel_id).
+    """
+    db = get_supabase()
+
+    # 1. Fetch biomarker
+    bio_resp = (
+        db.table("biomarkers")
+        .select("id,ref_type,ref_low,ref_high")
+        .eq("id", biomarker_id)
+        .eq("user_id", user_id)
+        .single()
+        .execute()
+    )
+    bio = bio_resp.data
+
+    # 2. Compute in_range
+    ref_type: str = bio.get("ref_type", "none")
+    ref_low: float | None = bio.get("ref_low")
+    ref_high: float | None = bio.get("ref_high")
+
+    in_range: bool | None = None
+    if ref_type == "bounded" and ref_low is not None and ref_high is not None:
+        in_range = ref_low <= value <= ref_high
+    elif ref_type == "lt" and ref_high is not None:
+        in_range = value < ref_high
+    elif ref_type == "gt" and ref_low is not None:
+        in_range = value > ref_low
+
+    # 3. Upsert panel for this date
+    panel_resp = (
+        db.table("panels")
+        .upsert(
+            {"user_id": user_id, "tested_at": tested_at, "source": "manual"},
+            on_conflict="user_id,tested_at",
+        )
+        .execute()
+    )
+    panel_id: str = panel_resp.data[0]["id"]
+
+    # 4. Upsert result
+    result_resp = (
+        db.table("results")
+        .upsert(
+            {
+                "user_id": user_id,
+                "panel_id": panel_id,
+                "biomarker_id": biomarker_id,
+                "value": value,
+                "in_range": in_range,
+            },
+            on_conflict="biomarker_id,panel_id",
+        )
+        .execute()
+    )
+    return result_resp.data[0]

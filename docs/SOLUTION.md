@@ -153,8 +153,8 @@ The app understands the standard Norwegian blood panel Excel format:
 | Sprint | What gets built |
 |--------|----------------|
 | 0 ✅ | Server setup, deployment pipeline, Supabase wired |
-| 1 🔄 | **Biomarker import** (this sprint), dashboard UI, trend charts |
-| 2 | Per-panel timeline, in/out-of-range highlighting, manual entry |
+| 1 ✅ | Biomarker import, dashboard UI, sparkline trend charts, auth wired |
+| 2 🔄 | **Panel timeline, per-marker trend charts, in/out-of-range highlighting, manual entry** (this sprint) |
 | 3 | Correlation overlay — draw a diet annotation on top of a biomarker chart |
 | 4 | Food diary — log what you eat each day |
 | 5 | Meal plans and calendar |
@@ -203,4 +203,6 @@ pytest -v   # 29 tests, should all pass
 | `web/src/app/import/page.tsx` | The file upload page |
 | `web/src/lib/api.ts` | All the API calls from the frontend |
 | `web/src/lib/mockData.ts` | Realistic test data (all 30+ biomarkers with real values) |
+| `web/src/app/panels/page.tsx` | Panel timeline — list of all blood draw sessions |
+| `web/src/components/ManualEntryModal.tsx` | Manual entry form for adding individual results |
 | `docs/adr/` | Architectural Decision Records — why we made the choices we made |

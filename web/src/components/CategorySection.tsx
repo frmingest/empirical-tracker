@@ -30,18 +30,18 @@ export function CategorySection({ category, items }: Props) {
   return (
     <section>
       <div className="flex items-center gap-3 mb-4">
-        <span className="text-zinc-600 text-sm select-none">
+        <span className="text-[var(--text-muted)] text-sm select-none">
           {CATEGORY_ICONS[category]}
         </span>
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-[var(--text-secondary)]">
           {category}
         </h2>
-        <div className="flex-1 h-px bg-zinc-800" />
-        <span className="text-xs text-zinc-600 font-mono">
+        <div className="flex-1 h-px bg-[var(--border-subtle)]" />
+        <span className="text-xs text-[var(--text-muted)] font-mono">
           {items.length}
         </span>
         {outOfRangeCount > 0 && (
-          <span className="text-xs font-mono text-rose-400 bg-rose-400/10 px-1.5 py-0.5 rounded">
+          <span className="text-xs font-mono text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded">
             {outOfRangeCount} off
           </span>
         )}

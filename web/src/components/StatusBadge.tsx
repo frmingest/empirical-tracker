@@ -14,9 +14,9 @@ export function StatusBadge({
   if (inRange === null) {
     return (
       <span className="inline-flex items-center gap-1.5">
-        <span className={`${dotSize} rounded-full bg-zinc-600`} />
+        <span className={`${dotSize} rounded-full bg-[var(--text-muted)]`} />
         {showLabel && (
-          <span className="text-xs text-zinc-500 font-mono">—</span>
+          <span className="text-xs text-[var(--text-muted)] font-mono">—</span>
         )}
       </span>
     );

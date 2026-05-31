@@ -23,7 +23,7 @@ export function BiomarkerCard({ data }: Props) {
   const sparkData = series.map((p) => ({ v: p.value }));
 
   const lineColor =
-    latestInRange === false ? "#f87171" : "#34d399";
+    latestInRange === false ? "var(--color-out-range)" : "var(--color-in-range)";
 
   const rangeLabel =
     biomarker.ref_type === "bounded" &&
@@ -39,11 +39,11 @@ export function BiomarkerCard({ data }: Props) {
   return (
     <Link
       href={`/biomarkers/${biomarker.id}`}
-      className="group block rounded-xl border border-zinc-800 bg-zinc-900 p-4 transition-all duration-200 hover:border-zinc-700 hover:bg-zinc-800/80 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/40"
+      className="group block rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] p-4 transition-all duration-200 hover:border-[var(--border-subtle)] hover:bg-[var(--bg-elevated)] hover:-translate-y-0.5 hover:shadow-md"
     >
       {/* Name row */}
       <div className="flex items-start justify-between gap-2 mb-3">
-        <span className="text-sm text-zinc-300 leading-tight line-clamp-2 group-hover:text-zinc-100 transition-colors">
+        <span className="text-sm text-[var(--text-secondary)] leading-tight line-clamp-2 group-hover:text-[var(--text-primary)] transition-colors">
           {shortLabel(biomarker.name_no)}
         </span>
         <StatusBadge inRange={latestInRange} />
@@ -55,19 +55,19 @@ export function BiomarkerCard({ data }: Props) {
           <>
             <span
               className={`text-2xl font-mono font-semibold tabular-nums leading-none ${
-                latestInRange === false ? "text-rose-400" : "text-zinc-100"
+                latestInRange === false ? "text-[var(--color-out-range)]" : "text-[var(--text-primary)]"
               }`}
             >
               {latestValue}
             </span>
             {biomarker.unit && (
-              <span className="text-xs text-zinc-500 font-mono">
+              <span className="text-xs text-[var(--text-secondary)] font-mono">
                 {biomarker.unit}
               </span>
             )}
           </>
         ) : (
-          <span className="text-sm text-zinc-600 font-mono">No data</span>
+          <span className="text-sm text-[var(--text-muted)] font-mono">No data</span>
         )}
       </div>
 
@@ -89,9 +89,9 @@ export function BiomarkerCard({ data }: Props) {
         ) : (
           <div className="h-full w-full flex items-center">
             {sparkData.length === 1 ? (
-              <div className="w-full h-px bg-zinc-700" />
+              <div className="w-full h-px bg-[var(--border-card)]" />
             ) : (
-              <div className="w-full h-px bg-zinc-800" />
+              <div className="w-full h-px bg-[var(--border-subtle)]" />
             )}
           </div>
         )}
@@ -99,7 +99,7 @@ export function BiomarkerCard({ data }: Props) {
 
       {/* Ref range */}
       {rangeLabel && (
-        <div className="text-xs text-zinc-600 font-mono">
+        <div className="text-xs text-[var(--text-muted)] font-mono">
           ref {rangeLabel}
         </div>
       )}

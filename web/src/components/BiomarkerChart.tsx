@@ -25,11 +25,11 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Toolti
   if (!d) return null;
 
   return (
-    <div className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 shadow-xl text-xs">
-      <p className="text-zinc-400 mb-1">{fmtDate(d.tested_at)}</p>
-      <p className="font-mono font-semibold text-zinc-100 text-sm">{d.value}</p>
+    <div className="rounded-lg border border-[var(--border-card)] bg-[var(--bg-surface)] px-3 py-2 shadow-xl text-xs">
+      <p className="text-[var(--text-secondary)] mb-1">{fmtDate(d.tested_at)}</p>
+      <p className="font-mono font-semibold text-[var(--text-primary)] text-sm">{d.value}</p>
       {d.in_range !== null && (
-        <p className={d.in_range ? "text-emerald-400 mt-0.5" : "text-rose-400 mt-0.5"}>
+        <p className={d.in_range ? "text-emerald-600 mt-0.5" : "text-rose-500 mt-0.5"}>
           {d.in_range ? "In range" : "Out of range"}
         </p>
       )}
@@ -45,14 +45,14 @@ interface CustomDotProps {
 
 function CustomDot({ cx, cy, payload }: CustomDotProps) {
   if (cx === undefined || cy === undefined || !payload) return null;
-  const color = payload.in_range === false ? "#f87171" : "#34d399";
+  const color = payload.in_range === false ? "var(--color-out-range)" : "var(--color-in-range)";
   return (
     <circle
       cx={cx}
       cy={cy}
       r={4}
       fill={color}
-      stroke="#09090b"
+      stroke="var(--bg-base)"
       strokeWidth={2}
     />
   );
@@ -68,13 +68,13 @@ export function BiomarkerChart({ data }: Props) {
   useEffect(() => setMounted(true), []);
 
   if (!mounted) {
-    return <div className="h-64 rounded-xl bg-zinc-900 animate-pulse" />;
+    return <div className="h-64 rounded-xl bg-[var(--bg-elevated)] animate-pulse" />;
   }
 
   if (series.length === 0) {
     return (
-      <div className="h-64 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center">
-        <p className="text-zinc-600 text-sm">No data recorded yet</p>
+      <div className="h-64 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] flex items-center justify-center">
+        <p className="text-[var(--text-muted)] text-sm">No data recorded yet</p>
       </div>
     );
   }
@@ -97,7 +97,7 @@ export function BiomarkerChart({ data }: Props) {
     refHigh !== null ? Math.max(maxVal, refHigh) * 1.1 : maxVal * 1.1;
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+    <div className="rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] p-6 shadow-sm">
       <ResponsiveContainer width="100%" height={280}>
         <LineChart
           data={chartData}
@@ -105,18 +105,18 @@ export function BiomarkerChart({ data }: Props) {
         >
           <CartesianGrid
             strokeDasharray="3 3"
-            stroke="#27272a"
+            stroke="var(--border-subtle)"
             vertical={false}
           />
           <XAxis
             dataKey="label"
-            tick={{ fill: "#71717a", fontSize: 11, fontFamily: "var(--font-geist-mono)" }}
-            axisLine={{ stroke: "#27272a" }}
+            tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "var(--font-geist-mono)" }}
+            axisLine={{ stroke: "var(--border-subtle)" }}
             tickLine={false}
           />
           <YAxis
             domain={[domainMin, domainMax]}
-            tick={{ fill: "#71717a", fontSize: 11, fontFamily: "var(--font-geist-mono)" }}
+            tick={{ fill: "var(--text-muted)", fontSize: 11, fontFamily: "var(--font-geist-mono)" }}
             axisLine={false}
             tickLine={false}
             width={48}
@@ -130,7 +130,7 @@ export function BiomarkerChart({ data }: Props) {
               <ReferenceArea
                 y1={refLow}
                 y2={refHigh}
-                fill="#34d399"
+                fill="var(--color-in-range)"
                 fillOpacity={0.07}
                 stroke="none"
               />
@@ -140,29 +140,29 @@ export function BiomarkerChart({ data }: Props) {
           {biomarker.ref_type === "lt" && refHigh !== null && (
             <ReferenceLine
               y={refHigh}
-              stroke="#34d399"
+              stroke="var(--color-in-range)"
               strokeDasharray="4 4"
               strokeOpacity={0.5}
-              label={{ value: `< ${refHigh}`, fill: "#34d399", fontSize: 10 }}
+              label={{ value: `< ${refHigh}`, fill: "var(--color-in-range)", fontSize: 10 }}
             />
           )}
           {biomarker.ref_type === "gt" && refLow !== null && (
             <ReferenceLine
               y={refLow}
-              stroke="#34d399"
+              stroke="var(--color-in-range)"
               strokeDasharray="4 4"
               strokeOpacity={0.5}
-              label={{ value: `> ${refLow}`, fill: "#34d399", fontSize: 10 }}
+              label={{ value: `> ${refLow}`, fill: "var(--color-in-range)", fontSize: 10 }}
             />
           )}
 
           <Line
             type="monotone"
             dataKey="value"
-            stroke="#60a5fa"
+            stroke="var(--color-accent)"
             strokeWidth={2}
             dot={<CustomDot />}
-            activeDot={{ r: 6, fill: "#60a5fa", stroke: "#09090b", strokeWidth: 2 }}
+            activeDot={{ r: 6, fill: "var(--color-accent)", stroke: "var(--bg-base)", strokeWidth: 2 }}
             isAnimationActive={false}
           />
         </LineChart>
@@ -170,9 +170,9 @@ export function BiomarkerChart({ data }: Props) {
 
       {/* Legend */}
       {biomarker.ref_type !== "none" && (
-        <div className="mt-4 flex items-center gap-4 text-xs text-zinc-500">
+        <div className="mt-4 flex items-center gap-4 text-xs text-[var(--text-secondary)]">
           <span className="flex items-center gap-1.5">
-            <span className="inline-block w-3 h-3 rounded-sm bg-emerald-400/20 border border-emerald-400/30" />
+            <span className="inline-block w-3 h-3 rounded-sm bg-emerald-500/20 border border-emerald-500/30" />
             Reference range
             {biomarker.ref_type === "bounded" &&
               refLow !== null &&
@@ -180,7 +180,7 @@ export function BiomarkerChart({ data }: Props) {
               ` (${refLow} – ${refHigh})`}
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="inline-block w-3 h-1 bg-blue-400 rounded" />
+            <span className="inline-block w-3 h-1 bg-[var(--color-accent)] rounded" />
             Measured value
           </span>
         </div>

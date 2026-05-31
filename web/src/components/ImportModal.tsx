@@ -96,18 +96,18 @@ export function ImportModal({ onClose, token, onSuccess }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl">
+      <div className="w-full max-w-md rounded-2xl border border-[var(--border-card)] bg-[var(--bg-surface)] shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-zinc-800">
-          <h2 className="text-base font-semibold text-zinc-100">
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[var(--border-subtle)]">
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">
             Import blood test data
           </h2>
           <button
             onClick={onClose}
-            className="text-zinc-500 hover:text-zinc-300 transition-colors text-xl leading-none"
+            className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors text-xl leading-none"
           >
             ×
           </button>
@@ -117,7 +117,7 @@ export function ImportModal({ onClose, token, onSuccess }: Props) {
           {/* Auth gate */}
           {!token && (
             <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3">
-              <p className="text-amber-400 text-sm">
+              <p className="text-amber-600 text-sm">
                 <Link href="/login" className="underline underline-offset-2">
                   Sign in
                 </Link>{" "}
@@ -136,8 +136,8 @@ export function ImportModal({ onClose, token, onSuccess }: Props) {
               dragging
                 ? "border-blue-500 bg-blue-500/5"
                 : file
-                  ? "border-emerald-600 bg-emerald-500/5"
-                  : "border-zinc-700 hover:border-zinc-600 bg-zinc-900/50"
+                  ? "border-emerald-500 bg-emerald-500/5"
+                  : "border-[var(--border-card)] hover:border-[var(--border-subtle)] bg-[var(--bg-elevated)]"
             }`}
           >
             <input
@@ -149,18 +149,18 @@ export function ImportModal({ onClose, token, onSuccess }: Props) {
             />
             {file ? (
               <>
-                <p className="text-emerald-400 text-sm font-mono">{file.name}</p>
-                <p className="text-zinc-600 text-xs mt-1">
+                <p className="text-emerald-600 text-sm font-mono">{file.name}</p>
+                <p className="text-[var(--text-muted)] text-xs mt-1">
                   {(file.size / 1024).toFixed(1)} KB — click to change
                 </p>
               </>
             ) : (
               <>
-                <p className="text-zinc-400 text-sm">
+                <p className="text-[var(--text-secondary)] text-sm">
                   Drop your{" "}
-                  <span className="font-mono text-zinc-300">.xlsx</span> file here
+                  <span className="font-mono text-[var(--text-primary)]">.xlsx</span> file here
                 </p>
-                <p className="text-zinc-600 text-xs mt-1">or click to browse</p>
+                <p className="text-[var(--text-muted)] text-xs mt-1">or click to browse</p>
               </>
             )}
           </div>
@@ -168,49 +168,49 @@ export function ImportModal({ onClose, token, onSuccess }: Props) {
           {/* Result */}
           {status === "success" && result && (
             <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-4 py-3">
-              <p className="text-emerald-400 text-sm font-mono">
+              <p className="text-emerald-600 text-sm font-mono">
                 ✓ {result.panels_created} panels · {result.results_inserted} results imported
               </p>
             </div>
           )}
           {status === "error" && (
             <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-4 py-3">
-              <p className="text-rose-400 text-sm">{errorMsg}</p>
+              <p className="text-rose-500 text-sm">{errorMsg}</p>
             </div>
           )}
 
           <button
             onClick={handleUpload}
             disabled={!file || !token || status === "uploading"}
-            className="w-full rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white text-sm font-semibold py-2.5 transition-colors"
+            className="w-full rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-[var(--bg-elevated)] disabled:text-[var(--text-muted)] text-white text-sm font-semibold py-2.5 transition-colors"
           >
             {status === "uploading" ? "Uploading…" : "Import file"}
           </button>
 
           {token && (
-            <div className="border-t border-zinc-800 pt-4">
+            <div className="border-t border-[var(--border-subtle)] pt-4">
               {!confirmDelete ? (
                 <button
                   onClick={() => setConfirmDelete(true)}
-                  className="w-full text-xs text-zinc-600 hover:text-rose-400 transition-colors py-1"
+                  className="w-full text-xs text-[var(--text-muted)] hover:text-rose-500 transition-colors py-1"
                 >
                   Delete all imported data
                 </button>
               ) : (
                 <div className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-3">
-                  <p className="text-xs text-rose-300 mb-3 text-center">
+                  <p className="text-xs text-rose-500 mb-3 text-center">
                     Permanently deletes all panels and results.
                   </p>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setConfirmDelete(false)}
-                      className="flex-1 text-xs py-1.5 rounded border border-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors"
+                      className="flex-1 text-xs py-1.5 rounded border border-[var(--border-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleDeleteAll}
-                      className="flex-1 text-xs py-1.5 rounded border border-rose-500/50 text-rose-400 hover:bg-rose-500/10 transition-colors"
+                      className="flex-1 text-xs py-1.5 rounded border border-rose-500/50 text-rose-500 hover:bg-rose-500/10 transition-colors"
                     >
                       Delete all
                     </button>

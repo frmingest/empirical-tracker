@@ -88,23 +88,23 @@ export default function ImportPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#09090b]">
-      <header className="sticky top-0 z-40 border-b border-zinc-900 bg-[#09090b]/90 backdrop-blur-md">
+    <div className="min-h-screen bg-[var(--bg-base)]">
+      <header className="sticky top-0 z-40 border-b border-[var(--border-subtle)] bg-[var(--bg-base)]/90 backdrop-blur-md">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
-          <Link href="/" className="text-zinc-500 hover:text-zinc-300 transition-colors text-sm">
+          <Link href="/" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm">
             ← Dashboard
           </Link>
-          <span className="text-zinc-800">·</span>
-          <span className="text-xs text-zinc-600 uppercase tracking-wide">Import</span>
+          <span className="text-[var(--border-card)]">·</span>
+          <span className="text-xs text-[var(--text-muted)] uppercase tracking-wide">Import</span>
         </div>
       </header>
 
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-10 space-y-8">
         <div>
-          <h1 className="text-xl font-semibold text-zinc-100 mb-1">
+          <h1 className="text-xl font-semibold text-[var(--text-primary)] mb-1">
             Import blood test data
           </h1>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-[var(--text-secondary)]">
             Upload your lab results spreadsheet. Supports the Norwegian blood panel
             format with bilingual names and reference ranges.
           </p>
@@ -113,9 +113,9 @@ export default function ImportPage() {
         {/* Auth gate */}
         {!token && (
           <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-5 py-4">
-            <p className="text-amber-300 text-sm">
+            <p className="text-amber-600 text-sm">
               You need to{" "}
-              <Link href="/login" className="underline underline-offset-2 hover:text-amber-200">
+              <Link href="/login" className="underline underline-offset-2 hover:text-amber-500">
                 sign in
               </Link>{" "}
               before you can import data.
@@ -124,20 +124,20 @@ export default function ImportPage() {
         )}
 
         {/* Format hint */}
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-5 py-4">
-          <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Expected format</p>
-          <ul className="space-y-1.5 text-sm text-zinc-400">
+        <div className="rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] px-5 py-4 shadow-sm">
+          <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-3">Expected format</p>
+          <ul className="space-y-1.5 text-sm text-[var(--text-secondary)]">
             <li className="flex gap-2">
-              <span className="text-zinc-700">·</span>
+              <span className="text-[var(--text-muted)]">·</span>
               Row 1: col A = biomarker name, col B = reference range, cols C+ = test dates
             </li>
             <li className="flex gap-2">
-              <span className="text-zinc-700">·</span>
-              Dates as <span className="font-mono text-zinc-300">DD.MM.YYYY</span>
+              <span className="text-[var(--text-muted)]">·</span>
+              Dates as <span className="font-mono text-[var(--text-primary)]">DD.MM.YYYY</span>
             </li>
             <li className="flex gap-2">
-              <span className="text-zinc-700">·</span>
-              Norwegian decimal commas (<span className="font-mono text-zinc-300">4,5</span>) handled automatically
+              <span className="text-[var(--text-muted)]">·</span>
+              Norwegian decimal commas (<span className="font-mono text-[var(--text-primary)]">4,5</span>) handled automatically
             </li>
           </ul>
         </div>
@@ -152,8 +152,8 @@ export default function ImportPage() {
             dragging
               ? "border-blue-500 bg-blue-500/5 scale-[1.01]"
               : file
-                ? "border-emerald-600 bg-emerald-500/5"
-                : "border-zinc-800 hover:border-zinc-700 bg-zinc-900/30"
+                ? "border-emerald-500 bg-emerald-500/5"
+                : "border-[var(--border-card)] hover:border-[var(--border-subtle)] bg-[var(--bg-elevated)]"
           }`}
         >
           <input
@@ -163,28 +163,28 @@ export default function ImportPage() {
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
             className="hidden"
           />
-          <div className="text-3xl mb-3 text-zinc-700">↑</div>
+          <div className="text-3xl mb-3 text-[var(--text-muted)]">↑</div>
           {file ? (
             <>
-              <p className="text-emerald-400 font-mono text-sm">{file.name}</p>
-              <p className="text-zinc-600 text-xs mt-1">
+              <p className="text-emerald-600 font-mono text-sm">{file.name}</p>
+              <p className="text-[var(--text-muted)] text-xs mt-1">
                 {(file.size / 1024).toFixed(1)} KB — click to change
               </p>
             </>
           ) : (
             <>
-              <p className="text-zinc-400 text-sm">
-                Drop your <span className="font-mono text-zinc-200">.xlsx</span> file here
+              <p className="text-[var(--text-secondary)] text-sm">
+                Drop your <span className="font-mono text-[var(--text-primary)]">.xlsx</span> file here
               </p>
-              <p className="text-zinc-700 text-xs mt-1">or click to browse</p>
+              <p className="text-[var(--text-muted)] text-xs mt-1">or click to browse</p>
             </>
           )}
         </div>
 
         {status === "success" && result && (
           <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-5 py-4">
-            <p className="text-emerald-400 font-semibold text-sm mb-1">Import complete</p>
-            <p className="text-emerald-300/70 text-sm font-mono">
+            <p className="text-emerald-600 font-semibold text-sm mb-1">Import complete</p>
+            <p className="text-emerald-600/70 text-sm font-mono">
               {result.panels_created} panels · {result.results_inserted} results
             </p>
           </div>
@@ -192,14 +192,14 @@ export default function ImportPage() {
 
         {status === "error" && (
           <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 px-5 py-4">
-            <p className="text-rose-400 text-sm">{errorMsg}</p>
+            <p className="text-rose-500 text-sm">{errorMsg}</p>
           </div>
         )}
 
         <button
           onClick={handleUpload}
           disabled={!file || !token || status === "uploading"}
-          className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-semibold py-3 text-sm transition-colors"
+          className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-[var(--bg-elevated)] disabled:text-[var(--text-muted)] text-white font-semibold py-3 text-sm transition-colors"
         >
           {!token
             ? "Sign in to import"
@@ -209,30 +209,30 @@ export default function ImportPage() {
         </button>
 
         {token && (
-          <div className="border-t border-zinc-900 pt-6">
-            <p className="text-xs text-zinc-700 uppercase tracking-wider mb-3">Danger zone</p>
+          <div className="border-t border-[var(--border-subtle)] pt-6">
+            <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-3">Danger zone</p>
             {!confirmDelete ? (
               <button
                 onClick={() => setConfirmDelete(true)}
-                className="text-sm text-zinc-600 hover:text-rose-400 transition-colors border border-zinc-800 hover:border-rose-500/30 rounded-lg px-4 py-2"
+                className="text-sm text-[var(--text-muted)] hover:text-rose-500 transition-colors border border-[var(--border-card)] hover:border-rose-500/30 rounded-lg px-4 py-2"
               >
                 Delete all imported data
               </button>
             ) : (
               <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-5 space-y-3">
-                <p className="text-rose-300 text-sm">
+                <p className="text-rose-500 text-sm">
                   Permanently deletes all your panels and results. Cannot be undone.
                 </p>
                 <div className="flex gap-3">
                   <button
                     onClick={() => setConfirmDelete(false)}
-                    className="flex-1 text-sm py-2 rounded-lg border border-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors"
+                    className="flex-1 text-sm py-2 rounded-lg border border-[var(--border-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleDeleteAll}
-                    className="flex-1 text-sm py-2 rounded-lg border border-rose-500/50 text-rose-400 hover:bg-rose-500/10 transition-colors"
+                    className="flex-1 text-sm py-2 rounded-lg border border-rose-500/50 text-rose-500 hover:bg-rose-500/10 transition-colors"
                   >
                     Delete everything
                   </button>

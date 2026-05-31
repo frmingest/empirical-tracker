@@ -14,6 +14,8 @@ import {
 } from "@/lib/biomarkerCategories";
 import { CategorySection } from "@/components/CategorySection";
 import { ImportModal } from "@/components/ImportModal";
+import { ManualEntryModal } from "@/components/ManualEntryModal";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 function derivedStats(results: BiomarkerWithSeries[]) {
   const allDates = new Set(results.flatMap((r) => r.series.map((p) => p.tested_at)));
@@ -29,6 +31,7 @@ export default function DashboardPage() {
   const { session, loading, signOut } = useAuth();
   const router = useRouter();
   const [showImport, setShowImport] = useState(false);
+  const [showManual, setShowManual] = useState(false);
   const [results, setResults] = useState<BiomarkerWithSeries[]>(MOCK_RESULTS);
   const [isLive, setIsLive] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
@@ -56,26 +59,39 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
-        <div className="w-5 h-5 border-2 border-zinc-700 border-t-blue-400 rounded-full animate-spin" />
+      <div className="min-h-screen bg-[var(--bg-base)] flex items-center justify-center">
+        <div className="w-5 h-5 border-2 border-[var(--border-card)] border-t-blue-400 rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#09090b]">
+    <div className="min-h-screen bg-[var(--bg-base)]">
       {/* ── Top nav ─────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 border-b border-zinc-900 bg-[#09090b]/90 backdrop-blur-md">
+      <header className="sticky top-0 z-40 border-b border-[var(--border-subtle)] bg-[var(--bg-base)]/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <span className="text-base font-semibold tracking-tight bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
             Empirical
           </span>
           <nav className="flex items-center gap-1">
+            <ThemeToggle />
+            <Link
+              href="/panels"
+              className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] px-2 py-1.5 rounded transition-colors"
+            >
+              Panels
+            </Link>
             {session ? (
               <>
-                <span className="text-xs text-zinc-600 px-2 hidden sm:block truncate max-w-[160px]">
+                <span className="text-xs text-[var(--text-muted)] px-2 hidden sm:block truncate max-w-[160px]">
                   {session.user.email}
                 </span>
+                <button
+                  onClick={() => setShowManual(true)}
+                  className="text-xs font-medium border border-[var(--border-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  Add result
+                </button>
                 <button
                   onClick={() => setShowImport(true)}
                   className="flex items-center gap-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg transition-colors"
@@ -85,7 +101,7 @@ export default function DashboardPage() {
                 </button>
                 <button
                   onClick={signOut}
-                  className="text-xs text-zinc-600 hover:text-zinc-400 px-2 py-1.5 rounded transition-colors"
+                  className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] px-2 py-1.5 rounded transition-colors"
                 >
                   Sign out
                 </button>
@@ -93,7 +109,7 @@ export default function DashboardPage() {
             ) : (
               <Link
                 href="/login"
-                className="text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg transition-colors"
+                className="text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg transition-colors ml-1"
               >
                 Sign in
               </Link>
@@ -106,7 +122,7 @@ export default function DashboardPage() {
         {/* ── Not signed in banner ─────────────────────────────────────────── */}
         {!session && (
           <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 px-4 py-3 flex items-center justify-between gap-4">
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-[var(--text-secondary)]">
               Showing mock data.{" "}
               <Link href="/login" className="text-blue-400 hover:text-blue-300">
                 Sign in
@@ -121,7 +137,7 @@ export default function DashboardPage() {
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-400 via-blue-300 to-emerald-400 bg-clip-text text-transparent">
             Blood biomarkers
           </h1>
-          <p className="text-zinc-500 text-sm">
+          <p className="text-[var(--text-secondary)] text-sm">
             {isLive ? "Your data" : "Sample data"} · personal health tracking
             for elimination diets
           </p>
@@ -152,8 +168,8 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        <footer className="border-t border-zinc-900 pt-6 pb-4">
-          <p className="text-xs text-zinc-700 text-center font-mono">
+        <footer className="border-t border-[var(--border-subtle)] pt-6 pb-4">
+          <p className="text-xs text-[var(--text-muted)] text-center font-mono">
             {isLive ? "Live data from Supabase" : "Mock data — sign in to load your results"}
           </p>
         </footer>
@@ -165,6 +181,24 @@ export default function DashboardPage() {
           token={session?.access_token ?? null}
           onSuccess={() => {
             // Refresh real data after a successful import
+            if (session?.access_token) {
+              getBiomarkerResults(session.access_token)
+                .then((data) => {
+                  if (data.length > 0) { setResults(data); setIsLive(true); }
+                })
+                .catch(() => {});
+            }
+          }}
+        />
+      )}
+
+      {showManual && (
+        <ManualEntryModal
+          onClose={() => setShowManual(false)}
+          token={session?.access_token ?? null}
+          results={results}
+          onSuccess={() => {
+            setShowManual(false);
             if (session?.access_token) {
               getBiomarkerResults(session.access_token)
                 .then((data) => {
@@ -192,14 +226,14 @@ function StatCard({
 }) {
   const valueColor =
     accent === "rose"
-      ? "text-rose-400"
+      ? "text-rose-500"
       : accent === "emerald"
-        ? "text-emerald-400"
-        : "text-zinc-100";
+        ? "text-emerald-600"
+        : "text-[var(--text-primary)]";
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-4">
-      <p className="text-[10px] uppercase tracking-widest text-zinc-600 mb-1.5">
+    <div className="rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] px-4 py-4 shadow-sm">
+      <p className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1.5">
         {label}
       </p>
       <p

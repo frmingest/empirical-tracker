@@ -77,3 +77,20 @@ export async function deletePanelImport(
   if (!res.ok)
     throw new Error(`DELETE /biomarkers/import/${panelId} → ${res.status}`);
 }
+
+export async function addManualResult(
+  token: string,
+  biomarkerId: string,
+  testedAt: string,
+  value: number
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/biomarkers/results/manual`, {
+    method: "POST",
+    headers: {
+      ...bearerHeaders(token),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ biomarker_id: biomarkerId, tested_at: testedAt, value }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}

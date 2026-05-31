@@ -6,6 +6,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Security, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel
 
 from app.biomarkers import parser, repository
 from app.db import get_supabase
@@ -45,6 +46,12 @@ def _in_range(
     if ref_type == "gt" and ref_low is not None:
         return value > ref_low
     return None
+
+
+class ManualResultIn(BaseModel):
+    biomarker_id: str
+    tested_at: str   # "YYYY-MM-DD"
+    value: float
 
 
 # ── Import ─────────────────────────────────────────────────────────────────────
@@ -121,6 +128,26 @@ async def delete_all_imports(
 ) -> dict:
     repository.delete_all_panels(user_id)
     return {"deleted": "all"}
+
+
+# ── Manual entry ───────────────────────────────────────────────────────────────
+
+@router.post("/results/manual", status_code=201)
+async def add_manual_result(
+    body: ManualResultIn,
+    user_id: str = Depends(_current_user_id),
+) -> dict:
+    """Upsert a single manually-entered result."""
+    try:
+        result = repository.add_manual_result(
+            user_id=user_id,
+            biomarker_id=body.biomarker_id,
+            tested_at=body.tested_at,
+            value=body.value,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return result
 
 
 # ── Read ───────────────────────────────────────────────────────────────────────

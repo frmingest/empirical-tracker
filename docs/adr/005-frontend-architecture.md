@@ -21,8 +21,9 @@ lay the groundwork for the future React Native mobile client.
 - **Charting:** Recharts — client components only, with `mounted` guard for SSR safety
 - **Data during dev:** Static mock data matching the exact API response shape, with TODO
   comments marking where live API calls replace it
-- **Design system:** Dark-only palette (zinc + emerald/rose/blue semantics), Geist fonts,
-  no light mode toggle needed
+- **Design system:** Light-first palette (medical white/slate + sky-blue accents), with a
+  persisted dark-mode toggle. CSS custom properties define both themes; `html.dark` class
+  activates dark mode. Geist fonts throughout.
 - **Component boundary:** Server components for layout/data; client components only where
   browser APIs are needed (charts, modals, file upload)
 
@@ -63,7 +64,7 @@ without blocking on auth. The swap is a single-line change in `page.tsx`.
 - **Good:** TypeScript strict mode catches API shape mismatches at compile time
 - **Good:** Server/client boundary is explicit — pages that don't need interactivity compile
   to static HTML
-- **Good:** Dark-only design means no conditional styling, smaller CSS bundle
+- **Good:** CSS-variable theming means components reference semantic tokens (`var(--bg-card)`) rather than theme-specific values; the same component renders correctly in both light and dark mode without conditional classes.
 - **Trade-off:** Recharts requires a `"use client"` boundary even for static charts.
   Mitigation: charts are isolated in leaf components; server components compose them
 - **Trade-off:** Mock data will diverge from real data if the API shape changes.
