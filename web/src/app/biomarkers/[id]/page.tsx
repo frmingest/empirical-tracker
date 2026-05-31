@@ -26,6 +26,7 @@ export default function BiomarkerDetailPage({ params }: { params: Promise<{ id: 
   useEffect(() => {
     if (loading) return; // auth not settled yet — keep the spinner
     if (!session?.access_token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDataLoading(false); // no session → show mock data
       return;
     }

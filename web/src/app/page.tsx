@@ -56,6 +56,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (loading) return; // auth not settled yet
     if (!session?.access_token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDataLoading(false); // no session → stick with mock data
       return;
     }
