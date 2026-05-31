@@ -11,14 +11,24 @@ interface Props {
   token: string | null;
   results: BiomarkerWithSeries[];
   onSuccess: () => void;
+  /** When set (e.g. opened from a biomarker page), pre-select this marker. */
+  initialBiomarkerId?: string;
 }
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function ManualEntryModal({ onClose, token, results, onSuccess }: Props) {
-  const [biomarkerId, setBiomarkerId] = useState(results[0]?.biomarker.id ?? "");
+export function ManualEntryModal({
+  onClose,
+  token,
+  results,
+  onSuccess,
+  initialBiomarkerId,
+}: Props) {
+  const [biomarkerId, setBiomarkerId] = useState(
+    initialBiomarkerId ?? results[0]?.biomarker.id ?? ""
+  );
   const [testedAt, setTestedAt] = useState(todayIso());
   const [valueStr, setValueStr] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");

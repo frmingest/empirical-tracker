@@ -17,6 +17,7 @@ type Dict = Record<string, string>;
 const en: Dict = {
   // nav
   "nav.panels": "Panels",
+  "nav.foodDiary": "Food diary",
   "nav.addResult": "Add result",
   "nav.import": "Import",
   "nav.signOut": "Sign out",
@@ -68,6 +69,7 @@ const en: Dict = {
 const no: Dict = {
   // nav
   "nav.panels": "Paneler",
+  "nav.foodDiary": "Matdagbok",
   "nav.addResult": "Legg til resultat",
   "nav.import": "Importer",
   "nav.signOut": "Logg ut",

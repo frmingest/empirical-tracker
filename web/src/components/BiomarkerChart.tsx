@@ -13,7 +13,8 @@ import {
   YAxis,
 } from "recharts";
 import { fmtDate } from "@/lib/biomarkerCategories";
-import type { BiomarkerWithSeries, ResultPoint } from "@/lib/api";
+import type { BiomarkerWithSeries, DietEvent, ResultPoint } from "@/lib/api";
+import { buildAnnotations } from "@/lib/chartAnnotations";
 
 interface TooltipPayload {
   payload?: { tested_at: string; value: number; in_range: boolean | null };
@@ -60,9 +61,11 @@ function CustomDot({ cx, cy, payload }: CustomDotProps) {
 
 interface Props {
   data: BiomarkerWithSeries;
+  /** Diet events to overlay as correlation annotations (Sprint 3). */
+  annotations?: DietEvent[];
 }
 
-export function BiomarkerChart({ data }: Props) {
+export function BiomarkerChart({ data, annotations = [] }: Props) {
   const { biomarker, series } = data;
   const [mounted, setMounted] = useState(false);
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -96,6 +99,9 @@ export function BiomarkerChart({ data }: Props) {
     refLow !== null ? Math.min(minVal, refLow) * 0.9 : minVal * 0.9;
   const domainMax =
     refHigh !== null ? Math.max(maxVal, refHigh) * 1.1 : maxVal * 1.1;
+
+  // Sprint 3 — correlation overlay: project diet events onto the chart.
+  const overlay = buildAnnotations(annotations, series);
 
   return (
     <div className="rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] p-6 shadow-sm">
@@ -157,6 +163,36 @@ export function BiomarkerChart({ data }: Props) {
             />
           )}
 
+          {/* Correlation overlay — diet annotations (Sprint 3) */}
+          {overlay.map((a) =>
+            a.x2 ? (
+              <ReferenceArea
+                key={`area-${a.id}`}
+                x1={a.x1}
+                x2={a.x2}
+                fill={a.color}
+                fillOpacity={0.08}
+                stroke="none"
+              />
+            ) : null
+          )}
+          {overlay.map((a) => (
+            <ReferenceLine
+              key={`line-${a.id}`}
+              x={a.x1}
+              stroke={a.color}
+              strokeDasharray="3 3"
+              strokeOpacity={0.7}
+              label={{
+                value: a.label,
+                fill: a.color,
+                fontSize: 10,
+                position: "insideTopLeft",
+                angle: 0,
+              }}
+            />
+          ))}
+
           <Line
             type="monotone"
             dataKey="value"
@@ -184,6 +220,22 @@ export function BiomarkerChart({ data }: Props) {
             <span className="inline-block w-3 h-1 bg-[var(--color-accent)] rounded" />
             Measured value
           </span>
+        </div>
+      )}
+
+      {/* Diet annotation legend (correlation overlay) */}
+      {overlay.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-[var(--text-secondary)]">
+          {overlay.map((a) => (
+            <span key={`legend-${a.id}`} className="flex items-center gap-1.5">
+              <span
+                className="inline-block w-3 h-3 rounded-sm border"
+                style={{ backgroundColor: a.color, borderColor: a.color, opacity: 0.7 }}
+              />
+              {a.label}
+              {a.x2 ? ` (${a.x1} → ${a.x2})` : ` (${a.x1})`}
+            </span>
+          ))}
         </div>
       )}
     </div>

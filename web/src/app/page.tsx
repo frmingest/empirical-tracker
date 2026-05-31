@@ -21,7 +21,6 @@ import { CategorySection } from "@/components/CategorySection";
 import { DietFilter } from "@/components/DietFilter";
 import { CustomMarkerModal } from "@/components/CustomMarkerModal";
 import { ImportModal } from "@/components/ImportModal";
-import { ManualEntryModal } from "@/components/ManualEntryModal";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -40,7 +39,6 @@ export default function DashboardPage() {
   const { t } = useLanguage();
   const { session, loading, signOut } = useAuth();
   const [showImport, setShowImport] = useState(false);
-  const [showManual, setShowManual] = useState(false);
   const [results, setResults] = useState<BiomarkerWithSeries[]>(MOCK_RESULTS);
   const [isLive, setIsLive] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
@@ -131,17 +129,17 @@ export default function DashboardPage() {
             >
               {t("nav.panels")}
             </Link>
+            <Link
+              href="/food-diary"
+              className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] px-2 py-1.5 rounded transition-colors"
+            >
+              {t("nav.foodDiary")}
+            </Link>
             {session ? (
               <>
                 <span className="text-xs text-[var(--text-muted)] px-2 hidden sm:block truncate max-w-[160px]">
                   {session.user.email}
                 </span>
-                <button
-                  onClick={() => setShowManual(true)}
-                  className="text-xs font-medium border border-[var(--border-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  {t("nav.addResult")}
-                </button>
                 <button
                   onClick={() => setShowImport(true)}
                   className="flex items-center gap-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg transition-colors"
@@ -273,24 +271,6 @@ export default function DashboardPage() {
           onSave={(selected) => {
             applySelection("custom", selected);
             setShowCustom(false);
-          }}
-        />
-      )}
-
-      {showManual && (
-        <ManualEntryModal
-          onClose={() => setShowManual(false)}
-          token={session?.access_token ?? null}
-          results={results}
-          onSuccess={() => {
-            setShowManual(false);
-            if (session?.access_token) {
-              getBiomarkerResults(session.access_token)
-                .then((data) => {
-                  if (data.length > 0) { setResults(data); setIsLive(true); }
-                })
-                .catch(() => {});
-            }
           }}
         />
       )}
