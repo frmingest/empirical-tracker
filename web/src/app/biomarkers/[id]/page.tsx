@@ -3,10 +3,12 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBiomarkerResults } from "@/lib/api";
-import type { BiomarkerWithSeries } from "@/lib/api";
-import { MOCK_RESULTS } from "@/lib/mockData";
+import { getBiomarkerResults, listDietEvents } from "@/lib/api";
+import type { BiomarkerWithSeries, DietEvent } from "@/lib/api";
+import { MOCK_DIET_EVENTS, MOCK_RESULTS } from "@/lib/mockData";
 import { BiomarkerChart } from "@/components/BiomarkerChart";
+import { DietEventManager } from "@/components/DietEventManager";
+import { ManualEntryModal } from "@/components/ManualEntryModal";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
   fmtDateLong,
@@ -18,28 +20,56 @@ export default function BiomarkerDetailPage({ params }: { params: Promise<{ id: 
   const { id } = use(params);
   const { session, loading } = useAuth();
   const [results, setResults] = useState<BiomarkerWithSeries[]>(MOCK_RESULTS);
+  const [dietEvents, setDietEvents] = useState<DietEvent[]>(MOCK_DIET_EVENTS);
   const [isLive, setIsLive] = useState(false);
+  const [showManual, setShowManual] = useState(false);
   // Start true so the first render never reaches the "not found" branch while
   // auth is still settling or the real-data fetch hasn't fired yet.
   const [dataLoading, setDataLoading] = useState(true);
 
-  useEffect(() => {
-    if (loading) return; // auth not settled yet — keep the spinner
-    if (!session?.access_token) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setDataLoading(false); // no session → show mock data
-      return;
-    }
-    setDataLoading(true);
-    getBiomarkerResults(session.access_token)
+  const token = session?.access_token ?? null;
+
+  const refreshResults = () => {
+    if (!token) return;
+    getBiomarkerResults(token)
       .then((data) => {
         if (data.length > 0) {
           setResults(data);
           setIsLive(true);
         }
       })
-      .catch(() => {})
-      .finally(() => setDataLoading(false));
+      .catch(() => {});
+  };
+
+  const refreshDietEvents = () => {
+    if (!token) return;
+    listDietEvents(token)
+      .then((evts) => setDietEvents(evts))
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    if (loading) return; // auth not settled yet — keep the spinner
+    if (!token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDataLoading(false); // no session → show mock data
+      return;
+    }
+    setDataLoading(true);
+    Promise.all([
+      getBiomarkerResults(token)
+        .then((data) => {
+          if (data.length > 0) {
+            setResults(data);
+            setIsLive(true);
+          }
+        })
+        .catch(() => {}),
+      listDietEvents(token)
+        .then((evts) => setDietEvents(evts))
+        .catch(() => {}),
+    ]).finally(() => setDataLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, loading]);
 
   if (loading || dataLoading) {
@@ -84,6 +114,14 @@ export default function BiomarkerDetailPage({ params }: { params: Promise<{ id: 
           <span className="text-xs text-[var(--text-muted)] uppercase tracking-wide">
             {category}
           </span>
+          {session && (
+            <button
+              onClick={() => setShowManual(true)}
+              className="ml-auto text-xs font-medium border border-[var(--border-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] px-3 py-1.5 rounded-lg transition-colors"
+            >
+              + Add result
+            </button>
+          )}
         </div>
       </header>
 
@@ -166,8 +204,22 @@ export default function BiomarkerDetailPage({ params }: { params: Promise<{ id: 
           <h2 className="text-xs uppercase tracking-widest text-[var(--text-muted)] mb-3">
             Trend over time
           </h2>
-          <BiomarkerChart data={entry} />
+          <BiomarkerChart data={entry} annotations={dietEvents} />
+          {dietEvents.length > 0 && (
+            <p className="mt-2 text-xs text-[var(--text-muted)]">
+              Diet annotations are snapped to the nearest blood draw and show
+              visual context only — a marker lining up with a change does not
+              prove cause and effect.
+            </p>
+          )}
         </div>
+
+        {/* Diet annotations (correlation overlay) */}
+        <DietEventManager
+          token={token}
+          events={dietEvents}
+          onChange={refreshDietEvents}
+        />
 
         {/* History table */}
         {series.length > 0 && (
@@ -216,6 +268,19 @@ export default function BiomarkerDetailPage({ params }: { params: Promise<{ id: 
           </div>
         )}
       </main>
+
+      {showManual && (
+        <ManualEntryModal
+          onClose={() => setShowManual(false)}
+          token={token}
+          results={results}
+          initialBiomarkerId={id}
+          onSuccess={() => {
+            setShowManual(false);
+            refreshResults();
+          }}
+        />
+      )}
     </div>
   );
 }

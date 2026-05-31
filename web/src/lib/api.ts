@@ -33,6 +33,81 @@ export interface UserSettings {
   custom_markers: string[];
 }
 
+// ── Sprint 3: diet events (correlation overlay annotations) ─────────────────────
+
+export type DietEventKind =
+  | "diet"
+  | "fast"
+  | "supplement"
+  | "medication"
+  | "lifestyle"
+  | "other";
+
+export interface DietEvent {
+  id: string;
+  label: string;
+  kind: DietEventKind;
+  /** ISO date "YYYY-MM-DD" when the change took effect. */
+  started_on: string;
+  /** Optional ISO end date; when set the event spans a shaded period. */
+  ended_on: string | null;
+  note: string | null;
+}
+
+export interface DietEventInput {
+  label: string;
+  kind: DietEventKind;
+  started_on: string;
+  ended_on?: string | null;
+  note?: string | null;
+}
+
+// ── Sprint 4: food diary + Open Food Facts ──────────────────────────────────────
+
+/** A normalised Open Food Facts product (nutrients per 100 g, as published). */
+export interface FoodItem {
+  code: string;
+  name: string;
+  brand: string | null;
+  quantity: string | null;
+  energy_kcal_100g: number | null;
+  carbs_100g: number | null;
+  protein_100g: number | null;
+  fat_100g: number | null;
+}
+
+export type Meal = "breakfast" | "lunch" | "dinner" | "snack" | "other";
+
+/** A logged food item. Nutrient fields are the amounts actually consumed. */
+export interface FoodEntry {
+  id: string;
+  logged_on: string;
+  meal: Meal;
+  food_name: string;
+  brand: string | null;
+  barcode: string | null;
+  quantity_g: number | null;
+  energy_kcal: number | null;
+  carbs_g: number | null;
+  protein_g: number | null;
+  fat_g: number | null;
+  note: string | null;
+}
+
+export interface FoodEntryInput {
+  logged_on: string;
+  meal: Meal;
+  food_name: string;
+  brand?: string | null;
+  barcode?: string | null;
+  quantity_g?: number | null;
+  energy_kcal?: number | null;
+  carbs_g?: number | null;
+  protein_g?: number | null;
+  fat_g?: number | null;
+  note?: string | null;
+}
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 function bearerHeaders(token: string): HeadersInit {
@@ -125,4 +200,93 @@ export async function addManualResult(
     body: JSON.stringify({ biomarker_id: biomarkerId, tested_at: testedAt, value }),
   });
   if (!res.ok) throw new Error(await res.text());
+}
+
+// ── Diet events ─────────────────────────────────────────────────────────────────
+
+export async function listDietEvents(token: string): Promise<DietEvent[]> {
+  const res = await fetch(`${API_BASE}/diet-events`, {
+    headers: bearerHeaders(token),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`GET /diet-events → ${res.status}`);
+  return res.json() as Promise<DietEvent[]>;
+}
+
+export async function createDietEvent(
+  token: string,
+  input: DietEventInput
+): Promise<DietEvent> {
+  const res = await fetch(`${API_BASE}/diet-events`, {
+    method: "POST",
+    headers: { ...bearerHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<DietEvent>;
+}
+
+export async function deleteDietEvent(token: string, id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/diet-events/${id}`, {
+    method: "DELETE",
+    headers: bearerHeaders(token),
+  });
+  if (!res.ok) throw new Error(`DELETE /diet-events/${id} → ${res.status}`);
+}
+
+// ── Food diary + Open Food Facts ─────────────────────────────────────────────────
+
+export async function searchFoods(token: string, q: string): Promise<FoodItem[]> {
+  const res = await fetch(
+    `${API_BASE}/food-diary/search?q=${encodeURIComponent(q)}`,
+    { headers: bearerHeaders(token), cache: "no-store" }
+  );
+  if (!res.ok) throw new Error(`GET /food-diary/search → ${res.status}`);
+  return res.json() as Promise<FoodItem[]>;
+}
+
+export async function lookupBarcode(
+  token: string,
+  barcode: string
+): Promise<FoodItem> {
+  const res = await fetch(`${API_BASE}/food-diary/barcode/${encodeURIComponent(barcode)}`, {
+    headers: bearerHeaders(token),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`GET /food-diary/barcode/${barcode} → ${res.status}`);
+  return res.json() as Promise<FoodItem>;
+}
+
+export async function listFoodEntries(
+  token: string,
+  date?: string
+): Promise<FoodEntry[]> {
+  const qs = date ? `?date=${encodeURIComponent(date)}` : "";
+  const res = await fetch(`${API_BASE}/food-diary${qs}`, {
+    headers: bearerHeaders(token),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`GET /food-diary → ${res.status}`);
+  return res.json() as Promise<FoodEntry[]>;
+}
+
+export async function createFoodEntry(
+  token: string,
+  input: FoodEntryInput
+): Promise<FoodEntry> {
+  const res = await fetch(`${API_BASE}/food-diary`, {
+    method: "POST",
+    headers: { ...bearerHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<FoodEntry>;
+}
+
+export async function deleteFoodEntry(token: string, id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/food-diary/${id}`, {
+    method: "DELETE",
+    headers: bearerHeaders(token),
+  });
+  if (!res.ok) throw new Error(`DELETE /food-diary/${id} → ${res.status}`);
 }

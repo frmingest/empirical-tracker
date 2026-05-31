@@ -1,4 +1,4 @@
-import type { BiomarkerWithSeries } from "./api";
+import type { BiomarkerWithSeries, DietEvent, FoodEntry } from "./api";
 
 /** Representative mock data matching the real XLSX structure.
  *  Dates: 2023-09-15, 2024-05-31, 2025-03-13, 2026-05-22 (chronological).
@@ -471,6 +471,58 @@ export const MOCK_RESULTS: BiomarkerWithSeries[] = [
       { tested_at: "2024-05-31", value: 4.4, in_range: true },
       { tested_at: "2025-03-13", value: 4.3, in_range: true },
     ],
+  },
+];
+
+/** Sample diet annotations for the signed-out correlation-overlay demo. */
+export const MOCK_DIET_EVENTS: DietEvent[] = [
+  {
+    id: "mock-evt-carnivore",
+    label: "Started carnivore",
+    kind: "diet",
+    started_on: "2024-05-31",
+    ended_on: null,
+    note: "Switched to an all-meat elimination diet.",
+  },
+  {
+    id: "mock-evt-fast",
+    label: "5-day fast",
+    kind: "fast",
+    started_on: "2025-03-13",
+    ended_on: "2026-05-22",
+    note: "Sample extended-fasting block.",
+  },
+];
+
+/** Sample food-diary entries for the signed-out demo. */
+export const MOCK_FOOD_ENTRIES: FoodEntry[] = [
+  {
+    id: "mock-food-1",
+    logged_on: new Date().toISOString().slice(0, 10),
+    meal: "breakfast",
+    food_name: "Eggs, whole, cooked",
+    brand: null,
+    barcode: null,
+    quantity_g: 100,
+    energy_kcal: 155,
+    carbs_g: 1.1,
+    protein_g: 13,
+    fat_g: 11,
+    note: null,
+  },
+  {
+    id: "mock-food-2",
+    logged_on: new Date().toISOString().slice(0, 10),
+    meal: "dinner",
+    food_name: "Ribeye steak",
+    brand: null,
+    barcode: null,
+    quantity_g: 250,
+    energy_kcal: 728,
+    carbs_g: 0,
+    protein_g: 60,
+    fat_g: 55,
+    note: null,
   },
 ];
 

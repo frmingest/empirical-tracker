@@ -44,7 +44,9 @@ requests and automatically validates data types.
 This is the website you see in your browser. It:
 - Shows a dashboard of all your biomarkers grouped by category (Lipids, Thyroid, CBC, etc.)
 - Draws sparkline trend charts on each biomarker card
-- Shows a full chart when you click on a biomarker
+- Shows a full chart when you click on a biomarker, with optional diet-event
+  annotations overlaid for visual correlation
+- Lets you keep a food diary, searching the Open Food Facts database to add items
 - Has an upload screen for importing new Excel files
 - Lets you focus the view on the biomarkers relevant to your diet (carnivore, low-carb,
   fasting, or a custom hand-picked set)
@@ -102,6 +104,16 @@ user_settings: Your dashboard preferences
 
 The first three tables hold your blood-test data. `user_settings` holds one row per user with
 your dashboard preferences (which diet focus is active, and any custom marker selection).
+
+Two more tables were added in Sprints 3 and 4:
+
+```
+diet_events:   When you changed your regimen (correlation overlay annotations)
+               "label: Started carnivore | kind: diet | started_on: 2024-05-31"
+
+food_entries:  What you ate each day (food diary, sourced from Open Food Facts)
+               "logged_on: 2026-05-31 | meal: dinner | food: Ribeye | 728 kcal"
+```
 
 Every row in every table has a `user_id` column. This means your data and someone else's data
 are completely separate — the database itself enforces this (not just the application code).
@@ -166,6 +178,64 @@ view). Custom selections are stored by biomarker name, so they survive re-import
 
 ---
 
+## Correlation overlay (Sprint 3)
+
+You can mark **diet events** — the day you started carnivore, a supplement, a
+medication, or a multi-day fast — and they are drawn on top of every biomarker
+trend chart. A single date shows as a dashed marker line; an event with an end
+date shows as a shaded period. This lets you see at a glance whether a regimen
+change lines up with a shift in your numbers.
+
+You manage these annotations from any biomarker's detail page ("Diet
+annotations"). They are account-wide: one set of events annotates all your
+charts, because a diet change affects the whole panel, not one marker.
+
+**Important honesty caveat:** annotations are *snapped to the nearest blood
+draw* (the chart has one slot per draw), so their position is approximate, and a
+marker moving near an annotation **does not prove cause and effect**. The UI says
+so. The full reasoning is in `docs/adr/010-correlation-overlay.md`.
+
+Diet events live in a new `diet_events` table (RLS self-scoped) and are served by
+`GET/POST/DELETE /diet-events`.
+
+---
+
+## Food diary (Sprint 4)
+
+The food diary lets you log what you eat each day. Instead of typing nutrition
+facts by hand, you search the **Open Food Facts** branded & barcode database (a
+free, open food database under the ODbL licence — no API key needed) or enter a
+barcode directly, then pick a quantity and meal.
+
+- The app stores the **amounts you actually consumed** (energy, carbs, protein,
+  fat), computed as `per-100g × grams / 100`, so your diary stays correct even if
+  the upstream product data later changes.
+- Nutrition is taken **as published by Open Food Facts** — never invented or
+  estimated. Missing values show as "—".
+- The `/food-diary` page has a date navigator, daily macro totals, and entries
+  grouped by meal.
+
+How it's sourced and the accuracy limits are documented in
+`docs/NUTRITION_DATA.md`; the design rationale is in
+`docs/adr/011-food-diary-openfoodfacts.md`.
+
+Food data lives in a new `food_entries` table (RLS self-scoped). Open Food Facts
+is reached through a small authenticated **backend proxy** (`GET
+/food-diary/search`, `GET /food-diary/barcode/{code}`) that attaches the required
+`User-Agent` and normalises OFF's nutriment fields. Diary CRUD is `GET/POST/DELETE
+/food-diary`.
+
+---
+
+## Where the "Add result" button lives
+
+Manual single-result entry now lives on each **biomarker detail page** (an "Add
+result" button in that page's header), pre-selecting the marker you're looking
+at, rather than as a global button on the dashboard. Adding a result where you're
+already looking at that marker's trend is the natural place for it.
+
+---
+
 ## Language and tooltips
 
 The UI can switch between **English and Norwegian** via a toggle in the header (your choice is
@@ -193,8 +263,8 @@ The app understands the standard Norwegian blood panel Excel format:
 | 0 ✅ | Server setup, deployment pipeline, Supabase wired |
 | 1 ✅ | Biomarker import, dashboard UI, sparkline trend charts, auth wired |
 | 2 ✅ | Panel timeline, per-marker trend charts, in/out-of-range highlighting, manual entry |
-| 3 | Correlation overlay — draw a diet annotation on top of a biomarker chart |
-| 4 | Food diary — log what you eat each day |
+| 3 ✅ | Correlation overlay — draw a diet annotation on top of a biomarker chart |
+| 4 ✅ | Food diary — log what you eat each day, with Open Food Facts search |
 | 5 | Meal plans and calendar |
 | 6 | Doctor sharing, GDPR data export, security audit |
 
@@ -241,18 +311,29 @@ pytest -v   # 37 tests, should all pass
 | `api/app/biomarkers/repository.py` | Saves and retrieves data from Supabase |
 | `api/app/biomarkers/router.py` | HTTP endpoints: import, delete, list, chart data |
 | `api/app/settings/router.py` | HTTP endpoints: read/write per-user dashboard settings |
+| `api/app/diet_events/` | Diet-event (correlation annotation) router + repository |
+| `api/app/food_diary/router.py` | Food-diary CRUD + Open Food Facts proxy endpoints |
+| `api/app/food_diary/openfoodfacts.py` | Open Food Facts client (search + barcode, normalised) |
 | `api/supabase/migrations/001_biomarkers.sql` | Creates the three blood-test tables |
 | `api/supabase/migrations/003_user_settings.sql` | Creates the `user_settings` table |
+| `api/supabase/migrations/004_diet_events.sql` | Creates the `diet_events` table |
+| `api/supabase/migrations/005_food_entries.sql` | Creates the `food_entries` table |
 | `web/src/app/page.tsx` | The main dashboard page |
-| `web/src/app/biomarkers/[id]/page.tsx` | The detail page for one biomarker |
+| `web/src/app/biomarkers/[id]/page.tsx` | Biomarker detail — chart, annotations, Add result |
+| `web/src/app/food-diary/page.tsx` | The food diary page (Sprint 4) |
 | `web/src/app/import/page.tsx` | The file upload page |
 | `web/src/lib/api.ts` | All the API calls from the frontend |
-| `web/src/lib/mockData.ts` | Realistic test data (all 30+ biomarkers with real values) |
+| `web/src/lib/mockData.ts` | Realistic test data (biomarkers, diet events, food entries) |
 | `web/src/lib/dietProfiles.ts` | Diet → biomarker focus sets + name classifier |
+| `web/src/lib/chartAnnotations.ts` | Projects diet events onto the chart's x-axis |
 | `web/src/lib/i18n.ts` | English/Norwegian string dictionary |
 | `web/src/app/panels/page.tsx` | Panel timeline — list of all blood draw sessions |
+| `web/src/components/BiomarkerChart.tsx` | Trend chart with reference band + diet overlay |
+| `web/src/components/DietEventManager.tsx` | Add/list/delete diet annotations |
+| `web/src/components/FoodSearch.tsx` | Open Food Facts search + barcode add box |
 | `web/src/components/ManualEntryModal.tsx` | Manual entry form for adding individual results |
 | `web/src/components/DietFilter.tsx` | Diet-focus segmented control |
 | `web/src/components/LanguageProvider.tsx` | Language context + EN/NO toggle state |
 | `docs/DIET_BIOMARKERS.md` | Clinical rationale for each diet's biomarker focus list |
+| `docs/NUTRITION_DATA.md` | Food-data sources, accuracy caveats, correlation caveat |
 | `docs/adr/` | Architectural Decision Records — why we made the choices we made |
