@@ -1,9 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Browser Supabase client. The anon key is safe to expose; row-level security
-// on the database enforces that users only read/write their own data.
-// Wired up for use in Sprint 1+ (auth, biomarker data).
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(url, anonKey);
+// createClient throws if URL is falsy, so fall back to a valid placeholder during
+// build time or when env vars aren't set. Auth calls will fail gracefully at runtime.
+export const supabase = createClient(
+  url ?? "https://placeholder.supabase.co",
+  anonKey ?? "placeholder-anon-key"
+);
+
+/** True only when real credentials are configured. */
+export const isSupabaseConfigured = Boolean(url && anonKey);

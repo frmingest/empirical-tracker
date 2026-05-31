@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import Link from "next/link";
 
 interface ImportResult {
   panels_created: number;
@@ -9,9 +10,11 @@ interface ImportResult {
 
 interface Props {
   onClose: () => void;
+  token: string | null;
+  onSuccess?: () => void;
 }
 
-export function ImportModal({ onClose }: Props) {
+export function ImportModal({ onClose, token, onSuccess }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -41,28 +44,30 @@ export function ImportModal({ onClose }: Props) {
     [handleFile]
   );
 
-  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f) handleFile(f);
-  };
-
   const handleUpload = async () => {
     if (!file) return;
+    if (!token) {
+      setErrorMsg("You need to sign in before importing data.");
+      setStatus("error");
+      return;
+    }
     setStatus("uploading");
     try {
-      // TODO: replace placeholder token with real Supabase session token (Sprint 1 auth)
+      const form = new FormData();
+      form.append("file", file);
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/biomarkers/import`,
         {
           method: "POST",
-          headers: { Authorization: "Bearer PLACEHOLDER_TOKEN" },
-          body: (() => { const f = new FormData(); f.append("file", file); return f; })(),
+          headers: { Authorization: `Bearer ${token}` },
+          body: form,
         }
       );
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
       const data = (await res.json()) as ImportResult;
       setResult(data);
       setStatus("success");
+      onSuccess?.();
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Upload failed");
       setStatus("error");
@@ -70,18 +75,20 @@ export function ImportModal({ onClose }: Props) {
   };
 
   const handleDeleteAll = async () => {
+    if (!token) return;
     try {
       await fetch(
         `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/biomarkers/import`,
         {
           method: "DELETE",
-          headers: { Authorization: "Bearer PLACEHOLDER_TOKEN" },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
       setConfirmDelete(false);
+      onSuccess?.();
       onClose();
     } catch {
-      setErrorMsg("Delete failed — are you authenticated?");
+      setErrorMsg("Delete failed — check your connection.");
       setStatus("error");
       setConfirmDelete(false);
     }
@@ -95,16 +102,30 @@ export function ImportModal({ onClose }: Props) {
       <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-zinc-800">
-          <h2 className="text-base font-semibold text-zinc-100">Import blood test data</h2>
+          <h2 className="text-base font-semibold text-zinc-100">
+            Import blood test data
+          </h2>
           <button
             onClick={onClose}
-            className="text-zinc-500 hover:text-zinc-300 transition-colors text-lg leading-none"
+            className="text-zinc-500 hover:text-zinc-300 transition-colors text-xl leading-none"
           >
             ×
           </button>
         </div>
 
         <div className="px-6 py-5 space-y-4">
+          {/* Auth gate */}
+          {!token && (
+            <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+              <p className="text-amber-400 text-sm">
+                <Link href="/login" className="underline underline-offset-2">
+                  Sign in
+                </Link>{" "}
+                to import your data.
+              </p>
+            </div>
+          )}
+
           {/* Drop zone */}
           <div
             onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
@@ -123,7 +144,7 @@ export function ImportModal({ onClose }: Props) {
               ref={fileRef}
               type="file"
               accept=".xlsx"
-              onChange={onInputChange}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
               className="hidden"
             />
             {file ? (
@@ -136,14 +157,15 @@ export function ImportModal({ onClose }: Props) {
             ) : (
               <>
                 <p className="text-zinc-400 text-sm">
-                  Drop your <span className="font-mono text-zinc-300">.xlsx</span> file here
+                  Drop your{" "}
+                  <span className="font-mono text-zinc-300">.xlsx</span> file here
                 </p>
                 <p className="text-zinc-600 text-xs mt-1">or click to browse</p>
               </>
             )}
           </div>
 
-          {/* Status messages */}
+          {/* Result */}
           {status === "success" && result && (
             <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-4 py-3">
               <p className="text-emerald-400 text-sm font-mono">
@@ -157,45 +179,46 @@ export function ImportModal({ onClose }: Props) {
             </div>
           )}
 
-          {/* Upload button */}
           <button
             onClick={handleUpload}
-            disabled={!file || status === "uploading"}
+            disabled={!file || !token || status === "uploading"}
             className="w-full rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white text-sm font-semibold py-2.5 transition-colors"
           >
             {status === "uploading" ? "Uploading…" : "Import file"}
           </button>
 
-          <div className="border-t border-zinc-800 pt-4">
-            {!confirmDelete ? (
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="w-full text-xs text-zinc-600 hover:text-rose-400 transition-colors py-1"
-              >
-                Delete all imported data
-              </button>
-            ) : (
-              <div className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-3">
-                <p className="text-xs text-rose-300 mb-3 text-center">
-                  This will permanently delete all panels and results.
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setConfirmDelete(false)}
-                    className="flex-1 text-xs py-1.5 rounded border border-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleDeleteAll}
-                    className="flex-1 text-xs py-1.5 rounded border border-rose-500/50 text-rose-400 hover:bg-rose-500/10 transition-colors"
-                  >
-                    Delete all
-                  </button>
+          {token && (
+            <div className="border-t border-zinc-800 pt-4">
+              {!confirmDelete ? (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="w-full text-xs text-zinc-600 hover:text-rose-400 transition-colors py-1"
+                >
+                  Delete all imported data
+                </button>
+              ) : (
+                <div className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-3">
+                  <p className="text-xs text-rose-300 mb-3 text-center">
+                    Permanently deletes all panels and results.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setConfirmDelete(false)}
+                      className="flex-1 text-xs py-1.5 rounded border border-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleDeleteAll}
+                      className="flex-1 text-xs py-1.5 rounded border border-rose-500/50 text-rose-400 hover:bg-rose-500/10 transition-colors"
+                    >
+                      Delete all
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

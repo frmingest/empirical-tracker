@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ImportResult {
   panels_created: number;
@@ -9,6 +10,9 @@ interface ImportResult {
 }
 
 export default function ImportPage() {
+  const { session } = useAuth();
+  const token = session?.access_token ?? null;
+
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -39,7 +43,7 @@ export default function ImportPage() {
   );
 
   const handleUpload = async () => {
-    if (!file) return;
+    if (!file || !token) return;
     setStatus("uploading");
     try {
       const form = new FormData();
@@ -48,7 +52,7 @@ export default function ImportPage() {
         `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/biomarkers/import`,
         {
           method: "POST",
-          headers: { Authorization: "Bearer PLACEHOLDER_TOKEN" }, // TODO: real token
+          headers: { Authorization: `Bearer ${token}` },
           body: form,
         }
       );
@@ -63,12 +67,13 @@ export default function ImportPage() {
   };
 
   const handleDeleteAll = async () => {
+    if (!token) return;
     try {
       await fetch(
         `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/biomarkers/import`,
         {
           method: "DELETE",
-          headers: { Authorization: "Bearer PLACEHOLDER_TOKEN" },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
       setConfirmDelete(false);
@@ -76,7 +81,7 @@ export default function ImportPage() {
       setResult(null);
       setStatus("idle");
     } catch {
-      setErrorMsg("Delete failed — auth required.");
+      setErrorMsg("Delete failed — check your connection.");
       setStatus("error");
       setConfirmDelete(false);
     }
@@ -86,10 +91,7 @@ export default function ImportPage() {
     <div className="min-h-screen bg-[#09090b]">
       <header className="sticky top-0 z-40 border-b border-zinc-900 bg-[#09090b]/90 backdrop-blur-md">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
-          <Link
-            href="/"
-            className="text-zinc-500 hover:text-zinc-300 transition-colors text-sm"
-          >
+          <Link href="/" className="text-zinc-500 hover:text-zinc-300 transition-colors text-sm">
             ← Dashboard
           </Link>
           <span className="text-zinc-800">·</span>
@@ -103,19 +105,40 @@ export default function ImportPage() {
             Import blood test data
           </h1>
           <p className="text-sm text-zinc-500">
-            Upload your lab results spreadsheet. Supports the Norwegian blood panel format
-            with bilingual biomarker names and reference ranges.
+            Upload your lab results spreadsheet. Supports the Norwegian blood panel
+            format with bilingual names and reference ranges.
           </p>
         </div>
 
-        {/* Format description */}
+        {/* Auth gate */}
+        {!token && (
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-5 py-4">
+            <p className="text-amber-300 text-sm">
+              You need to{" "}
+              <Link href="/login" className="underline underline-offset-2 hover:text-amber-200">
+                sign in
+              </Link>{" "}
+              before you can import data.
+            </p>
+          </div>
+        )}
+
+        {/* Format hint */}
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-5 py-4">
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Expected format</p>
           <ul className="space-y-1.5 text-sm text-zinc-400">
-            <li className="flex gap-2"><span className="text-zinc-700">·</span>Row 1: headers — biomarker names in col A, reference range in col B, test dates in cols C+</li>
-            <li className="flex gap-2"><span className="text-zinc-700">·</span>Dates as <span className="font-mono text-zinc-300">DD.MM.YYYY</span></li>
-            <li className="flex gap-2"><span className="text-zinc-700">·</span>Norwegian decimal commas (<span className="font-mono text-zinc-300">4,5</span>) are handled automatically</li>
-            <li className="flex gap-2"><span className="text-zinc-700">·</span>Sparse columns (blank cells) are fine</li>
+            <li className="flex gap-2">
+              <span className="text-zinc-700">·</span>
+              Row 1: col A = biomarker name, col B = reference range, cols C+ = test dates
+            </li>
+            <li className="flex gap-2">
+              <span className="text-zinc-700">·</span>
+              Dates as <span className="font-mono text-zinc-300">DD.MM.YYYY</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-zinc-700">·</span>
+              Norwegian decimal commas (<span className="font-mono text-zinc-300">4,5</span>) handled automatically
+            </li>
           </ul>
         </div>
 
@@ -153,12 +176,11 @@ export default function ImportPage() {
               <p className="text-zinc-400 text-sm">
                 Drop your <span className="font-mono text-zinc-200">.xlsx</span> file here
               </p>
-              <p className="text-zinc-700 text-xs mt-1">or click to browse files</p>
+              <p className="text-zinc-700 text-xs mt-1">or click to browse</p>
             </>
           )}
         </div>
 
-        {/* Result */}
         {status === "success" && result && (
           <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-5 py-4">
             <p className="text-emerald-400 font-semibold text-sm mb-1">Import complete</p>
@@ -176,44 +198,49 @@ export default function ImportPage() {
 
         <button
           onClick={handleUpload}
-          disabled={!file || status === "uploading"}
+          disabled={!file || !token || status === "uploading"}
           className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-semibold py-3 text-sm transition-colors"
         >
-          {status === "uploading" ? "Uploading…" : "Import file"}
+          {!token
+            ? "Sign in to import"
+            : status === "uploading"
+              ? "Uploading…"
+              : "Import file"}
         </button>
 
-        {/* Danger zone */}
-        <div className="border-t border-zinc-900 pt-6">
-          <p className="text-xs text-zinc-700 uppercase tracking-wider mb-3">Danger zone</p>
-          {!confirmDelete ? (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="text-sm text-zinc-600 hover:text-rose-400 transition-colors border border-zinc-800 hover:border-rose-500/30 rounded-lg px-4 py-2"
-            >
-              Delete all imported data
-            </button>
-          ) : (
-            <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-5 space-y-3">
-              <p className="text-rose-300 text-sm">
-                This permanently deletes all your panels and results. This cannot be undone.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="flex-1 text-sm py-2 rounded-lg border border-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDeleteAll}
-                  className="flex-1 text-sm py-2 rounded-lg border border-rose-500/50 text-rose-400 hover:bg-rose-500/10 transition-colors"
-                >
-                  Delete everything
-                </button>
+        {token && (
+          <div className="border-t border-zinc-900 pt-6">
+            <p className="text-xs text-zinc-700 uppercase tracking-wider mb-3">Danger zone</p>
+            {!confirmDelete ? (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="text-sm text-zinc-600 hover:text-rose-400 transition-colors border border-zinc-800 hover:border-rose-500/30 rounded-lg px-4 py-2"
+              >
+                Delete all imported data
+              </button>
+            ) : (
+              <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-5 space-y-3">
+                <p className="text-rose-300 text-sm">
+                  Permanently deletes all your panels and results. Cannot be undone.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="flex-1 text-sm py-2 rounded-lg border border-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteAll}
+                    className="flex-1 text-sm py-2 rounded-lg border border-rose-500/50 text-rose-400 hover:bg-rose-500/10 transition-colors"
+                  >
+                    Delete everything
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </main>
     </div>
   );
