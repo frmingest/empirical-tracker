@@ -32,7 +32,8 @@ export interface ClinicalTarget {
 /**
  * Seeded guideline targets. Conservative, general-population/low-risk bounds —
  * deliberately not the aggressive secondary-prevention numbers, since the app
- * cannot know a user's individual risk. Expanded in Sprint 8 (triglycerides).
+ * cannot know a user's individual risk. Sprint 8 added triglycerides alongside
+ * the marker itself.
  */
 const TARGETS: Partial<Record<MarkerKey, ClinicalTarget>> = {
   ldl: {
@@ -62,6 +63,13 @@ const TARGETS: Partial<Record<MarkerKey, ClinicalTarget>> = {
     rationale:
       "Below ~39 mmol/mol (5.7%) is the optimal, non-prediabetic band. The lab's upper reference (42) already overlaps the prediabetes range.",
     source: "ADA glycaemic categories (optimal < 39 mmol/mol)",
+  },
+  triglycerides: {
+    upper: 1.7,
+    unit: "mmol/L",
+    rationale:
+      "Desirable fasting triglycerides sit below ~1.7 mmol/L. On low-carb / carnivore eating this number usually falls well under the lab's upper reference, so the tighter target is the more informative line to watch.",
+    source: "ESC/EAS 2019 dyslipidaemia guideline (desirable fasting TG)",
   },
 };
 

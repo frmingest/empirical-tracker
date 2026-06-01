@@ -84,6 +84,54 @@ export const MOCK_RESULTS: BiomarkerWithSeries[] = [
       { tested_at: "2026-05-22", value: 4.5, in_range: true },
     ],
   },
+  {
+    biomarker: {
+      id: "mock-trig",
+      name_no: "P-Triglyserider (Triglycerides)",
+      name_en: "Triglycerides",
+      unit: "mmol/L",
+      ref_range_raw: "0,45 - 2,6",
+      ref_low: 0.45,
+      ref_high: 2.6,
+      ref_type: "bounded",
+    },
+    series: [
+      { tested_at: "2023-09-15", value: 1.4, in_range: true },
+      { tested_at: "2024-05-31", value: 0.9, in_range: true },
+      { tested_at: "2025-03-13", value: 1.0, in_range: true },
+      { tested_at: "2026-05-22", value: 0.7, in_range: true },
+    ],
+  },
+  {
+    biomarker: {
+      id: "mock-apob",
+      name_no: "P-Apolipoprotein B (ApoB)",
+      name_en: "Apolipoprotein B",
+      unit: "g/L",
+      ref_range_raw: "0,60 - 1,30",
+      ref_low: 0.6,
+      ref_high: 1.3,
+      ref_type: "bounded",
+    },
+    series: [
+      { tested_at: "2024-05-31", value: 1.0, in_range: true },
+      { tested_at: "2025-03-13", value: 1.05, in_range: true },
+      { tested_at: "2026-05-22", value: 1.25, in_range: true },
+    ],
+  },
+  {
+    biomarker: {
+      id: "mock-lpa",
+      name_no: "P-Lipoprotein (a) (Lp(a))",
+      name_en: "Lipoprotein (a)",
+      unit: "nmol/L",
+      ref_range_raw: "< 75",
+      ref_low: null,
+      ref_high: 75,
+      ref_type: "lt",
+    },
+    series: [{ tested_at: "2026-05-22", value: 45, in_range: true }],
+  },
 
   // ── CBC ──────────────────────────────────────────────────────────────────────
   {
@@ -194,6 +242,23 @@ export const MOCK_RESULTS: BiomarkerWithSeries[] = [
       ref_type: "bounded",
     },
     series: [{ tested_at: "2025-03-13", value: 34, in_range: true }],
+  },
+  {
+    biomarker: {
+      id: "mock-urate",
+      name_no: "P-Urinsyre (Uric Acid)",
+      name_en: "Uric Acid",
+      unit: "µmol/L",
+      ref_range_raw: "200 - 430",
+      ref_low: 200,
+      ref_high: 430,
+      ref_type: "bounded",
+    },
+    series: [
+      { tested_at: "2024-05-31", value: 340, in_range: true },
+      { tested_at: "2025-03-13", value: 365, in_range: true },
+      { tested_at: "2026-05-22", value: 410, in_range: true },
+    ],
   },
 
   // ── Thyroid ──────────────────────────────────────────────────────────────────
@@ -477,6 +542,35 @@ export const MOCK_RESULTS: BiomarkerWithSeries[] = [
       { tested_at: "2024-05-31", value: 4.4, in_range: true },
       { tested_at: "2025-03-13", value: 4.3, in_range: true },
     ],
+  },
+  {
+    biomarker: {
+      id: "mock-mg",
+      name_no: "P-Magnesium (Magnesium)",
+      name_en: "Magnesium",
+      unit: "mmol/L",
+      ref_range_raw: "0,71 - 0,94",
+      ref_low: 0.71,
+      ref_high: 0.94,
+      ref_type: "bounded",
+    },
+    series: [
+      { tested_at: "2025-03-13", value: 0.85, in_range: true },
+      { tested_at: "2026-05-22", value: 0.83, in_range: true },
+    ],
+  },
+  {
+    biomarker: {
+      id: "mock-phos",
+      name_no: "P-Fosfat (Phosphate)",
+      name_en: "Phosphate",
+      unit: "mmol/L",
+      ref_range_raw: "0,76 - 1,65",
+      ref_low: 0.76,
+      ref_high: 1.65,
+      ref_type: "bounded",
+    },
+    series: [{ tested_at: "2026-05-22", value: 1.05, in_range: true }],
   },
 ];
 

@@ -60,13 +60,13 @@ const en: Dict = {
   "diet.all.desc": "Show every biomarker in your panel.",
   "diet.carnivore.label": "Carnivore",
   "diet.carnivore.desc":
-    "Lipid response, iron stores, kidney load, liver enzymes, electrolytes and B-vitamin / folate status — the markers most affected by an all-meat diet.",
+    "Lipid panel (incl. triglycerides, ApoB, Lp(a)), iron stores, kidney load, liver enzymes, uric acid, electrolytes and B-vitamin / folate status — the markers most affected by an all-meat diet.",
   "diet.low_carb.label": "Low carb",
   "diet.low_carb.desc":
-    "Glycemic control (HbA1c), the full lipid panel, liver enzymes and the electrolytes that shift when you cut carbs.",
+    "Glycemic control (HbA1c), the full lipid panel (incl. triglycerides and ApoB), liver enzymes and the electrolytes that shift when you cut carbs.",
   "diet.fasting.label": "Fasting",
   "diet.fasting.desc":
-    "Electrolytes, glucose control, kidney and liver markers, plus hydration-sensitive blood counts to watch during a fast.",
+    "Refeeding-syndrome electrolytes (sodium, potassium, magnesium, phosphate), glucose control, uric acid, kidney and liver markers, plus hydration-sensitive blood counts to watch during a fast.",
   "diet.custom.label": "Custom",
   "diet.custom.desc": "Hand-pick exactly which biomarkers you want to follow.",
   // language toggle
@@ -119,13 +119,13 @@ const no: Dict = {
   "diet.all.desc": "Vis alle biomarkører i panelet ditt.",
   "diet.carnivore.label": "Karnivor",
   "diet.carnivore.desc":
-    "Lipidrespons, jernlagre, nyrebelastning, leverenzymer, elektrolytter og B-vitamin-/folatstatus — markørene som påvirkes mest av et rent kjøttkosthold.",
+    "Lipidpanel (inkl. triglyserider, ApoB, Lp(a)), jernlagre, nyrebelastning, leverenzymer, urinsyre, elektrolytter og B-vitamin-/folatstatus — markørene som påvirkes mest av et rent kjøttkosthold.",
   "diet.low_carb.label": "Lavkarbo",
   "diet.low_carb.desc":
-    "Blodsukkerkontroll (HbA1c), hele lipidpanelet, leverenzymer og elektrolyttene som endrer seg når du kutter karbohydrater.",
+    "Blodsukkerkontroll (HbA1c), hele lipidpanelet (inkl. triglyserider og ApoB), leverenzymer og elektrolyttene som endrer seg når du kutter karbohydrater.",
   "diet.fasting.label": "Faste",
   "diet.fasting.desc":
-    "Elektrolytter, blodsukkerkontroll, nyre- og levermarkører, samt væskefølsomme blodverdier å følge med på under en faste.",
+    "Reernæringssyndrom-elektrolytter (natrium, kalium, magnesium, fosfat), blodsukkerkontroll, urinsyre, nyre- og levermarkører, samt væskefølsomme blodverdier å følge med på under en faste.",
   "diet.custom.label": "Egendefinert",
   "diet.custom.desc": "Velg nøyaktig hvilke biomarkører du vil følge.",
   // language toggle
@@ -175,39 +175,39 @@ export const CATEGORY_LABELS: Record<Lang, Record<Category, string>> = {
 export const CATEGORY_DESCRIPTIONS: Record<Lang, Record<Category, string>> = {
   en: {
     Lipids:
-      "Fats in your blood such as cholesterol and triglycerides. They affect your heart and blood vessels — out-of-range levels can raise the risk of clogged arteries.",
+      "Fats and lipid particles in your blood — cholesterol, triglycerides, and particle markers such as ApoB and Lp(a). They affect your heart and blood vessels: out-of-range levels can raise the risk of clogged arteries.",
     CBC: "Complete Blood Count — your red and white blood cells and platelets. Shows how well your blood carries oxygen, fights infection, and clots.",
     Metabolic:
-      "Blood-sugar markers like glucose and HbA1c. They show how your body handles sugar over time and are used to screen for diabetes.",
+      "How your body handles fuel over time — HbA1c (long-term blood sugar) and uric acid (a by-product of purine and protein metabolism, raised by high meat intake and fasting).",
     Thyroid:
       "Hormones from your thyroid gland (like TSH and T4). They control your metabolism, energy levels, and body temperature.",
     Renal:
       "Kidney markers like creatinine and GFR. They show how well your kidneys are filtering waste out of your blood.",
     Liver:
-      "Liver enzymes and proteins (like ALAT and ASAT). They reveal how hard your liver is working and whether it is stressed or damaged.",
+      "Liver enzymes like ALAT and GGT. They reveal how hard your liver is working and whether it is stressed or damaged.",
     Nutrients:
       "Vitamins and minerals such as iron, B12, folate, and vitamin D. They show whether your body has enough of the building blocks it needs.",
     Electrolytes:
-      "Charged minerals like sodium, potassium, and calcium. They keep your nerves, muscles, and fluid balance working properly.",
+      "Charged minerals like sodium, potassium, magnesium, and phosphate. They keep your nerves, muscles, and fluid balance working — and magnesium and phosphate are the ones to watch when breaking a long fast (refeeding).",
     Other:
       "Markers that don't fall into the main groups. Open each one to see what it measures.",
   },
   no: {
     Lipids:
-      "Fettstoffer i blodet, som kolesterol og triglyserider. De påvirker hjertet og blodårene dine — verdier utenfor referansen kan øke risikoen for tette blodårer.",
+      "Fettstoffer og lipidpartikler i blodet — kolesterol, triglyserider og partikkelmarkører som ApoB og Lp(a). De påvirker hjertet og blodårene dine: verdier utenfor referansen kan øke risikoen for tette blodårer.",
     CBC: "Komplett blodtelling — røde og hvite blodlegemer og blodplater. Viser hvor godt blodet transporterer oksygen, bekjemper infeksjon og levrer seg.",
     Metabolic:
-      "Blodsukkermarkører som glukose og HbA1c. De viser hvordan kroppen håndterer sukker over tid, og brukes til å oppdage diabetes.",
+      "Hvordan kroppen håndterer drivstoff over tid — HbA1c (langtidsblodsukker) og urinsyre (et biprodukt av purin- og proteinomsetning, økt av høyt kjøttinntak og faste).",
     Thyroid:
       "Hormoner fra skjoldbruskkjertelen (som TSH og T4). De styrer stoffskiftet, energinivået og kroppstemperaturen din.",
     Renal:
       "Nyremarkører som kreatinin og GFR. De viser hvor godt nyrene dine filtrerer avfallsstoffer ut av blodet.",
     Liver:
-      "Leverenzymer og proteiner (som ALAT og ASAT). De viser hvor hardt leveren din jobber, og om den er belastet eller skadet.",
+      "Leverenzymer som ALAT og GGT. De viser hvor hardt leveren din jobber, og om den er belastet eller skadet.",
     Nutrients:
       "Vitaminer og mineraler som jern, B12, folat og vitamin D. De viser om kroppen har nok av byggesteinene den trenger.",
     Electrolytes:
-      "Ladede mineraler som natrium, kalium og kalsium. De holder nerver, muskler og væskebalanse i orden.",
+      "Ladede mineraler som natrium, kalium, magnesium og fosfat. De holder nerver, muskler og væskebalanse i orden — og magnesium og fosfat er de man må følge med på når man bryter en lang faste (reernæring).",
     Other:
       "Markører som ikke hører hjemme i hovedgruppene. Åpne hver enkelt for å se hva den måler.",
   },

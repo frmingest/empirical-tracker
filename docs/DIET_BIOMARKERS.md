@@ -26,11 +26,11 @@ sit inside the lab range yet still be higher than you'd ideally want.
 Since Sprint 7 the app makes that distinction visible (see
 `docs/adr/014-clinical-targets-trend-signals.md`):
 
-- **LDL, non-HDL, total cholesterol, and HbA1c** carry a guideline **clinical
-  target** — drawn as a separate amber line on the chart. If your latest value is
-  at or above it, the marker shows an amber **"Watch"** instead of green, even
-  while it's inside the lab range. These are *general* guideline numbers, not
-  personalised to your individual risk.
+- **LDL, non-HDL, total cholesterol, triglycerides, and HbA1c** carry a guideline
+  **clinical target** — drawn as a separate amber line on the chart. If your
+  latest value is at or above it, the marker shows an amber **"Watch"** instead of
+  green, even while it's inside the lab range. These are *general* guideline
+  numbers, not personalised to your individual risk.
 - The app also flags **big moves that stay in range** — for example a liver
   enzyme (ALT) doubling from 25 to 55 while still under the lab limit of 70. The
   old green flag used to hide exactly that.
@@ -38,6 +38,22 @@ Since Sprint 7 the app makes that distinction visible (see
 This is still **decision-support, not medical advice**: it points at numbers
 worth a second look and a conversation with your clinician — it does not diagnose
 anything or claim your diet caused the change.
+
+## A note on diet confounders
+
+A few markers are routinely *misread* on these diets because the diet itself
+moves the number for a reason unrelated to what the marker usually means. Since
+Sprint 8, those markers carry a per-marker **interpretation note** on their
+detail page (see `web/src/lib/markerNotes.ts`):
+
+- **eGFR** — creatinine-based eGFR is depressed by a high meat intake and more
+  muscle mass, so it can look low without any real loss of kidney function;
+  cystatin-C–based eGFR is the cleaner check.
+- **HbA1c** — can read paradoxically high on keto/carnivore because longer-lived
+  red cells accumulate more glucose over their lifespan.
+- **Ferritin** — an acute-phase reactant that rises with inflammation, not only
+  with iron stores; a high value on a high-heme-iron diet needs transferrin
+  saturation and an inflammation marker to interpret.
 
 ---
 
@@ -50,8 +66,8 @@ sources of folate and vitamin C.
 
 | System | Markers | Why it matters on carnivore |
 |--------|---------|------------------------------|
-| **Lipids** | HDL, LDL, Total cholesterol, non-HDL | High saturated-fat intake can drive large LDL/non-HDL shifts (incl. the "lean-mass hyper-responder" pattern). The single most important panel to watch. |
-| **Metabolic** | HbA1c | Confirms the near-zero-carb glycemic effect over time. |
+| **Lipids** | HDL, LDL, Total cholesterol, non-HDL, Triglycerides, ApoB, Lp(a) | High saturated-fat intake can drive large LDL/non-HDL/ApoB shifts (incl. the "lean-mass hyper-responder" pattern); ApoB is the gold-standard atherogenic-particle count and Lp(a) the genetic risk modifier. Triglycerides typically fall on near-zero-carb eating. The single most important panel to watch. |
+| **Metabolic** | HbA1c, Uric acid | HbA1c confirms the near-zero-carb glycemic effect over time; uric acid rises with the high purine load of an all-meat diet (gout / renal-load risk). |
 | **Liver** | ALT, GGT | Fat-adapted metabolism; track resolution (or strain) of fatty-liver markers. |
 | **Renal** | Creatinine, eGFR | Very high protein load increases filtration demand; creatinine also rises with high meat intake and muscle mass. |
 | **Iron studies** | Ferritin, Iron, Transferrin | Heme iron from red meat is highly absorbed → watch for iron *overload*, not just deficiency. |
@@ -75,7 +91,7 @@ handling (lower insulin → natriuresis).
 | System | Markers | Why it matters on low carb |
 |--------|---------|-----------------------------|
 | **Metabolic** | HbA1c | The primary endpoint — does carb restriction improve glycemic control? |
-| **Lipids** | HDL, LDL, Total cholesterol, non-HDL | HDL typically rises; LDL/non-HDL responses vary and should be tracked. |
+| **Lipids** | HDL, LDL, Total cholesterol, non-HDL, Triglycerides, ApoB | HDL typically rises and triglycerides usually fall (the signature low-carb lipid response); LDL/non-HDL/ApoB responses vary and should be tracked. |
 | **Liver** | ALT, GGT | Often improve as fatty-liver burden falls. |
 | **Electrolytes** | Sodium, Potassium | Insulin drop causes sodium (and water) loss — a common cause of early fatigue. |
 | **Iron** | Ferritin | Modest relevance as red-meat intake often rises. |
@@ -95,12 +111,12 @@ hydration-sensitive blood counts.
 
 | System | Markers | Why it matters when fasting |
 |--------|---------|------------------------------|
-| **Electrolytes** | Sodium, Potassium | The top priority — depletion during prolonged fasts and refeeding-syndrome risk on breaking them. |
-| **Metabolic** | HbA1c | Tracks the glycemic benefit of the fasting pattern. |
+| **Electrolytes** | Sodium, Potassium, Magnesium, Phosphate | The top priority. Refeeding syndrome is defined by falling **phosphate, magnesium and potassium** when a fast is broken, so all three (plus sodium) belong here — not potassium alone. |
+| **Metabolic** | HbA1c, Uric acid | HbA1c tracks the glycemic benefit; uric acid rises during a fast (ketone–urate competition for renal excretion) and can precipitate gout. |
 | **Liver** | ALT, GGT | Reflect the shift to fat metabolism / autophagy. |
 | **Renal** | Creatinine, eGFR | Sensitive to hydration status and fasting-related changes. |
 | **CBC (subset)** | Hemoglobin, Hematocrit | Hemoconcentration is an early sign of dehydration during a fast. |
-| **Lipids** | HDL, LDL, Total cholesterol, non-HDL | Free fatty-acid mobilisation shifts the lipid panel. |
+| **Lipids** | HDL, LDL, Total cholesterol, non-HDL, Triglycerides, ApoB, Lp(a) | Free fatty-acid mobilisation shifts the lipid panel. |
 
 *Deliberately hidden:* red-cell indices, white count, thyroid, and the
 micronutrient panel — relevant for diet *composition*, less so for the *timing*
