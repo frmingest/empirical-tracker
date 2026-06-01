@@ -220,8 +220,9 @@ free, open food database under the ODbL licence — no API key needed) or enter 
 barcode directly, then pick a quantity and meal.
 
 - The app stores the **amounts you actually consumed** (energy, carbs, protein,
-  fat), computed as `per-100g × grams / 100`, so your diary stays correct even if
-  the upstream product data later changes.
+  fat, plus saturated fat and sodium since Sprint 9), computed as
+  `per-100g × grams / 100`, so your diary stays correct even if the upstream
+  product data later changes.
 - Nutrition is taken **as published by Open Food Facts** — never invented or
   estimated. Missing values show as "—".
 - The `/food-diary` page has a date navigator, daily macro totals, and entries
@@ -356,6 +357,37 @@ reasoning is in `docs/adr/015-panel-expansion-confounder-notes.md`.
 
 ---
 
+## Food-diary depth — sodium & saturated fat (Sprint 9 — high-priority slice)
+
+The food diary tracked four macros (energy, carbs, protein, fat). The clinical
+review flagged that it omitted the two nutrients the **biomarker** side of the app
+cares about most for these diets. This slice closes that gap:
+
+- **Sodium** (stored in mg) — the labs emphasise electrolyte management, and
+  sodium ties directly to the blood-pressure tracking coming in Sprint 10.
+- **Saturated fat** (stored in g) — the dietary driver of the LDL response the
+  lipid panel and the Sprint 7 clinical targets track.
+
+Both are stored as **amounts actually consumed** (per-100 g × grams / 100), like
+the existing macros, on `food_entries` *and* `planned_meals` — so a planned meal
+"logged to the diary" keeps these values rather than dropping them. The food diary
+shows them as two extra daily-total tiles and on each entry line.
+
+The Open Food Facts client now also: prefers OFF's measured **sodium**, deriving
+it from **salt** (`salt = sodium × 2.5`) only when sodium isn't published; and
+**falls back from kilojoules to kcal** (`kJ ÷ 4.184`) when the kcal field is
+missing, so energy stops showing "—" unnecessarily. Both are fixed unit
+conversions, never invented values. The columns ride the existing GDPR
+export/erasure (which selects `*`) with no contract change. See ADR-016.
+
+> **Deferred to the Sprint 9 follow-up:** a **whole-foods reference source** (USDA
+> FoodData Central / Norwegian *Matvaretabellen*) alongside Open Food Facts for
+> unbranded whole foods, and **daily targets / needs context** (per-day energy and
+> macro targets, including protein in g/kg body weight — which depends on the body
+> weight that arrives in Sprint 10).
+
+---
+
 ## Where the "Add result" button lives
 
 Manual single-result entry now lives on each **biomarker detail page** (an "Add
@@ -398,7 +430,7 @@ The app understands the standard Norwegian blood panel Excel format:
 | 6 | GDPR data export + account deletion ✅ and security headers ✅; doctor sharing (PDF report) — follow-up |
 | 7 ✅ | Reference range vs. clinical target + within-range trend signals |
 | 8 ◐ | **Panel expansion — high-yield markers, derived ratios, confounder tooltips** (high-yield markers, refeeding electrolytes, triglycerides target, confounder notes ✅; further Medium markers + derived ratios — follow-up) |
-| 9 | **Food diary depth — sodium & saturated fat, better food source, daily targets** |
+| 9 ◐ | **Food diary depth — sodium & saturated fat ✅, kJ→kcal fallback ✅; better food source + daily targets — follow-up** |
 | 10 | **Body metrics & longitudinal context — weight, waist, blood pressure** |
 
 Additional UX enhancements shipped alongside Sprint 2 (outside the original roadmap): diet-focus
@@ -428,10 +460,12 @@ headers** (ADR-013). Two items remain before Sprint 6 is closed:
     browser print-CSS page (no dependency). Lean toward print-CSS first to avoid a new dependency.
 
 - **Export/erasure coverage is a maintenance contract** (carried from ADR-013). `USER_TABLES` and
-  `DELETE_ORDER` in `api/app/account/repository.py` must be extended whenever a new user-owned table
-  or nutrient column is added — specifically **Sprint 9** (sodium / saturated-fat columns) and
-  **Sprint 10** (`body_metrics`). A table left out would silently drop from both export and erasure,
-  so each of those sprints' reviews must check this off.
+  `DELETE_ORDER` in `api/app/account/repository.py` must be extended whenever a new user-owned
+  **table** is added — e.g. **Sprint 10** (`body_metrics`). New **columns** on an already-listed
+  table need no change: collection uses `select("*")` and the CSV export derives its columns from the
+  rows, so **Sprint 9**'s sodium / saturated-fat columns flow into both export and erasure
+  automatically (verified in ADR-016). A *table* left out would silently drop from both, so Sprint 10's
+  review must still check this off.
 
 ---
 
@@ -502,21 +536,26 @@ Severity tags below mirror the review: **High** = change a decision a user could
 - Trim or fulfil tooltips that promise markers not in the panel ✅: triglycerides is now fulfilled;
   glucose, calcium, and ASAT were trimmed so the app never describes what it can't show.
 
-### Sprint 9 — Food diary depth & better food data
+### Sprint 9 — Food diary depth & better food data ◐
 
 > **Why:** the diary's four macros omit the two things the biomarker side cares about most
 > (sodium and saturated fat), Open Food Facts is a branded-product database ill-suited to whole-food
 > carnivore eating, and energy frequently shows "—" unnecessarily.
+>
+> **Status:** the **High**-severity item (sodium + saturated fat) and the **Low** quick win
+> (kJ→kcal fallback) have shipped (ADR-016). The **Medium** items below (whole-foods source +
+> daily targets) are the follow-up.
 
-- **Add sodium and saturated fat** to tracked nutrients (High): schema column, scaling, UI, and OFF
-  field mapping (`salt_100g` → sodium, `saturated-fat_100g`). Closes the loop with the labs, which
-  emphasise electrolyte management and saturated-fat-driven LDL.
-- **kJ → kcal fallback** in the OFF client (Low, quick win): when `energy-kcal_100g` is absent, fall
+- **Add sodium and saturated fat** to tracked nutrients (High) ✅: columns on `food_entries` *and*
+  `planned_meals`, consumed-amount scaling, daily-total + per-entry UI, and OFF field mapping
+  (`sodium_100g`/`salt_100g` → sodium mg, `saturated-fat_100g` → sat fat g). Closes the loop with the
+  labs, which emphasise electrolyte management and saturated-fat-driven LDL.
+- **kJ → kcal fallback** in the OFF client (Low, quick win) ✅: when `energy-kcal_100g` is absent, fall
   back to `energy_100g` (kJ) ÷ 4.184 instead of storing nothing.
-- **Whole-foods reference source** (Medium): add USDA FoodData Central and/or the Norwegian
+- **Whole-foods reference source** (Medium — follow-up): add USDA FoodData Central and/or the Norwegian
   *Matvaretabellen* alongside OFF, prioritised for unbranded whole foods (steak, eggs, mince), which
   OFF covers poorly. Matvaretabellen also fits the Norwegian-first framing.
-- **Daily targets / needs context** (Medium): per-day energy and macro targets, including
+- **Daily targets / needs context** (Medium — follow-up): per-day energy and macro targets, including
   **protein in g/kg body weight** (renal-load concern), with intake-vs-target shown. The g/kg target
   depends on body weight from Sprint 10 — ship the targets UI here and enable the g/kg view once
   weight tracking lands (or capture a single weight value as a prerequisite).
@@ -586,6 +625,7 @@ pytest -v   # 81 pass (+7 integration tests skipped without Supabase creds)
 | `api/supabase/migrations/004_diet_events.sql` | Creates the `diet_events` table |
 | `api/supabase/migrations/005_food_entries.sql` | Creates the `food_entries` table |
 | `api/supabase/migrations/006_meal_plans.sql` | Creates the `meal_plans` + `planned_meals` tables |
+| `api/supabase/migrations/007_sodium_saturated_fat.sql` | Adds sodium + saturated-fat columns to food/planned meals (Sprint 9) |
 | `web/src/app/page.tsx` | The main dashboard page |
 | `web/src/app/biomarkers/[id]/page.tsx` | Biomarker detail — chart, annotations, Add result |
 | `web/src/app/food-diary/page.tsx` | The food diary page (Sprint 4) |

@@ -62,6 +62,8 @@ export function PlannedMealPicker({
       carbs_g: qty !== null ? scaleNutrient(selected.carbs_100g, qty) : null,
       protein_g: qty !== null ? scaleNutrient(selected.protein_100g, qty) : null,
       fat_g: qty !== null ? scaleNutrient(selected.fat_100g, qty) : null,
+      saturated_fat_g: qty !== null ? scaleNutrient(selected.saturated_fat_100g, qty) : null,
+      sodium_mg: qty !== null ? scaleNutrient(selected.sodium_mg_100g, qty) : null,
     });
     onClose();
   };
@@ -186,7 +188,9 @@ export function PlannedMealPicker({
                       </p>
                       <p className="text-[11px] text-[var(--text-muted)] font-mono">
                         {item.energy_kcal_100g ?? "—"} kcal · C{item.carbs_100g ?? "—"} /
-                        P{item.protein_100g ?? "—"} / F{item.fat_100g ?? "—"} per 100 g
+                        P{item.protein_100g ?? "—"} / F{item.fat_100g ?? "—"}
+                        {" "}(sat {item.saturated_fat_100g ?? "—"}) · Na{" "}
+                        {item.sodium_mg_100g ?? "—"} mg per 100 g
                       </p>
                     </div>
                     <button

@@ -21,6 +21,8 @@ class FoodEntryIn(BaseModel):
     carbs_g: float | None = None
     protein_g: float | None = None
     fat_g: float | None = None
+    sodium_mg: float | None = None
+    saturated_fat_g: float | None = None
     note: str | None = None
 
     @field_validator("food_name")

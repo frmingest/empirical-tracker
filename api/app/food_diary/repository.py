@@ -8,7 +8,7 @@ VALID_MEALS = {"breakfast", "lunch", "dinner", "snack", "other"}
 
 _COLUMNS = (
     "id,logged_on,meal,food_name,brand,barcode,"
-    "quantity_g,energy_kcal,carbs_g,protein_g,fat_g,note"
+    "quantity_g,energy_kcal,carbs_g,protein_g,fat_g,sodium_mg,saturated_fat_g,note"
 )
 
 
@@ -41,6 +41,8 @@ def create_entry(user_id: str, entry: dict) -> dict:
         "carbs_g": entry.get("carbs_g"),
         "protein_g": entry.get("protein_g"),
         "fat_g": entry.get("fat_g"),
+        "sodium_mg": entry.get("sodium_mg"),
+        "saturated_fat_g": entry.get("saturated_fat_g"),
         "note": entry.get("note"),
     }
     resp = db.table("food_entries").insert(row).execute()

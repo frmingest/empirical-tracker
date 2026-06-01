@@ -171,6 +171,8 @@ export default function MealPlansPage() {
         carbs_g: m.carbs_g,
         protein_g: m.protein_g,
         fat_g: m.fat_g,
+        sodium_mg: m.sodium_mg,
+        saturated_fat_g: m.saturated_fat_g,
       });
       if (!m.done) await setPlannedMealDone(token, m.id, true);
       refresh();
