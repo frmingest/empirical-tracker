@@ -15,6 +15,32 @@ The canonical machine-readable version lives in
 
 ---
 
+## A note on "in range" vs. clinical targets
+
+The colour on each marker is **not** a verdict of "healthy." The lab's
+**reference range** is just the band where most of a reference population falls —
+it says nothing about whether a value is *good for you*. For a few markers a
+guideline-recommended **target** is tighter than the lab's range, so a value can
+sit inside the lab range yet still be higher than you'd ideally want.
+
+Since Sprint 7 the app makes that distinction visible (see
+`docs/adr/014-clinical-targets-trend-signals.md`):
+
+- **LDL, non-HDL, total cholesterol, and HbA1c** carry a guideline **clinical
+  target** — drawn as a separate amber line on the chart. If your latest value is
+  at or above it, the marker shows an amber **"Watch"** instead of green, even
+  while it's inside the lab range. These are *general* guideline numbers, not
+  personalised to your individual risk.
+- The app also flags **big moves that stay in range** — for example a liver
+  enzyme (ALT) doubling from 25 to 55 while still under the lab limit of 70. The
+  old green flag used to hide exactly that.
+
+This is still **decision-support, not medical advice**: it points at numbers
+worth a second look and a conversation with your clinician — it does not diagnose
+anything or claim your diet caused the change.
+
+---
+
 ## Carnivore (all-meat, near-zero carbohydrate)
 
 An all-animal-foods elimination diet. It is high in saturated fat and heme
