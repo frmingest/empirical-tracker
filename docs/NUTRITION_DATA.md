@@ -31,14 +31,24 @@ OFF publishes nutrient values **per 100 g** of product. When you log a food we:
    consumed = published_per_100g × grams_eaten / 100
    ```
 
-3. Store the **consumed** amounts (energy in kcal; carbohydrate, protein, and fat
-   in grams) on the diary entry.
+3. Store the **consumed** amounts (energy in kcal; carbohydrate, protein, fat,
+   and saturated fat in grams; sodium in milligrams) on the diary entry.
 
 We store the computed result — not just a link to the product — so your diary
 stays accurate even if the product's data on OFF later changes or is removed.
 
 If OFF doesn't have a value for a field, we store nothing for it and the UI shows
 **"—"** rather than a guess.
+
+**Two derivations (Sprint 9), only when the direct field is missing:**
+
+- **Sodium.** We prefer OFF's measured sodium. When OFF publishes only **salt**,
+  we derive sodium from it using the standard conversion `salt = sodium × 2.5`.
+  Sodium is stored and shown in **milligrams**.
+- **Energy.** When OFF has no kcal value but does have **kilojoules**, we convert
+  at `1 kcal = 4.184 kJ` instead of storing nothing.
+
+These are fixed unit conversions — not estimates of missing data.
 
 ---
 
@@ -50,8 +60,9 @@ If OFF doesn't have a value for a field, we store nothing for it and the UI show
 - **Linear scaling only.** We scale strictly by mass. We do not adjust for
   cooking losses, water uptake, or preparation — log the form you actually ate
   where possible (e.g. "cooked").
-- **Four macros only.** The diary tracks energy, carbohydrate, protein, and fat.
-  It does not track micronutrients, fibre, or sodium at this stage.
+- **Macros plus sodium & saturated fat.** The diary tracks energy, carbohydrate,
+  protein, fat, **saturated fat, and sodium** (Sprint 9). It does not track other
+  micronutrients or fibre at this stage.
 - **No medical advice.** The diary is a logging and context tool. It does not
   interpret your intake, set targets, or make clinical recommendations.
 

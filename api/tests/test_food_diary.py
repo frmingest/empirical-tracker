@@ -60,6 +60,9 @@ def test_create_entry_inserts_user_scoped_row(mock_db):
     assert inserted["user_id"] == "u1"
     assert inserted["food_name"] == "Ribeye steak"
     assert inserted["quantity_g"] == 250
+    # Sprint 9 columns are always written (None when not supplied).
+    assert "sodium_mg" in inserted
+    assert "saturated_fat_g" in inserted
     assert out["id"] == "f1"
 
 
@@ -101,6 +104,53 @@ def test_normalise_maps_off_fields():
 
 def test_normalise_drops_nameless_product():
     assert openfoodfacts._normalise({"code": "1", "product_name": ""}) is None
+
+
+# ── Sprint 9: sodium, saturated fat, kJ→kcal fallback ────────────────────────────
+
+def test_normalise_maps_saturated_fat():
+    product = _off_product()
+    product["nutriments"]["saturated-fat_100g"] = "9.5"
+    out = openfoodfacts._normalise(product)
+    assert out["saturated_fat_100g"] == 9.5
+
+
+def test_normalise_derives_sodium_from_salt():
+    # OFF salt (g) → sodium: salt = sodium × 2.5, returned in mg.
+    product = _off_product()
+    product["nutriments"]["salt_100g"] = "1.0"  # → 0.4 g sodium → 400 mg
+    out = openfoodfacts._normalise(product)
+    assert out["sodium_mg_100g"] == 400.0
+
+
+def test_normalise_prefers_measured_sodium_over_salt():
+    product = _off_product()
+    product["nutriments"]["sodium_100g"] = "0.5"  # 0.5 g → 500 mg
+    product["nutriments"]["salt_100g"] = "9.9"     # ignored when sodium present
+    out = openfoodfacts._normalise(product)
+    assert out["sodium_mg_100g"] == 500.0
+
+
+def test_normalise_sodium_none_when_absent():
+    product = _off_product()  # no salt or sodium fields
+    out = openfoodfacts._normalise(product)
+    assert out["sodium_mg_100g"] is None
+
+
+def test_energy_falls_back_from_kj_when_kcal_absent():
+    # Only the kJ field present → convert at 4.184 kJ/kcal.
+    product = _off_product()
+    del product["nutriments"]["energy-kcal_100g"]
+    product["nutriments"]["energy_100g"] = "1000"  # kJ → 239.0 kcal
+    out = openfoodfacts._normalise(product)
+    assert out["energy_kcal_100g"] == 239.0
+
+
+def test_energy_prefers_kcal_when_present():
+    product = _off_product()
+    product["nutriments"]["energy_100g"] = "9999"  # kJ ignored when kcal present
+    out = openfoodfacts._normalise(product)
+    assert out["energy_kcal_100g"] == 291.0
 
 
 def test_num_handles_bad_values():

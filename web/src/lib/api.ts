@@ -74,6 +74,8 @@ export interface FoodItem {
   carbs_100g: number | null;
   protein_100g: number | null;
   fat_100g: number | null;
+  saturated_fat_100g: number | null;
+  sodium_mg_100g: number | null;
 }
 
 export type Meal = "breakfast" | "lunch" | "dinner" | "snack" | "other";
@@ -91,6 +93,8 @@ export interface FoodEntry {
   carbs_g: number | null;
   protein_g: number | null;
   fat_g: number | null;
+  sodium_mg: number | null;
+  saturated_fat_g: number | null;
   note: string | null;
 }
 
@@ -105,6 +109,8 @@ export interface FoodEntryInput {
   carbs_g?: number | null;
   protein_g?: number | null;
   fat_g?: number | null;
+  sodium_mg?: number | null;
+  saturated_fat_g?: number | null;
   note?: string | null;
 }
 
@@ -137,6 +143,8 @@ export interface PlannedMeal {
   carbs_g: number | null;
   protein_g: number | null;
   fat_g: number | null;
+  sodium_mg: number | null;
+  saturated_fat_g: number | null;
   note: string | null;
   done: boolean;
 }
@@ -153,6 +161,8 @@ export interface PlannedMealInput {
   carbs_g?: number | null;
   protein_g?: number | null;
   fat_g?: number | null;
+  sodium_mg?: number | null;
+  saturated_fat_g?: number | null;
   note?: string | null;
   done?: boolean;
 }

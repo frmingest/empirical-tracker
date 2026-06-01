@@ -33,6 +33,8 @@ class PlannedMealIn(BaseModel):
     carbs_g: float | None = None
     protein_g: float | None = None
     fat_g: float | None = None
+    sodium_mg: float | None = None
+    saturated_fat_g: float | None = None
     note: str | None = None
     done: bool = False
 

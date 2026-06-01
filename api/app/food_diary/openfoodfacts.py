@@ -38,6 +38,40 @@ def _num(value: object) -> float | None:
         return None
 
 
+def _round1(value: float | None) -> float | None:
+    """Round to one decimal place, preserving None."""
+    return None if value is None else round(value, 1)
+
+
+def _energy_kcal(nutriments: dict) -> float | None:
+    """Energy in kcal per 100 g.
+
+    Prefer OFF's ``energy-kcal_100g``. When that's absent, fall back to the
+    kilojoule field (``energy_100g``, in kJ) converted at 4.184 kJ/kcal, rather
+    than storing nothing — many OFF products carry only the kJ value.
+    """
+    kcal = _num(nutriments.get("energy-kcal_100g"))
+    if kcal is not None:
+        return kcal
+    kj = _num(nutriments.get("energy_100g"))
+    return _round1(kj / 4.184) if kj is not None else None
+
+
+def _sodium_mg(nutriments: dict) -> float | None:
+    """Sodium in milligrams per 100 g.
+
+    OFF may publish ``sodium_100g`` (grams) directly, or only ``salt_100g``
+    (grams). Prefer measured sodium; otherwise derive it from salt using the
+    standard 2.5 conversion (salt = sodium × 2.5). Result is in mg to match the
+    conventional label unit.
+    """
+    sodium_g = _num(nutriments.get("sodium_100g"))
+    if sodium_g is None:
+        salt_g = _num(nutriments.get("salt_100g"))
+        sodium_g = salt_g / 2.5 if salt_g is not None else None
+    return _round1(sodium_g * 1000) if sodium_g is not None else None
+
+
 def _normalise(product: dict) -> dict | None:
     """Reduce a raw OFF product to the fields the food diary cares about.
 
@@ -54,11 +88,14 @@ def _normalise(product: dict) -> dict | None:
         "name": name,
         "brand": (product.get("brands") or "").strip() or None,
         "quantity": (product.get("quantity") or "").strip() or None,
-        # Per-100g values, straight from Open Food Facts.
-        "energy_kcal_100g": _num(nutriments.get("energy-kcal_100g")),
+        # Per-100g values, straight from Open Food Facts. Energy falls back to
+        # kJ→kcal and sodium derives from salt when only those are published.
+        "energy_kcal_100g": _energy_kcal(nutriments),
         "carbs_100g": _num(nutriments.get("carbohydrates_100g")),
         "protein_100g": _num(nutriments.get("proteins_100g")),
         "fat_100g": _num(nutriments.get("fat_100g")),
+        "saturated_fat_100g": _num(nutriments.get("saturated-fat_100g")),
+        "sodium_mg_100g": _sodium_mg(nutriments),
     }
 
 

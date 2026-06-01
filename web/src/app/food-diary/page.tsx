@@ -98,6 +98,8 @@ export default function FoodDiaryPage() {
     carbs: round(sum(dayEntries, "carbs_g")),
     protein: round(sum(dayEntries, "protein_g")),
     fat: round(sum(dayEntries, "fat_g")),
+    satFat: round(sum(dayEntries, "saturated_fat_g")),
+    sodium: round(sum(dayEntries, "sodium_mg")),
   };
 
   if (loading) {
@@ -188,11 +190,13 @@ export default function FoodDiaryPage() {
         </div>
 
         {/* Daily totals */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <Totals label="Energy" value={`${totals.kcal}`} unit="kcal" />
           <Totals label="Carbs" value={`${totals.carbs}`} unit="g" />
           <Totals label="Protein" value={`${totals.protein}`} unit="g" />
           <Totals label="Fat" value={`${totals.fat}`} unit="g" />
+          <Totals label="Sat. fat" value={`${totals.satFat}`} unit="g" />
+          <Totals label="Sodium" value={`${totals.sodium}`} unit="mg" />
         </div>
 
         {/* Add food */}
@@ -229,6 +233,8 @@ export default function FoodDiaryPage() {
                             {e.quantity_g != null ? `${e.quantity_g} g · ` : ""}
                             {e.energy_kcal ?? "—"} kcal · C{e.carbs_g ?? "—"} /
                             P{e.protein_g ?? "—"} / F{e.fat_g ?? "—"}
+                            {" "}(sat {e.saturated_fat_g ?? "—"}) · Na{" "}
+                            {e.sodium_mg ?? "—"} mg
                           </p>
                         </div>
                         <button
