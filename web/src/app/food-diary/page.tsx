@@ -105,7 +105,7 @@ export default function FoodDiaryPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[var(--bg-base)] flex items-center justify-center">
-        <div className="w-5 h-5 border-2 border-[var(--border-card)] border-t-blue-400 rounded-full animate-spin" />
+        <div className="w-5 h-5 border-2 border-[var(--border-card)] border-t-[var(--color-accent)] rounded-full animate-spin" />
       </div>
     );
   }

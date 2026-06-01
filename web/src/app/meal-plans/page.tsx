@@ -475,7 +475,7 @@ export default function MealPlansPage() {
             <button
               onClick={handleCreatePlan}
               disabled={!newPlanName.trim()}
-              className="rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-sm font-semibold px-4 py-2 transition-colors"
+              className="rounded-lg bg-[var(--btn-accent)] hover:bg-[var(--btn-accent-hover)] disabled:opacity-40 text-[var(--btn-accent-text)] text-sm font-semibold px-4 py-2 transition-colors"
             >
               Add plan
             </button>
@@ -515,7 +515,7 @@ function FilterChip({
       onClick={onClick}
       className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
         active
-          ? "bg-blue-600 border-blue-600 text-white"
+          ? "bg-[var(--btn-accent)] border-[var(--btn-accent)] text-[var(--btn-accent-text)]"
           : "border-[var(--border-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
       }`}
     >

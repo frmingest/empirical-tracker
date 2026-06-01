@@ -129,7 +129,7 @@ export default function BodyMetricsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[var(--bg-base)] flex items-center justify-center">
-        <div className="w-5 h-5 border-2 border-[var(--border-card)] border-t-blue-400 rounded-full animate-spin" />
+        <div className="w-5 h-5 border-2 border-[var(--border-card)] border-t-[var(--color-accent)] rounded-full animate-spin" />
       </div>
     );
   }
@@ -212,7 +212,7 @@ export default function BodyMetricsPage() {
           <button
             type="submit"
             disabled={saving}
-            className="text-xs font-medium bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-colors"
+            className="text-xs font-medium bg-[var(--btn-accent)] hover:bg-[var(--btn-accent-hover)] disabled:opacity-50 text-[var(--btn-accent-text)] px-4 py-2 rounded-lg transition-colors"
           >
             {saving ? "Saving…" : "Add measurement"}
           </button>

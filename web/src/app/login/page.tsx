@@ -201,7 +201,7 @@ function AuthForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-[var(--bg-elevated)] disabled:text-[var(--text-muted)] text-white font-semibold py-2.5 text-sm transition-colors"
+              className="w-full rounded-lg bg-[var(--btn-accent)] hover:bg-[var(--btn-accent-hover)] disabled:bg-[var(--bg-elevated)] disabled:text-[var(--text-muted)] text-[var(--btn-accent-text)] font-semibold py-2.5 text-sm transition-colors"
             >
               {loading
                 ? "…"

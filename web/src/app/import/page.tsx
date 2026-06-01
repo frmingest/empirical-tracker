@@ -199,7 +199,7 @@ export default function ImportPage() {
         <button
           onClick={handleUpload}
           disabled={!file || !token || status === "uploading"}
-          className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-[var(--bg-elevated)] disabled:text-[var(--text-muted)] text-white font-semibold py-3 text-sm transition-colors"
+          className="w-full rounded-xl bg-[var(--btn-accent)] hover:bg-[var(--btn-accent-hover)] disabled:bg-[var(--bg-elevated)] disabled:text-[var(--text-muted)] text-[var(--btn-accent-text)] font-semibold py-3 text-sm transition-colors"
         >
           {!token
             ? "Sign in to import"

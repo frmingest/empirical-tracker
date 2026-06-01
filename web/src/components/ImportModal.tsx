@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 import Link from "next/link";
+import { useModalA11y } from "@/lib/useModalA11y";
 
 interface ImportResult {
   panels_created: number;
@@ -22,6 +23,8 @@ export function ImportModal({ onClose, token, onSuccess }: Props) {
   const [result, setResult] = useState<ImportResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
+  const titleId = useId();
 
   const handleFile = useCallback((f: File) => {
     if (!f.name.toLowerCase().endsWith(".xlsx")) {
@@ -99,14 +102,22 @@ export function ImportModal({ onClose, token, onSuccess }: Props) {
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="w-full max-w-md rounded-2xl border border-[var(--border-card)] bg-[var(--bg-surface)] shadow-2xl">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="w-full max-w-md rounded-2xl border border-[var(--border-card)] bg-[var(--bg-surface)] shadow-2xl focus:outline-none"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[var(--border-subtle)]">
-          <h2 className="text-base font-semibold text-[var(--text-primary)]">
+          <h2 id={titleId} className="text-base font-semibold text-[var(--text-primary)]">
             Import blood test data
           </h2>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors text-xl leading-none"
           >
             ×
@@ -182,7 +193,7 @@ export function ImportModal({ onClose, token, onSuccess }: Props) {
           <button
             onClick={handleUpload}
             disabled={!file || !token || status === "uploading"}
-            className="w-full rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-[var(--bg-elevated)] disabled:text-[var(--text-muted)] text-white text-sm font-semibold py-2.5 transition-colors"
+            className="w-full rounded-lg bg-[var(--btn-accent)] hover:bg-[var(--btn-accent-hover)] disabled:bg-[var(--bg-elevated)] disabled:text-[var(--text-muted)] text-[var(--btn-accent-text)] text-sm font-semibold py-2.5 transition-colors"
           >
             {status === "uploading" ? "Uploading…" : "Import file"}
           </button>

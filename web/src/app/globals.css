@@ -18,6 +18,12 @@
   --border-subtle: #D3D8E0;
   --border-card:   #BFC6D0;
 
+  /* Primary action button — tokenised so it tracks the theme instead of
+     hardcoding blue-600/blue-500 at each call site. */
+  --btn-accent:       #2563EB;
+  --btn-accent-hover: #3B82F6;
+  --btn-accent-text:  #FFFFFF;
+
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
@@ -39,6 +45,10 @@ html.dark {
 
   --border-subtle: #27272a;
   --border-card:   #3f3f46;
+
+  --btn-accent:       #2563EB;
+  --btn-accent-hover: #3B82F6;
+  --btn-accent-text:  #FFFFFF;
 }
 
 *,
@@ -73,6 +83,20 @@ body {
 
 /* ── Recharts override — remove default SVG overflow ─ */
 .recharts-wrapper { overflow: visible !important; }
+
+/* ── Reduced motion — honour the OS "reduce motion" setting ───────────
+   Spinners, the card hover-lift, and chart transitions all animate; users
+   who ask for less motion (vestibular sensitivity) should get a still UI. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 /* ── Autofill — light mode: white bg, dark text ─────── */
 input:-webkit-autofill,
