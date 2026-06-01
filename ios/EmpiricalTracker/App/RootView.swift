@@ -28,7 +28,7 @@ struct MainTabView: View {
     var body: some View {
         TabView {
             Tab(String(localized: "tab.home"), systemImage: "chart.line.uptrend.xyaxis") {
-                DashboardPlaceholderView()
+                DashboardView()
             }
             Tab(String(localized: "tab.diary"), systemImage: "fork.knife") {
                 DiaryPlaceholderView()
@@ -48,16 +48,6 @@ struct MainTabView: View {
 }
 
 // MARK: - Placeholder screens (replaced sprint-by-sprint)
-
-private struct DashboardPlaceholderView: View {
-    var body: some View {
-        EmptyStateView(
-            icon: "chart.bar.doc.horizontal",
-            title: String(localized: "tab.home"),
-            message: String(localized: "placeholder.sprint", defaultValue: "Sprint 2 — coming soon.")
-        )
-    }
-}
 
 private struct DiaryPlaceholderView: View {
     var body: some View {

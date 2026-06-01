@@ -69,15 +69,8 @@ public final class BiomarkersRepository {
     // MARK: - Filtering helpers
 
     /// Returns only the markers visible for the given diet focus.
+    /// Uses keyword-based matching (DietProfiles) so Norwegian lab name variants are handled.
     public func filtered(by focus: DietFocus, customMarkers: Set<String>) -> [BiomarkerWithSeries] {
-        switch focus {
-        case .all:
-            return results
-        case .custom:
-            return results.filter { customMarkers.contains($0.biomarker.nameNo) }
-        default:
-            guard let set = DietFocus.markerSets[focus] else { return results }
-            return results.filter { set.contains($0.biomarker.nameNo) }
-        }
+        filterByDiet(results, diet: focus, customMarkers: customMarkers)
     }
 }
