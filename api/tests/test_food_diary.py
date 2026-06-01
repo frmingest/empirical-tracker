@@ -1,4 +1,5 @@
-from unittest.mock import MagicMock, patch
+import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 from fastapi.testclient import TestClient
@@ -109,30 +110,30 @@ def test_num_handles_bad_values():
     assert openfoodfacts._num("12.5") == 12.5
 
 
-@patch("app.food_diary.openfoodfacts.httpx.Client")
+@patch("app.food_diary.openfoodfacts.httpx.AsyncClient")
 def test_search_products_normalises(mock_client_cls):
-    mock_client = MagicMock()
-    mock_client.__enter__.return_value = mock_client
+    mock_client = AsyncMock()
+    mock_client.__aenter__.return_value = mock_client
     resp = MagicMock()
     resp.json.return_value = {"products": [_off_product(), {"product_name": ""}]}
     mock_client.get.return_value = resp
     mock_client_cls.return_value = mock_client
 
-    out = openfoodfacts.search_products("ribeye")
+    out = asyncio.run(openfoodfacts.search_products("ribeye"))
     assert len(out) == 1  # the nameless product is dropped
     assert out[0]["name"] == "Ribeye steak"
 
 
-@patch("app.food_diary.openfoodfacts.httpx.Client")
+@patch("app.food_diary.openfoodfacts.httpx.AsyncClient")
 def test_lookup_barcode_returns_none_when_not_found(mock_client_cls):
-    mock_client = MagicMock()
-    mock_client.__enter__.return_value = mock_client
+    mock_client = AsyncMock()
+    mock_client.__aenter__.return_value = mock_client
     resp = MagicMock()
     resp.json.return_value = {"status": 0}
     mock_client.get.return_value = resp
     mock_client_cls.return_value = mock_client
 
-    assert openfoodfacts.lookup_barcode("000") is None
+    assert asyncio.run(openfoodfacts.lookup_barcode("000")) is None
 
 
 # ── HTTP endpoints ───────────────────────────────────────────────────────────────
