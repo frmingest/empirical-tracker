@@ -71,7 +71,43 @@
 
     "healthkit.connect"   : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Connect Apple Health" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Koble til Apple Helse" }}}},
     "healthkit.syncNow"   : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Sync now" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Synkroniser nå" }}}},
-    "healthkit.lastSync"  : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Last synced" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Sist synkronisert" }}}}
+    "healthkit.lastSync"  : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Last synced" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Sist synkronisert" }}}},
+
+    "placeholder.sprint" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Coming in a future sprint." }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Kommer i en fremtidig sprint." }}}},
+
+    "auth.title"    : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Empirical Tracker" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Empirical Tracker" }}}},
+    "auth.subtitle" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Track how your diet shapes your biomarkers." }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Følg med på hvordan kostholdet ditt påvirker blodverdiene." }}}},
+
+    "auth.field.email"             : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Email" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "E-post" }}}},
+    "auth.field.email.placeholder" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "you@example.com" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "deg@eksempel.no" }}}},
+    "auth.field.email.invalid"     : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Enter a valid email address." }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Skriv inn en gyldig e-postadresse." }}}},
+    "auth.field.password"             : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Password" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Passord" }}}},
+    "auth.field.password.placeholder" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Your password" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Ditt passord" }}}},
+
+    "auth.sign_in"      : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Sign In" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Logg inn" }}}},
+    "auth.sign_in.hint" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Signs you in to your Empirical Tracker account." }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Logger deg inn på Empirical Tracker-kontoen din." }}}},
+    "auth.demo"         : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Try demo mode" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Prøv demomodus" }}}},
+    "auth.demo.a11y"    : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Open app in demo mode without signing in." }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Åpne appen i demomodus uten å logge inn." }}}},
+
+    "auth.error.invalid_credentials" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Invalid email or password." }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Ugyldig e-post eller passord." }}}},
+    "auth.error.network"             : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Network error — check your connection and try again." }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Nettverksfeil — sjekk tilkoblingen og prøv igjen." }}}},
+
+    "settings.title"              : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Settings" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Innstillinger" }}}},
+    "settings.section.appearance" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Appearance" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Utseende" }}}},
+    "settings.section.account"    : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Account" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Konto" }}}},
+
+    "settings.theme.label"       : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Theme" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Tema" }}}},
+    "settings.theme.picker.a11y" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Theme picker. Current:" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Temaveiger. Nåværende:" }}}},
+
+    "settings.language.label"           : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Language" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Språk" }}}},
+    "settings.language.system"          : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "System" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "System" }}}},
+    "settings.language.restart.title"   : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Restart to apply language" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Start på nytt for å bytte språk" }}}},
+    "settings.language.restart.message" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The new language takes effect the next time you launch the app." }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Det nye språket trer i kraft neste gang du starter appen." }}}},
+    "settings.language.restart.ok"      : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "OK" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "OK" }}}},
+
+    "settings.account.signed_in" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Signed in" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Innlogget" }}}},
+    "settings.sign_out"          : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Sign Out" }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Logg ut" }}}},
+    "settings.sign_out.hint"     : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Signs you out of your account on this device." }}, "nb" : { "stringUnit" : { "state" : "translated", "value" : "Logger deg ut av kontoen din på denne enheten." }}}}
 
   },
   "version" : "1.0"

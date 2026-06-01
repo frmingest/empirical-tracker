@@ -1,15 +1,19 @@
 import SwiftUI
 import Core
+import Auth
 
 @main
 struct EmpiricalTrackerApp: App {
-    @State private var env = AppEnvironment()
+    @State private var env = AppEnvironment(authService: AppConfig.authService)
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environment(env)
-                .preferredColorScheme(nil) // respects system; Sprint 1 wires user override
+                // Theme is applied at the root so every screen inherits it.
+                .preferredColorScheme(env.settings.theme.colorScheme)
+                // Restore the session silently before the first frame is committed.
+                .task { await env.authStore.restoreSession() }
         }
     }
 }

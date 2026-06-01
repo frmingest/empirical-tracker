@@ -1,17 +1,22 @@
 import SwiftUI
 import Core
+import Auth
 
 /// Root navigator. Switches between `AuthView` (unauthenticated) and the main
-/// `TabView` (authenticated). Auth wired fully in Sprint 1.
+/// `TabView` (authenticated) based on live `AuthStore` state.
+/// The cross-fade animation makes the transition feel intentional.
 struct RootView: View {
     @Environment(AppEnvironment.self) private var env
 
     var body: some View {
-        if env.isAuthenticated {
-            MainTabView()
-        } else {
-            AuthPlaceholderView()
+        Group {
+            if env.authStore.isAuthenticated {
+                MainTabView()
+            } else {
+                AuthView()
+            }
         }
+        .animation(.easeInOut(duration: 0.3), value: env.authStore.isAuthenticated)
     }
 }
 
@@ -22,20 +27,20 @@ struct RootView: View {
 struct MainTabView: View {
     var body: some View {
         TabView {
-            Tab("Home", systemImage: "chart.line.uptrend.xyaxis") {
+            Tab(String(localized: "tab.home"), systemImage: "chart.line.uptrend.xyaxis") {
                 DashboardPlaceholderView()
             }
-            Tab("Diary", systemImage: "fork.knife") {
+            Tab(String(localized: "tab.diary"), systemImage: "fork.knife") {
                 DiaryPlaceholderView()
             }
-            Tab("Plan", systemImage: "calendar") {
+            Tab(String(localized: "tab.plan"), systemImage: "calendar") {
                 PlanPlaceholderView()
             }
-            Tab("Body", systemImage: "figure.walk") {
+            Tab(String(localized: "tab.body"), systemImage: "figure.walk") {
                 BodyPlaceholderView()
             }
-            Tab("Settings", systemImage: "gearshape") {
-                SettingsPlaceholderView()
+            Tab(String(localized: "tab.settings"), systemImage: "gearshape") {
+                SettingsView()
             }
         }
         .tint(Color.accent)
@@ -44,50 +49,42 @@ struct MainTabView: View {
 
 // MARK: - Placeholder screens (replaced sprint-by-sprint)
 
-private struct AuthPlaceholderView: View {
-    @Environment(AppEnvironment.self) private var env
-
+private struct DashboardPlaceholderView: View {
     var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "waveform.path.ecg")
-                .font(.system(size: 56))
-                .foregroundStyle(Color.accent)
-            Text("Empirical Tracker")
-                .font(.displayMedium)
-                .foregroundStyle(Color.textPrimary)
-            Text("Sprint 1 — Auth integration coming next.")
-                .font(.bodyMedium)
-                .foregroundStyle(Color.textSecondary)
-            Button("Sign in (demo)") {
-                env.isAuthenticated = true
-            }
-            .buttonStyle(PrimaryButtonStyle())
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.bgBase)
+        EmptyStateView(
+            icon: "chart.bar.doc.horizontal",
+            title: String(localized: "tab.home"),
+            message: String(localized: "placeholder.sprint", defaultValue: "Sprint 2 — coming soon.")
+        )
     }
 }
 
-private struct DashboardPlaceholderView: View {
-    var body: some View { placeholder("chart.bar.doc.horizontal", "Dashboard", "Sprint 2") }
-}
 private struct DiaryPlaceholderView: View {
-    var body: some View { placeholder("fork.knife",           "Food Diary",  "Sprint 6") }
-}
-private struct PlanPlaceholderView: View {
-    var body: some View { placeholder("calendar",             "Meal Plans",  "Sprint 7") }
-}
-private struct BodyPlaceholderView: View {
-    var body: some View { placeholder("figure.walk",          "Body Metrics","Sprint 8") }
-}
-private struct SettingsPlaceholderView: View {
-    var body: some View { placeholder("gearshape",            "Settings",    "Sprint 11") }
+    var body: some View {
+        EmptyStateView(
+            icon: "fork.knife",
+            title: String(localized: "tab.diary"),
+            message: String(localized: "placeholder.sprint", defaultValue: "Sprint 6 — coming soon.")
+        )
+    }
 }
 
-private func placeholder(_ icon: String, _ title: String, _ sprint: String) -> some View {
-    EmptyStateView(
-        icon: icon,
-        title: title,
-        message: "\(sprint) — coming soon."
-    )
+private struct PlanPlaceholderView: View {
+    var body: some View {
+        EmptyStateView(
+            icon: "calendar",
+            title: String(localized: "tab.plan"),
+            message: String(localized: "placeholder.sprint", defaultValue: "Sprint 7 — coming soon.")
+        )
+    }
+}
+
+private struct BodyPlaceholderView: View {
+    var body: some View {
+        EmptyStateView(
+            icon: "figure.walk",
+            title: String(localized: "tab.body"),
+            message: String(localized: "placeholder.sprint", defaultValue: "Sprint 8 — coming soon.")
+        )
+    }
 }

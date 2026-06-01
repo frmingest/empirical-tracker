@@ -150,10 +150,79 @@ fi
 
 ---
 
-## Sprint 1 next steps
+---
 
-- Add `supabase-swift` via Swift Package Manager (remote package)
-- Implement `SupabaseTokenProvider: TokenProvider`
-- Wire real email/password auth in `AuthView`
-- Store JWT in Keychain via `SecItem` APIs
-- Implement `AuthStore` (`@Observable`) with session restore + 401 re-auth flow
+## Sprint 1 — Authentication, settings & app shell
+
+All Sprint 1 Swift files are pre-written in `ios/`. Follow these steps on your Mac.
+
+### 1. Add the `Auth` package (local)
+
+**File > Add Package Dependencies > Add Local…** → select `Packages/Auth`
+
+Add the `Auth` product to the **EmpiricalTracker** target.
+
+### 2. Add `supabase-swift` (remote dependency)
+
+The `Auth` package's `Package.swift` already declares this dependency. Xcode will
+resolve it automatically the first time you open/build. If it doesn't:
+
+**File > Add Package Dependencies** → paste `https://github.com/supabase/supabase-swift.git`
+→ version: **2.0.0** or later.
+
+> Note: `supabase-swift` is declared as a dependency of the `Auth` **package**, not
+> directly of the app target. Let SPM resolve it transitively.
+
+### 3. Drag in new source files
+
+Drag these folders into the **EmpiricalTracker** group in Xcode (uncheck "Copy items"):
+
+| Folder | Notes |
+|---|---|
+| `EmpiricalTracker/Features/Auth/` | `AuthView.swift`, `SignInViewModel.swift` |
+| `EmpiricalTracker/Features/Settings/` | `AppTheme.swift`, `AppLanguage.swift`, `SettingsStore.swift`, `SettingsView.swift` |
+| `EmpiricalTracker/Config/AppConfig.swift` | Reads `SupabaseURL` / `SupabaseAnonKey` from Info.plist |
+| `EmpiricalTracker/Mock/MockData.swift` | Demo biomarker data |
+
+Replace the existing `App/AppEnvironment.swift`, `App/EmpiricalTrackerApp.swift`,
+and `App/RootView.swift` — they have been updated in-place.
+
+### 4. Add Supabase credentials to Info.plist
+
+In the **EmpiricalTracker** target → **Info** tab, add two keys:
+
+| Key | Value |
+|---|---|
+| `SupabaseURL` | `https://YOUR_PROJECT_REF.supabase.co` |
+| `SupabaseAnonKey` | `your-anon-key` (safe to embed — public by design) |
+
+> **Development shortcut:** Set `DEMO_MODE=1` in the Run scheme environment variables
+> to bypass Supabase entirely and use mock data. No credentials needed.
+
+### 5. Scheme environment variables
+
+Update **Product > Scheme > Edit Scheme > Run > Arguments > Environment Variables**:
+
+```
+EMPIRICAL_API_URL = http://localhost:8000      (or Railway URL)
+DEMO_MODE        = 1                           (optional; bypasses Supabase in dev)
+```
+
+### 6. Build & run
+
+Press **⌘R**. Expected flow:
+- App opens to `AuthView` (sign-in form)
+- In demo mode: tap "Try demo mode" → lands on the 5-tab shell
+- In production: enter email + password → Supabase auth → 5-tab shell
+- Settings tab: theme picker updates colors live; language picker shows restart notice
+
+### Sprint 1 acceptance checklist
+
+- [ ] Real email/password sign-in works against Supabase
+- [ ] Session persists across app kills (Keychain restore on relaunch)
+- [ ] Sign-out returns to `AuthView`
+- [ ] Theme picker (System/Light/Dark) changes `ColorScheme` immediately
+- [ ] Language picker (System/English/Norsk) shows restart notice and writes `AppleLanguages`
+- [ ] Demo mode (`DEMO_MODE=1`) bypasses Supabase entirely
+- [ ] `AuthStore` unit tests pass (`⌘U` in the `Auth` package)
+- [ ] SwiftLint reports 0 errors
