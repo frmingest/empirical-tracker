@@ -463,3 +463,59 @@ export async function deleteAccount(token: string): Promise<AccountDeletion> {
   if (!res.ok) throw new Error(`DELETE /account → ${res.status}`);
   return res.json() as Promise<AccountDeletion>;
 }
+
+// ── Sprint 10: body metrics (weight, waist, blood pressure) ──────────────────────
+
+/** A body-metric measurement. Every metric is optional; a row carries at least one. */
+export interface BodyMetric {
+  id: string;
+  /** ISO date "YYYY-MM-DD" the measurement was taken. */
+  measured_on: string;
+  /** Weight in kilograms. */
+  weight_kg: number | null;
+  /** Waist circumference in centimetres. */
+  waist_cm: number | null;
+  /** Blood pressure, mmHg. Both halves or neither. */
+  systolic: number | null;
+  diastolic: number | null;
+  note: string | null;
+}
+
+export interface BodyMetricInput {
+  measured_on: string;
+  weight_kg?: number | null;
+  waist_cm?: number | null;
+  systolic?: number | null;
+  diastolic?: number | null;
+  note?: string | null;
+}
+
+export async function listBodyMetrics(token: string): Promise<BodyMetric[]> {
+  const res = await fetch(`${API_BASE}/body-metrics`, {
+    headers: bearerHeaders(token),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`GET /body-metrics → ${res.status}`);
+  return res.json() as Promise<BodyMetric[]>;
+}
+
+export async function createBodyMetric(
+  token: string,
+  input: BodyMetricInput
+): Promise<BodyMetric> {
+  const res = await fetch(`${API_BASE}/body-metrics`, {
+    method: "POST",
+    headers: { ...bearerHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<BodyMetric>;
+}
+
+export async function deleteBodyMetric(token: string, id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/body-metrics/${id}`, {
+    method: "DELETE",
+    headers: bearerHeaders(token),
+  });
+  if (!res.ok) throw new Error(`DELETE /body-metrics/${id} → ${res.status}`);
+}
