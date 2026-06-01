@@ -9,7 +9,9 @@ import { MOCK_DIET_EVENTS, MOCK_RESULTS } from "@/lib/mockData";
 import { BiomarkerChart } from "@/components/BiomarkerChart";
 import { DietEventManager } from "@/components/DietEventManager";
 import { ManualEntryModal } from "@/components/ManualEntryModal";
+import { MarkerSignals } from "@/components/MarkerSignals";
 import { StatusBadge } from "@/components/StatusBadge";
+import { assessMarker } from "@/lib/markerSignals";
 import {
   fmtDateLong,
   getCategory,
@@ -98,6 +100,7 @@ export default function BiomarkerDetailPage({ params }: { params: Promise<{ id: 
   const { biomarker, series } = entry;
   const latest = series.at(-1);
   const category = getCategory(biomarker.name_no);
+  const assessment = assessMarker(biomarker, series);
 
   return (
     <div className="min-h-screen bg-[var(--bg-base)]">
@@ -148,7 +151,14 @@ export default function BiomarkerDetailPage({ params }: { params: Promise<{ id: 
             <h1 className="text-xl font-semibold text-[var(--text-primary)] leading-tight">
               {shortLabel(biomarker.name_no)}
             </h1>
-            {latest && <StatusBadge inRange={latest.in_range} showLabel size="md" />}
+            {latest && (
+              <StatusBadge
+                inRange={latest.in_range}
+                attention={assessment.level === "attention"}
+                showLabel
+                size="md"
+              />
+            )}
           </div>
           {biomarker.name_no !== shortLabel(biomarker.name_no) && (
             <p className="text-xs text-[var(--text-muted)] font-mono">{biomarker.name_no}</p>
@@ -213,6 +223,9 @@ export default function BiomarkerDetailPage({ params }: { params: Promise<{ id: 
             </p>
           )}
         </div>
+
+        {/* Target + within-range trend signals (Sprint 7) */}
+        <MarkerSignals data={entry} />
 
         {/* Diet annotations (correlation overlay) */}
         <DietEventManager

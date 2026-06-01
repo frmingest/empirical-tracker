@@ -15,6 +15,7 @@ import {
 import { fmtDate } from "@/lib/biomarkerCategories";
 import type { BiomarkerWithSeries, DietEvent, ResultPoint } from "@/lib/api";
 import { buildAnnotations } from "@/lib/chartAnnotations";
+import { clinicalTarget } from "@/lib/clinicalTargets";
 
 interface TooltipPayload {
   payload?: { tested_at: string; value: number; in_range: boolean | null };
@@ -94,11 +95,18 @@ export function BiomarkerChart({ data, annotations = [] }: Props) {
   const refLow = biomarker.ref_low;
   const refHigh = biomarker.ref_high;
 
-  // Pad domain to fit ref range and data
-  const domainMin =
-    refLow !== null ? Math.min(minVal, refLow) * 0.9 : minVal * 0.9;
-  const domainMax =
-    refHigh !== null ? Math.max(maxVal, refHigh) * 1.1 : maxVal * 1.1;
+  // Sprint 7 — clinical target (guideline optimal bound), distinct from lab range.
+  const target = clinicalTarget(biomarker.name_no);
+
+  // Pad domain to fit ref range, the target line, and the data.
+  const lowCandidates = [minVal, ...(refLow !== null ? [refLow] : [])];
+  const highCandidates = [
+    maxVal,
+    ...(refHigh !== null ? [refHigh] : []),
+    ...(target ? [target.upper] : []),
+  ];
+  const domainMin = Math.min(...lowCandidates) * 0.9;
+  const domainMax = Math.max(...highCandidates) * 1.1;
 
   // Sprint 3 — correlation overlay: project diet events onto the chart.
   const overlay = buildAnnotations(annotations, series);
@@ -163,6 +171,22 @@ export function BiomarkerChart({ data, annotations = [] }: Props) {
             />
           )}
 
+          {/* Clinical target — guideline optimal bound (Sprint 7) */}
+          {target && (
+            <ReferenceLine
+              y={target.upper}
+              stroke="var(--color-warning)"
+              strokeDasharray="5 3"
+              strokeWidth={1.5}
+              label={{
+                value: `Target ≤ ${target.upper}`,
+                fill: "var(--color-warning)",
+                fontSize: 10,
+                position: "insideBottomRight",
+              }}
+            />
+          )}
+
           {/* Correlation overlay — diet annotations (Sprint 3) */}
           {overlay.map((a) =>
             a.x2 ? (
@@ -220,6 +244,15 @@ export function BiomarkerChart({ data, annotations = [] }: Props) {
             <span className="inline-block w-3 h-1 bg-[var(--color-accent)] rounded" />
             Measured value
           </span>
+          {target && (
+            <span className="flex items-center gap-1.5">
+              <span
+                className="inline-block w-3 border-t-2 border-dashed"
+                style={{ borderColor: "var(--color-warning)" }}
+              />
+              Clinical target (≤ {target.upper})
+            </span>
+          )}
         </div>
       )}
 

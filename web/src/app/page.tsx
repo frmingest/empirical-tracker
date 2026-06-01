@@ -17,6 +17,7 @@ import {
   type DietKey,
 } from "@/lib/dietProfiles";
 import { loadSettings, persistSettings } from "@/lib/dietSettings";
+import { assessMarker } from "@/lib/markerSignals";
 import { CategorySection } from "@/components/CategorySection";
 import { DietFilter } from "@/components/DietFilter";
 import { CustomMarkerModal } from "@/components/CustomMarkerModal";
@@ -102,6 +103,10 @@ export default function DashboardPage() {
   const grouped = groupByCategory(visible);
   const outOfRangeTotal = visible.filter(
     (r) => r.series.at(-1)?.in_range === false
+  ).length;
+  // Sprint 7 — in-range markers carrying a clinical-target or trend signal.
+  const attentionTotal = visible.filter(
+    (r) => assessMarker(r.biomarker, r.series).level === "attention"
   ).length;
 
   if (loading) {
@@ -229,6 +234,21 @@ export default function DashboardPage() {
             accent={outOfRangeTotal > 0 ? "rose" : "emerald"}
           />
         </div>
+
+        {/* Sprint 7 — within-range markers worth a second look */}
+        {!dataLoading && attentionTotal > 0 && (
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+            <p className="text-sm text-[var(--text-secondary)]">
+              {t("signals.watchNote").replace(
+                "{n}",
+                (attentionTotal === 1
+                  ? t("signals.watchNote.one")
+                  : t("signals.watchNote.many").replace("{n}", attentionTotal.toString())
+                )
+              )}
+            </p>
+          </div>
+        )}
 
         {/* ── Biomarker categories ─────────────────────────────────────────── */}
         {visible.length === 0 ? (

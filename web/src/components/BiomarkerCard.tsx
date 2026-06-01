@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Line, LineChart, ResponsiveContainer } from "recharts";
 import { shortLabel } from "@/lib/biomarkerCategories";
 import type { BiomarkerWithSeries, ResultPoint } from "@/lib/api";
+import { assessMarker, levelColor } from "@/lib/markerSignals";
 import { StatusBadge } from "./StatusBadge";
 
 interface Props {
@@ -21,10 +22,14 @@ export function BiomarkerCard({ data }: Props) {
   const latestValue = latest?.value ?? null;
   const latestInRange = latest?.in_range ?? null;
 
+  // Sprint 7 — fold target + trend signals into the card's status colour.
+  const assessment = assessMarker(biomarker, series);
+  const attention = assessment.level === "attention";
+  const topSignal = assessment.signals[0] ?? null;
+
   const sparkData = series.map((p) => ({ v: p.value }));
 
-  const lineColor =
-    latestInRange === false ? "var(--color-out-range)" : "var(--color-in-range)";
+  const lineColor = levelColor(assessment.level);
 
   const rangeLabel =
     biomarker.ref_type === "bounded" &&
@@ -47,7 +52,7 @@ export function BiomarkerCard({ data }: Props) {
         <span className="text-sm text-[var(--text-secondary)] leading-tight line-clamp-2 group-hover:text-[var(--text-primary)] transition-colors">
           {shortLabel(biomarker.name_no)}
         </span>
-        <StatusBadge inRange={latestInRange} />
+        <StatusBadge inRange={latestInRange} attention={attention} />
       </div>
 
       {/* Value row */}
@@ -56,7 +61,11 @@ export function BiomarkerCard({ data }: Props) {
           <>
             <span
               className={`text-2xl font-mono font-semibold tabular-nums leading-none ${
-                latestInRange === false ? "text-[var(--color-out-range)]" : "text-[var(--text-primary)]"
+                latestInRange === false
+                  ? "text-[var(--color-out-range)]"
+                  : attention
+                    ? "text-[var(--color-warning)]"
+                    : "text-[var(--text-primary)]"
               }`}
             >
               {latestValue}
@@ -102,6 +111,16 @@ export function BiomarkerCard({ data }: Props) {
       {rangeLabel && (
         <div className="text-xs text-[var(--text-muted)] font-mono">
           ref {rangeLabel}
+        </div>
+      )}
+
+      {/* Sprint 7 — within-range signal hint (target/trend) */}
+      {latestInRange !== false && topSignal && (
+        <div
+          className="mt-1.5 text-xs font-medium"
+          style={{ color: levelColor(assessment.level) }}
+        >
+          {topSignal.label}
         </div>
       )}
     </Link>
