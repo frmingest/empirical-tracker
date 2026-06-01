@@ -1,0 +1,83 @@
+import Core
+import Foundation
+import Observation
+
+/// App-wide authentication state. Injected via `AppEnvironment` into the SwiftUI environment.
+/// Screens read `authStore.isAuthenticated`; they never call the service directly.
+@MainActor
+@Observable
+public final class AuthStore {
+
+    // MARK: - Published state
+
+    public private(set) var session: StoredSession?
+    public private(set) var isLoading = false
+    public private(set) var error: AuthError?
+
+    public var isAuthenticated: Bool { session != nil }
+    public var userID: String? { session?.userID }
+    public var email: String? { session?.email }
+
+    // MARK: - Dependencies
+
+    private let service: any AuthServiceProtocol
+
+    // MARK: - Init
+
+    public init(service: any AuthServiceProtocol) {
+        self.service = service
+    }
+
+    // MARK: - Actions
+
+    /// Called once at app launch to restore a previously authenticated session from
+    /// supabase-swift's in-memory store or the Keychain fallback.
+    public func restoreSession() async {
+        isLoading = true
+        defer { isLoading = false }
+        session = await service.restoreSession()
+    }
+
+    /// Sign in with email + password. Sets `error` on failure; callers observe `error` for messages.
+    public func signIn(email: String, password: String) async {
+        guard !isLoading else { return }
+        isLoading = true
+        error = nil
+        defer { isLoading = false }
+        do {
+            session = try await service.signIn(email: email, password: password)
+        } catch let e as AuthError {
+            error = e
+        } catch {
+            self.error = .underlying(error)
+        }
+    }
+
+    /// Sign out. Clears the session locally even if the remote sign-out call fails —
+    /// the user should never be stuck in an authenticated state they can't escape.
+    public func signOut() async {
+        isLoading = true
+        defer { isLoading = false }
+        try? await service.signOut()
+        session = nil
+        error = nil
+    }
+}
+
+// MARK: - AuthError
+
+public enum AuthError: LocalizedError, Sendable {
+    case invalidCredentials
+    case networkError
+    case underlying(any Error)
+
+    public var errorDescription: String? {
+        switch self {
+        case .invalidCredentials: return String(localized: "auth.error.invalid_credentials",
+                                                bundle: .module)
+        case .networkError:       return String(localized: "auth.error.network",
+                                                bundle: .module)
+        case .underlying(let e):  return e.localizedDescription
+        }
+    }
+}
