@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import type { FoodItem, Meal, PlannedMealInput } from "@/lib/api";
-import { scaleNutrient, useFoodSearch } from "@/lib/useFoodSearch";
+import { itemKey, scaleNutrient, useFoodSearch } from "@/lib/useFoodSearch";
+import { FoodSourceBadge, FoodSourceSelect } from "@/components/FoodSourceSelect";
 
 interface Props {
   token: string | null;
@@ -35,8 +36,18 @@ export function PlannedMealPicker({
   onClose,
 }: Props) {
   const search = useFoodSearch(token);
-  const { query, setQuery, barcode, setBarcode, results, searching, error, handleBarcode } =
-    search;
+  const {
+    query,
+    setQuery,
+    barcode,
+    setBarcode,
+    source,
+    setSource,
+    results,
+    searching,
+    error,
+    handleBarcode,
+  } = search;
   const [selected, setSelected] = useState<FoodItem | null>(null);
   const [grams, setGrams] = useState("100");
   const [meal, setMeal] = useState<Meal>(defaultMeal);
@@ -64,6 +75,7 @@ export function PlannedMealPicker({
       fat_g: qty !== null ? scaleNutrient(selected.fat_100g, qty) : null,
       saturated_fat_g: qty !== null ? scaleNutrient(selected.saturated_fat_100g, qty) : null,
       sodium_mg: qty !== null ? scaleNutrient(selected.sodium_mg_100g, qty) : null,
+      source: selected.source,
     });
     onClose();
   };
@@ -86,8 +98,8 @@ export function PlannedMealPicker({
         <div>
           <h3 className="text-sm font-medium text-[var(--text-primary)]">Plan a meal</h3>
           <p className="text-xs text-[var(--text-muted)]">
-            Search Open Food Facts for macros, or just jot down what you intend to
-            eat.
+            Search whole-food tables or Open Food Facts for macros, or just jot
+            down what you intend to eat.
           </p>
         </div>
         <button
@@ -139,7 +151,7 @@ export function PlannedMealPicker({
 
       {!token ? (
         <p className="text-xs text-amber-600">
-          Sign in to search Open Food Facts for nutrition data.
+          Sign in to search the food databases for nutrition data.
         </p>
       ) : (
         <>
@@ -147,18 +159,21 @@ export function PlannedMealPicker({
             <p className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-2">
               …or search for macros
             </p>
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search foods (e.g. ribeye, cheddar, eggs)…"
-              className={inputCls}
-            />
+            <div className="flex items-end gap-2">
+              <FoodSourceSelect value={source} onChange={setSource} />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search foods (e.g. ribeye, cheddar, eggs)…"
+                className={inputCls}
+              />
+            </div>
             <div className="flex gap-2 mt-2">
               <input
                 value={barcode}
                 onChange={(e) => setBarcode(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleBarcode()}
-                placeholder="…or enter a barcode"
+                placeholder="…or enter a barcode (Open Food Facts)"
                 inputMode="numeric"
                 className={inputCls}
               />
@@ -177,14 +192,17 @@ export function PlannedMealPicker({
           {results.length > 0 && (
             <ul className="divide-y divide-[var(--border-subtle)] rounded-lg border border-[var(--border-subtle)] overflow-hidden">
               {results.map((item) => (
-                <li key={item.code || item.name} className="px-3 py-2">
+                <li key={itemKey(item)} className="px-3 py-2">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm text-[var(--text-primary)] truncate">
-                        {item.name}
-                        {item.brand && (
-                          <span className="text-[var(--text-muted)]"> · {item.brand}</span>
-                        )}
+                      <p className="flex items-center gap-1.5 text-sm text-[var(--text-primary)]">
+                        <FoodSourceBadge source={item.source} />
+                        <span className="truncate">
+                          {item.name}
+                          {item.brand && (
+                            <span className="text-[var(--text-muted)]"> · {item.brand}</span>
+                          )}
+                        </span>
                       </p>
                       <p className="text-[11px] text-[var(--text-muted)] font-mono">
                         {item.energy_kcal_100g ?? "—"} kcal · C{item.carbs_100g ?? "—"} /
@@ -195,15 +213,15 @@ export function PlannedMealPicker({
                     </div>
                     <button
                       onClick={() =>
-                        setSelected(selected?.code === item.code ? null : item)
+                        setSelected(selected && itemKey(selected) === itemKey(item) ? null : item)
                       }
                       className="shrink-0 text-xs font-medium text-[var(--color-accent)] hover:underline"
                     >
-                      {selected?.code === item.code ? "Close" : "Choose"}
+                      {selected && itemKey(selected) === itemKey(item) ? "Close" : "Choose"}
                     </button>
                   </div>
 
-                  {selected?.code === item.code && (
+                  {selected && itemKey(selected) === itemKey(item) && (
                     <div className="mt-2 flex flex-wrap items-end gap-2">
                       <div className="space-y-1">
                         <label className="text-[10px] uppercase tracking-widest text-[var(--text-muted)]">

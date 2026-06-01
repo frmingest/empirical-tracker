@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, field_validator
 
 from app.auth import current_user_id
+from app.food_sources.base import VALID_SOURCES
 from app.meal_plans import repository
 
 router = APIRouter(prefix="/meal-plans", tags=["meal-plans"])
@@ -35,6 +36,7 @@ class PlannedMealIn(BaseModel):
     fat_g: float | None = None
     sodium_mg: float | None = None
     saturated_fat_g: float | None = None
+    source: str | None = None
     note: str | None = None
     done: bool = False
 
@@ -44,6 +46,13 @@ class PlannedMealIn(BaseModel):
         if not v.strip():
             raise ValueError("food_name must not be empty")
         return v.strip()
+
+    @field_validator("source")
+    @classmethod
+    def _valid_source(cls, v: str | None) -> str | None:
+        if v is not None and v not in VALID_SOURCES:
+            raise ValueError(f"source must be one of {sorted(VALID_SOURCES)}")
+        return v
 
     @field_validator("meal")
     @classmethod

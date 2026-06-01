@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import type { FoodEntryInput, FoodItem, Meal } from "@/lib/api";
-import { scaleNutrient, useFoodSearch } from "@/lib/useFoodSearch";
+import { itemKey, scaleNutrient, useFoodSearch } from "@/lib/useFoodSearch";
+import { FoodSourceBadge, FoodSourceSelect } from "@/components/FoodSourceSelect";
 
 interface Props {
   token: string | null;
@@ -22,8 +23,18 @@ const MEAL_LABEL: Record<Meal, string> = {
 
 export function FoodSearch({ token, loggedOn, onAdd }: Props) {
   const search = useFoodSearch(token);
-  const { query, setQuery, barcode, setBarcode, results, searching, error, handleBarcode } =
-    search;
+  const {
+    query,
+    setQuery,
+    barcode,
+    setBarcode,
+    source,
+    setSource,
+    results,
+    searching,
+    error,
+    handleBarcode,
+  } = search;
   // The result currently being added, plus its quantity/meal selection.
   const [selected, setSelected] = useState<FoodItem | null>(null);
   const [grams, setGrams] = useState("100");
@@ -46,6 +57,7 @@ export function FoodSearch({ token, loggedOn, onAdd }: Props) {
       fat_g: qty !== null ? scaleNutrient(selected.fat_100g, qty) : null,
       saturated_fat_g: qty !== null ? scaleNutrient(selected.saturated_fat_100g, qty) : null,
       sodium_mg: qty !== null ? scaleNutrient(selected.sodium_mg_100g, qty) : null,
+      source: selected.source,
     });
     setSelected(null);
     setGrams("100");
@@ -60,29 +72,33 @@ export function FoodSearch({ token, loggedOn, onAdd }: Props) {
       <div>
         <h3 className="text-sm font-medium text-[var(--text-primary)]">Add food</h3>
         <p className="text-xs text-[var(--text-muted)]">
-          Search the Open Food Facts branded &amp; barcode database, or enter a
-          barcode directly. Nutrition is taken as-published — never estimated.
+          Search lab-analysed whole foods (Matvaretabellen, USDA) or the Open Food
+          Facts branded &amp; barcode database. Nutrition is taken as-published —
+          never estimated.
         </p>
       </div>
 
       {!token ? (
         <p className="text-xs text-amber-600">
-          Sign in to search Open Food Facts and log food.
+          Sign in to search the food databases and log food.
         </p>
       ) : (
         <>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search foods (e.g. ribeye, cheddar, eggs)…"
-            className={inputCls}
-          />
+          <div className="flex items-end gap-2">
+            <FoodSourceSelect value={source} onChange={setSource} />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search foods (e.g. ribeye, cheddar, eggs)…"
+              className={inputCls}
+            />
+          </div>
           <div className="flex gap-2">
             <input
               value={barcode}
               onChange={(e) => setBarcode(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleBarcode()}
-              placeholder="…or enter a barcode"
+              placeholder="…or enter a barcode (Open Food Facts)"
               inputMode="numeric"
               className={inputCls}
             />
@@ -101,14 +117,17 @@ export function FoodSearch({ token, loggedOn, onAdd }: Props) {
           {results.length > 0 && (
             <ul className="divide-y divide-[var(--border-subtle)] rounded-lg border border-[var(--border-subtle)] overflow-hidden">
               {results.map((item) => (
-                <li key={item.code || item.name} className="px-3 py-2">
+                <li key={itemKey(item)} className="px-3 py-2">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm text-[var(--text-primary)] truncate">
-                        {item.name}
-                        {item.brand && (
-                          <span className="text-[var(--text-muted)]"> · {item.brand}</span>
-                        )}
+                      <p className="flex items-center gap-1.5 text-sm text-[var(--text-primary)]">
+                        <FoodSourceBadge source={item.source} />
+                        <span className="truncate">
+                          {item.name}
+                          {item.brand && (
+                            <span className="text-[var(--text-muted)]"> · {item.brand}</span>
+                          )}
+                        </span>
                       </p>
                       <p className="text-[11px] text-[var(--text-muted)] font-mono">
                         {item.energy_kcal_100g ?? "—"} kcal · C{item.carbs_100g ?? "—"} /
@@ -119,16 +138,16 @@ export function FoodSearch({ token, loggedOn, onAdd }: Props) {
                     </div>
                     <button
                       onClick={() =>
-                        setSelected(selected?.code === item.code ? null : item)
+                        setSelected(selected && itemKey(selected) === itemKey(item) ? null : item)
                       }
                       className="shrink-0 text-xs font-medium text-[var(--color-accent)] hover:underline"
                     >
-                      {selected?.code === item.code ? "Close" : "Add"}
+                      {selected && itemKey(selected) === itemKey(item) ? "Close" : "Add"}
                     </button>
                   </div>
 
                   {/* Inline quantity + meal picker */}
-                  {selected?.code === item.code && (
+                  {selected && itemKey(selected) === itemKey(item) && (
                     <div className="mt-2 flex flex-wrap items-end gap-2">
                       <div className="space-y-1">
                         <label className="text-[10px] uppercase tracking-widest text-[var(--text-muted)]">

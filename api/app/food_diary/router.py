@@ -5,7 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, field_validator
 
 from app.auth import current_user_id
-from app.food_diary import openfoodfacts, repository
+from app.food_diary import repository
+from app.food_sources import openfoodfacts, registry
+from app.food_sources.base import SOURCE_OFF, VALID_SOURCES
 
 router = APIRouter(prefix="/food-diary", tags=["food-diary"])
 
@@ -23,6 +25,7 @@ class FoodEntryIn(BaseModel):
     fat_g: float | None = None
     sodium_mg: float | None = None
     saturated_fat_g: float | None = None
+    source: str | None = None
     note: str | None = None
 
     @field_validator("food_name")
@@ -32,6 +35,13 @@ class FoodEntryIn(BaseModel):
             raise ValueError("food_name must not be empty")
         return v.strip()
 
+    @field_validator("source")
+    @classmethod
+    def _valid_source(cls, v: str | None) -> str | None:
+        if v is not None and v not in VALID_SOURCES:
+            raise ValueError(f"source must be one of {sorted(VALID_SOURCES)}")
+        return v
+
     @field_validator("meal")
     @classmethod
     def _valid_meal(cls, v: str) -> str:
@@ -40,21 +50,29 @@ class FoodEntryIn(BaseModel):
         return v
 
 
-# ── Open Food Facts proxy ───────────────────────────────────────────────────────
-# These two endpoints are a thin, normalising proxy in front of Open Food Facts.
-# They require auth so the lookup can't be used as an open relay.
+# ── Food-source proxy ───────────────────────────────────────────────────────────
+# A thin, normalising proxy in front of the food sources (Open Food Facts,
+# Matvaretabellen, USDA — see ADR-018). These require auth so the lookup can't be
+# used as an open relay. Barcode lookup stays Open-Food-Facts-only: the
+# whole-food composition tables have no barcodes.
 
 
 @router.get("/search")
 async def search_foods(
     q: str = Query(min_length=1),
+    source: str = Query(default=SOURCE_OFF),
     _user_id: str = Depends(current_user_id),
 ) -> list[dict]:
+    if source not in registry.SELECTABLE_SOURCES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"source must be one of {sorted(registry.SELECTABLE_SOURCES)}",
+        )
     try:
-        return await openfoodfacts.search_products(q)
+        return await registry.search(q, source)
     except httpx.HTTPError as exc:
         raise HTTPException(
-            status_code=502, detail="Open Food Facts is unavailable"
+            status_code=502, detail="The selected food source is unavailable"
         ) from exc
 
 

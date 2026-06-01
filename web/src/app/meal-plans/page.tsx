@@ -19,6 +19,7 @@ import {
 } from "@/lib/api";
 import { MOCK_MEAL_PLANS, MOCK_PLANNED_MEALS } from "@/lib/mockData";
 import { PlannedMealPicker } from "@/components/PlannedMealPicker";
+import { FoodSourceBadge } from "@/components/FoodSourceSelect";
 
 const MEAL_ORDER: Meal[] = ["breakfast", "lunch", "dinner", "snack", "other"];
 
@@ -173,6 +174,7 @@ export default function MealPlansPage() {
         fat_g: m.fat_g,
         sodium_mg: m.sodium_mg,
         saturated_fat_g: m.saturated_fat_g,
+        source: m.source,
       });
       if (!m.done) await setPlannedMealDone(token, m.id, true);
       refresh();
@@ -555,13 +557,14 @@ function PlannedMealRow({
         </button>
         <div className="min-w-0 flex-1">
           <p
-            className={`text-xs truncate ${
+            className={`flex items-center gap-1.5 text-xs ${
               meal.done
                 ? "text-[var(--text-muted)] line-through"
                 : "text-[var(--text-primary)]"
             }`}
           >
-            {meal.food_name}
+            <FoodSourceBadge source={meal.source} />
+            <span className="truncate">{meal.food_name}</span>
           </p>
           <p className="text-[10px] text-[var(--text-muted)] font-mono">
             {meal.energy_kcal != null ? `${meal.energy_kcal} kcal` : "—"}

@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import httpx
 
+from app.food_sources.base import SOURCE_OFF
+
 # OFF asks every caller to identify itself as "AppName/Version (contact)".
 USER_AGENT = "EmpiricalTracker/1.0 (https://github.com/frmingest/empirical-tracker)"
 
@@ -96,6 +98,7 @@ def _normalise(product: dict) -> dict | None:
         "fat_100g": _num(nutriments.get("fat_100g")),
         "saturated_fat_100g": _num(nutriments.get("saturated-fat_100g")),
         "sodium_mg_100g": _sodium_mg(nutriments),
+        "source": SOURCE_OFF,
     }
 
 
