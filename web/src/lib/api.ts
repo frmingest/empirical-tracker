@@ -423,3 +423,33 @@ export async function deletePlannedMeal(token: string, id: string): Promise<void
   });
   if (!res.ok) throw new Error(`DELETE /meal-plans/calendar/${id} → ${res.status}`);
 }
+
+// ── Sprint 6: account (GDPR data export + erasure) ──────────────────────────────
+
+export interface AccountDeletion {
+  data_deleted: boolean;
+  account_deleted: boolean;
+}
+
+/** Download all of the user's data as a JSON document or a zip of CSVs. */
+export async function exportAccountData(
+  token: string,
+  format: "json" | "csv"
+): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/account/export?format=${format}`, {
+    headers: bearerHeaders(token),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`GET /account/export → ${res.status}`);
+  return res.blob();
+}
+
+/** Permanently erase the user's data and account (GDPR right to erasure). */
+export async function deleteAccount(token: string): Promise<AccountDeletion> {
+  const res = await fetch(`${API_BASE}/account`, {
+    method: "DELETE",
+    headers: bearerHeaders(token),
+  });
+  if (!res.ok) throw new Error(`DELETE /account → ${res.status}`);
+  return res.json() as Promise<AccountDeletion>;
+}
