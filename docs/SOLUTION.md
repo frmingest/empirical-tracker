@@ -153,25 +153,27 @@ who you are. The API verifies this token with Supabase before touching any data.
 
 ## The biomarker categories
 
-The 34 biomarkers from your blood panel are grouped into 8 categories:
+The biomarkers from your blood panel are grouped into 8 categories. A marker
+appears whenever your import (or the demo data) contains it; the lists below show
+what each category tracks, including the markers Sprint 8 added:
 
 | Category | What it tracks |
 |----------|---------------|
-| **Lipids** | Cholesterol (HDL, LDL, Total, non-HDL) |
+| **Lipids** | Cholesterol (HDL, LDL, Total, non-HDL), Triglycerides, and particle markers (ApoB, Lp(a)) |
 | **CBC** | Blood cell counts (Hemoglobin, RBC, WBC, Hematocrit, MCV, MCH, MCHC) |
-| **Metabolic** | Blood sugar management (HbA1c) |
+| **Metabolic** | Blood-sugar control (HbA1c) and uric acid |
 | **Thyroid** | Thyroid function (TSH, Free T4) |
 | **Renal** | Kidney function (Creatinine, eGFR) |
 | **Liver** | Liver enzymes (ALT, GGT) |
 | **Nutrients** | Vitamins and minerals (Ferritin, B12, Active B12, Vitamin D, Folate, Iron, Transferrin, Homocysteine, MMA) |
-| **Electrolytes** | Sodium, Potassium |
+| **Electrolytes** | Sodium, Potassium, Magnesium, Phosphate |
 
 ---
 
 ## Diet focus
 
 The dashboard has a **Diet focus** control that hides biomarkers which aren't clinically
-informative for your chosen eating pattern, so you see a focused view instead of all 34 markers
+informative for your chosen eating pattern, so you see a focused view instead of every marker
 at once:
 
 | Focus | Shows |
@@ -557,7 +559,7 @@ npm run dev   # opens http://localhost:3000
 **Run the tests:**
 ```bash
 cd api
-pytest -v   # 37 tests, should all pass
+pytest -v   # 81 pass (+7 integration tests skipped without Supabase creds)
 ```
 
 ---
