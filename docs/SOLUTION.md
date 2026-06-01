@@ -125,6 +125,13 @@ planned_meals: A meal scheduled on the calendar (optionally filed under a plan)
                "scheduled_on: 2026-06-02 | meal: dinner | Ribeye | done: false"
 ```
 
+Sprint 10 added one more table for body metrics:
+
+```
+body_metrics:  A body measurement on a given day (weight, waist, blood pressure)
+               "measured_on: 2026-05-22 | weight: 83.1 kg | waist: 90 cm | BP 122/79"
+```
+
 Every row in every table has a `user_id` column. This means your data and someone else's data
 are completely separate — the database itself enforces this (not just the application code).
 
@@ -388,6 +395,40 @@ export/erasure (which selects `*`) with no contract change. See ADR-016.
 
 ---
 
+## Body metrics — weight, waist, blood pressure (Sprint 10)
+
+For diet tracking, **weight, waist, and blood pressure respond faster — and often
+matter more — than most labs**, and blood pressure ties directly to the app's
+sodium emphasis (Sprint 9). Until now the app tracked blood biomarkers and food,
+but not the body's own headline responses to a diet change. Sprint 10 adds them:
+
+- A `/body-metrics` page lets you log **weight (kg)**, **waist (cm)**, and **blood
+  pressure (mmHg)** on any date. Every metric is optional, so you can record just
+  your weight one day and just your blood pressure another — but a measurement must
+  carry at least one metric, and blood pressure is a pair (both halves or neither).
+- Each metric gets its own **trend chart on the same timeline** as your biomarkers,
+  carrying the **same diet-event correlation overlay** (Sprint 3) — so you can see
+  whether a regimen change lines up with a shift in weight or blood pressure, with
+  the same honesty caveat that this shows *timing, not cause and effect*.
+- The blood-pressure chart draws faint **guideline** lines at 120 / 80 — labelled
+  "guideline," deliberately styled as a neutral population reference, **not** the
+  Sprint 7 clinical-target line and **not** a personalised verdict. Weight and waist
+  carry no guideline line (a healthy weight is personal; a waist threshold depends
+  on sex/ethnicity the app doesn't collect).
+
+Body metrics live in a new `body_metrics` table (RLS self-scoped), served by
+`GET/POST/DELETE /body-metrics`. The table is wired into the GDPR export/erasure
+contract (`USER_TABLES` / `DELETE_ORDER`). Storing **weight** also unblocks the
+deferred Sprint 9 **protein g/kg** target, once that targets UI is built. The
+design and the scope cuts are in `docs/adr/017-body-metrics.md`.
+
+> **Deferred to the Sprint 10 follow-up:** overlaying body metrics *onto the
+> biomarker timeline itself* (e.g. weight behind LDL) — the data and the overlay
+> machinery are now in place, so this is a presentation follow-up, not new
+> infrastructure.
+
+---
+
 ## Where the "Add result" button lives
 
 Manual single-result entry now lives on each **biomarker detail page** (an "Add
@@ -431,7 +472,7 @@ The app understands the standard Norwegian blood panel Excel format:
 | 7 ✅ | Reference range vs. clinical target + within-range trend signals |
 | 8 ◐ | **Panel expansion — high-yield markers, derived ratios, confounder tooltips** (high-yield markers, refeeding electrolytes, triglycerides target, confounder notes ✅; further Medium markers + derived ratios — follow-up) |
 | 9 ◐ | **Food diary depth — sodium & saturated fat ✅, kJ→kcal fallback ✅; better food source + daily targets — follow-up** |
-| 10 | **Body metrics & longitudinal context — weight, waist, blood pressure** |
+| 10 ✅ | **Body metrics & longitudinal context — weight, waist, blood pressure** (trend charts + diet-event overlay ✅; optional body-metric-on-biomarker-timeline overlay — follow-up) |
 
 Additional UX enhancements shipped alongside Sprint 2 (outside the original roadmap): diet-focus
 biomarker filtering (ADR-008) and English/Norwegian internationalization with category tooltips
@@ -464,8 +505,8 @@ headers** (ADR-013). Two items remain before Sprint 6 is closed:
   **table** is added — e.g. **Sprint 10** (`body_metrics`). New **columns** on an already-listed
   table need no change: collection uses `select("*")` and the CSV export derives its columns from the
   rows, so **Sprint 9**'s sodium / saturated-fat columns flow into both export and erasure
-  automatically (verified in ADR-016). A *table* left out would silently drop from both, so Sprint 10's
-  review must still check this off.
+  automatically (verified in ADR-016). A *table* left out would silently drop from both — **Sprint 10**
+  added `body_metrics` to both `USER_TABLES` and `DELETE_ORDER` (ADR-017), keeping the contract intact.
 
 ---
 
@@ -560,15 +601,22 @@ Severity tags below mirror the review: **High** = change a decision a user could
   depends on body weight from Sprint 10 — ship the targets UI here and enable the g/kg view once
   weight tracking lands (or capture a single weight value as a prerequisite).
 
-### Sprint 10 — Body metrics & longitudinal context
+### Sprint 10 — Body metrics & longitudinal context ✅
 
 > **Why:** for diet tracking, weight, waist, and blood pressure respond faster and matter more than
 > most labs, and BP ties directly to the app's sodium emphasis — yet there are no body metrics at all.
+>
+> **Status:** delivered (ADR-017). The new table, the three trend charts, and the diet-event overlay
+> have shipped; the *optional* body-metric-on-biomarker-timeline overlay is a noted follow-up.
 
-- New `body_metrics` table (RLS self-scoped): **weight, waist, blood pressure**, with trend charts on
-  the same timeline and the same diet-event correlation overlay as biomarkers.
-- Feed body weight into the Sprint 9 **protein g/kg** target.
-- Optionally overlay body metrics against the biomarker timeline for at-a-glance context.
+- New `body_metrics` table (RLS self-scoped) ✅: **weight, waist, blood pressure**, with trend charts on
+  the same timeline and the same diet-event correlation overlay as biomarkers. Every metric is
+  optional; blood pressure is constrained to a both-or-neither pair; a row must carry at least one
+  metric. Served by `GET/POST/DELETE /body-metrics` and wired into the GDPR export/erasure contract.
+- Feed body weight into the Sprint 9 **protein g/kg** target — the weight is now captured and stored;
+  the g/kg consumer ships with the deferred Sprint 9 targets UI.
+- Optionally overlay body metrics against the biomarker timeline for at-a-glance context — **follow-up**
+  (the data and overlay machinery are in place; this is a presentation enhancement).
 
 > **Cross-cutting (all four sprints):** keep the review's intellectual honesty. Every new number is
 > "decision-support, not medical advice"; with only a handful of blood draws, the app must keep
@@ -598,7 +646,7 @@ npm run dev   # opens http://localhost:3000
 **Run the tests:**
 ```bash
 cd api
-pytest -v   # 81 pass (+7 integration tests skipped without Supabase creds)
+pytest -v   # 97 pass (+7 integration tests skipped without Supabase creds)
 ```
 
 ---
@@ -626,11 +674,16 @@ pytest -v   # 81 pass (+7 integration tests skipped without Supabase creds)
 | `api/supabase/migrations/005_food_entries.sql` | Creates the `food_entries` table |
 | `api/supabase/migrations/006_meal_plans.sql` | Creates the `meal_plans` + `planned_meals` tables |
 | `api/supabase/migrations/007_sodium_saturated_fat.sql` | Adds sodium + saturated-fat columns to food/planned meals (Sprint 9) |
+| `api/supabase/migrations/008_body_metrics.sql` | Creates the `body_metrics` table — weight, waist, blood pressure (Sprint 10) |
+| `api/app/body_metrics/router.py` | Body-metrics CRUD endpoints (Sprint 10) |
+| `api/app/body_metrics/repository.py` | Saves/retrieves body metrics |
 | `web/src/app/page.tsx` | The main dashboard page |
 | `web/src/app/biomarkers/[id]/page.tsx` | Biomarker detail — chart, annotations, Add result |
 | `web/src/app/food-diary/page.tsx` | The food diary page (Sprint 4) |
 | `web/src/app/meal-plans/page.tsx` | The meal-plan weekly calendar page (Sprint 5) |
 | `web/src/app/account/page.tsx` | Account page — data export + account deletion (Sprint 6) |
+| `web/src/app/body-metrics/page.tsx` | Body-metrics page — log + trend charts (Sprint 10) |
+| `web/src/components/BodyMetricChart.tsx` | Generic body-metric trend chart with diet overlay (Sprint 10) |
 | `web/src/components/PlannedMealPicker.tsx` | Add a planned meal (OFF search or free-text) |
 | `web/src/lib/useFoodSearch.ts` | Shared Open Food Facts search hook (diary + meal plans) |
 | `web/src/app/import/page.tsx` | The file upload page |

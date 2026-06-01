@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.account.router import router as account_router
 from app.biomarkers.router import router as biomarkers_router
+from app.body_metrics.router import router as body_metrics_router
 from app.config import get_settings
 from app.diet_events.router import router as diet_events_router
 from app.food_diary.router import router as food_diary_router
@@ -44,6 +45,7 @@ app.include_router(settings_router)
 app.include_router(diet_events_router)
 app.include_router(food_diary_router)
 app.include_router(meal_plans_router)
+app.include_router(body_metrics_router)
 app.include_router(account_router)
 
 

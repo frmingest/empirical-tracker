@@ -16,15 +16,18 @@ USER_TABLES: tuple[str, ...] = (
     "food_entries",
     "meal_plans",
     "planned_meals",
+    "body_metrics",
 )
 
 # Deletion order: children before parents, so foreign-key constraints never
 # block erasure (results → panels/biomarkers; planned_meals → meal_plans).
+# body_metrics is a standalone table (no children), so its position is free.
 DELETE_ORDER: tuple[str, ...] = (
     "results",
     "planned_meals",
     "food_entries",
     "diet_events",
+    "body_metrics",
     "meal_plans",
     "panels",
     "biomarkers",

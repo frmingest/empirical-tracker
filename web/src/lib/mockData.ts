@@ -1,5 +1,6 @@
 import type {
   BiomarkerWithSeries,
+  BodyMetric,
   DietEvent,
   FoodEntry,
   MealPlan,
@@ -732,6 +733,49 @@ export const MOCK_PLANNED_MEALS: PlannedMeal[] = [
     sodium_mg: 250,
     note: null,
     done: false,
+  },
+];
+
+/** Sample body metrics for the signed-out demo. Dates line up with the blood
+ *  draws and diet events so the trend charts and the correlation overlay read
+ *  sensibly — weight and waist fall after the carnivore start, blood pressure
+ *  eases as sodium is managed. */
+export const MOCK_BODY_METRICS: BodyMetric[] = [
+  {
+    id: "mock-body-1",
+    measured_on: "2023-09-15",
+    weight_kg: 94.2,
+    waist_cm: 102,
+    systolic: 134,
+    diastolic: 86,
+    note: null,
+  },
+  {
+    id: "mock-body-2",
+    measured_on: "2024-05-31",
+    weight_kg: 91.0,
+    waist_cm: 99,
+    systolic: 130,
+    diastolic: 84,
+    note: "At carnivore start.",
+  },
+  {
+    id: "mock-body-3",
+    measured_on: "2025-03-13",
+    weight_kg: 86.4,
+    waist_cm: 94,
+    systolic: 126,
+    diastolic: 81,
+    note: null,
+  },
+  {
+    id: "mock-body-4",
+    measured_on: "2026-05-22",
+    weight_kg: 83.1,
+    waist_cm: 90,
+    systolic: 122,
+    diastolic: 79,
+    note: null,
   },
 ];
 

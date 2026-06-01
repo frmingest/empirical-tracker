@@ -146,6 +146,12 @@ export default function DashboardPage() {
             >
               {t("nav.mealPlans")}
             </Link>
+            <Link
+              href="/body-metrics"
+              className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] px-2 py-1.5 rounded transition-colors"
+            >
+              {t("nav.bodyMetrics")}
+            </Link>
             {session ? (
               <>
                 <Link
