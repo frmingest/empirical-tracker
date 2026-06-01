@@ -17,11 +17,11 @@ export type DietKey = "all" | "carnivore" | "low_carb" | "fasting" | "custom";
 
 /** Canonical, stable identifier for each biomarker in the panel. */
 export type MarkerKey =
-  | "hdl" | "ldl" | "total_chol" | "nonhdl"
+  | "hdl" | "ldl" | "total_chol" | "nonhdl" | "triglycerides" | "apob" | "lpa"
   | "hemoglobin" | "rbc" | "wbc" | "hematocrit" | "mch" | "mchc" | "mcv"
-  | "hba1c" | "tsh" | "free_t4" | "creatinine" | "egfr" | "alt" | "ggt"
+  | "hba1c" | "uric_acid" | "tsh" | "free_t4" | "creatinine" | "egfr" | "alt" | "ggt"
   | "ferritin" | "folate" | "b12" | "active_b12" | "vitamin_d" | "transferrin"
-  | "iron" | "homocysteine" | "mma" | "sodium" | "potassium";
+  | "iron" | "homocysteine" | "mma" | "sodium" | "potassium" | "magnesium" | "phosphate";
 
 /**
  * Ordered keyword rules — first match wins. Order resolves ambiguity:
@@ -30,13 +30,19 @@ export type MarkerKey =
  *  - the red-cell indices (mch/mchc/mcv) before "hemoglobin" (their names
  *    contain "… Hemoglobin …")
  *  - "gfr" before "kreatinin" so eGFR doesn't fall through to anything else
+ *  - the particle markers (apob/lp(a)/triglycerides) carry their own distinct
+ *    keywords, so order among the lipids is not load-bearing for them
  */
 const MARKER_RULES: [MarkerKey, string[]][] = [
   ["hba1c", ["hba1c"]],
   ["nonhdl", ["non-hdl"]],
   ["hdl", ["hdl"]],
   ["ldl", ["ldl"]],
+  ["triglycerides", ["triglyserid", "triglycerid"]],
+  ["apob", ["apolipoprotein b", "apolipoprotein", "apob"]],
+  ["lpa", ["lp(a)", "lipoprotein (a)", "lipoprotein a"]],
   ["total_chol", ["kolesterol", "cholesterol"]],
+  ["uric_acid", ["urinsyre", "uric acid", "urat"]],
   ["mchc", ["mchc"]],
   ["mch", ["mch"]],
   ["mcv", ["mcv"]],
@@ -61,6 +67,8 @@ const MARKER_RULES: [MarkerKey, string[]][] = [
   ["mma", ["mma", "metylmalon"]],
   ["sodium", ["natrium"]],
   ["potassium", ["kalium"]],
+  ["magnesium", ["magnesium"]],
+  ["phosphate", ["fosfat", "phosphate"]],
 ];
 
 /** Resolve a Norwegian biomarker name to its canonical key, or null if unknown. */
@@ -75,8 +83,9 @@ export function markerKey(nameNo: string): MarkerKey | null {
 // ── Clinical focus lists (keep in sync with docs/DIET_BIOMARKERS.md) ──────────
 
 const CARNIVORE: MarkerKey[] = [
-  "hdl", "ldl", "total_chol", "nonhdl",
+  "hdl", "ldl", "total_chol", "nonhdl", "triglycerides", "apob", "lpa",
   "hba1c",
+  "uric_acid",
   "alt", "ggt",
   "creatinine", "egfr",
   "ferritin", "iron", "transferrin",
@@ -88,19 +97,20 @@ const CARNIVORE: MarkerKey[] = [
 
 const LOW_CARB: MarkerKey[] = [
   "hba1c",
-  "hdl", "ldl", "total_chol", "nonhdl",
+  "hdl", "ldl", "total_chol", "nonhdl", "triglycerides", "apob", "lpa",
   "alt", "ggt",
   "sodium", "potassium",
   "ferritin",
 ];
 
 const FASTING: MarkerKey[] = [
-  "sodium", "potassium",
+  "sodium", "potassium", "magnesium", "phosphate",
   "hba1c",
+  "uric_acid",
   "alt", "ggt",
   "creatinine", "egfr",
   "hemoglobin", "hematocrit",
-  "hdl", "ldl", "total_chol", "nonhdl",
+  "hdl", "ldl", "total_chol", "nonhdl", "triglycerides", "apob", "lpa",
 ];
 
 /** Preset diets → the marker keys they reveal. */
@@ -126,19 +136,19 @@ export const DIET_OPTIONS: DietOption[] = [
     key: "carnivore",
     label: "Carnivore",
     description:
-      "Lipid response, iron stores, kidney load, liver enzymes, electrolytes and B-vitamin / folate status — the markers most affected by an all-meat diet.",
+      "Lipid panel (incl. triglycerides, ApoB, Lp(a)), iron stores, kidney load, liver enzymes, uric acid, electrolytes and B-vitamin / folate status — the markers most affected by an all-meat diet.",
   },
   {
     key: "low_carb",
     label: "Low carb",
     description:
-      "Glycemic control (HbA1c), the full lipid panel, liver enzymes and the electrolytes that shift when you cut carbs.",
+      "Glycemic control (HbA1c), the full lipid panel (incl. triglycerides and ApoB), liver enzymes and the electrolytes that shift when you cut carbs.",
   },
   {
     key: "fasting",
     label: "Fasting",
     description:
-      "Electrolytes, glucose control, kidney and liver markers, plus hydration-sensitive blood counts to watch during a fast.",
+      "Refeeding-syndrome electrolytes (sodium, potassium, magnesium, phosphate), glucose control, uric acid, kidney and liver markers, plus hydration-sensitive blood counts to watch during a fast.",
   },
   {
     key: "custom",

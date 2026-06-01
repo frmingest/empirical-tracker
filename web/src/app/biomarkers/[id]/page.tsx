@@ -10,6 +10,7 @@ import { BiomarkerChart } from "@/components/BiomarkerChart";
 import { DietEventManager } from "@/components/DietEventManager";
 import { ManualEntryModal } from "@/components/ManualEntryModal";
 import { MarkerSignals } from "@/components/MarkerSignals";
+import { MarkerNote } from "@/components/MarkerNote";
 import { StatusBadge } from "@/components/StatusBadge";
 import { assessMarker } from "@/lib/markerSignals";
 import {
@@ -226,6 +227,9 @@ export default function BiomarkerDetailPage({ params }: { params: Promise<{ id: 
 
         {/* Target + within-range trend signals (Sprint 7) */}
         <MarkerSignals data={entry} />
+
+        {/* Per-marker confounder note (Sprint 8) */}
+        <MarkerNote nameNo={biomarker.name_no} />
 
         {/* Diet annotations (correlation overlay) */}
         <DietEventManager

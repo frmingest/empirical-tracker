@@ -318,6 +318,42 @@ rules are in `docs/adr/014-clinical-targets-trend-signals.md`.
 
 ---
 
+## Panel expansion + confounder notes (Sprint 8 — high-priority slice)
+
+The clinical review flagged that, for these specific diets, some of the *most*
+informative markers were missing, two diet profiles promised markers they didn't
+carry, and a few markers we already track are confounded by the diet itself.
+This slice closes the **High-severity** gaps:
+
+- **New markers** the panel now recognises (they appear whenever your import or
+  the demo contains them): **triglycerides** (the signature low-carb response —
+  and it carries a clinical target of ≤ 1.7 mmol/L), **ApoB** and **Lp(a)** (the
+  gold-standard atherogenic-particle count and the genetic risk modifier),
+  **uric acid** (raised by high-purine meat intake and by fasting), and
+  **magnesium + phosphate**. The last two fix the **Fasting** profile, which
+  claimed to watch "refeeding-syndrome risk" but carried only potassium —
+  refeeding syndrome is defined by phosphate/magnesium/potassium together.
+- **Confounder notes** — eGFR, HbA1c, and ferritin each gain a plain-language note
+  on their detail page explaining *why the diet itself can move the number*:
+  creatinine-based eGFR is depressed by meat intake and muscle; HbA1c can read
+  paradoxically high from longer red-cell lifespan on keto; ferritin is an
+  acute-phase reactant, not only an iron store.
+- **Tooltip honesty pass** — group tooltips no longer promise markers the panel
+  can't show (glucose, calcium, ASAT were trimmed) and now name the markers that
+  *were* added.
+
+Everything here is **static client-side reference data** keyed off the same
+`markerKey()` the diet focus and clinical targets use — no database table and no
+migration, since these are universal marker facts, not per-user data. The full
+reasoning is in `docs/adr/015-panel-expansion-confounder-notes.md`.
+
+> **Deferred to the Sprint 8 follow-up:** the Medium-severity markers (fasting
+> insulin / C-peptide, fasting glucose, hs-CRP, AST/ASAT) and the **derived
+> ratios** (TG/HDL, AST:ALT), which will get a dedicated "Derived — calculated,
+> not measured" section.
+
+---
+
 ## Where the "Add result" button lives
 
 Manual single-result entry now lives on each **biomarker detail page** (an "Add
@@ -359,7 +395,7 @@ The app understands the standard Norwegian blood panel Excel format:
 | 5 ✅ | Meal plans and calendar — plan the week ahead, log planned meals to the diary |
 | 6 | GDPR data export + account deletion ✅ and security headers ✅; doctor sharing (PDF report) — follow-up |
 | 7 ✅ | Reference range vs. clinical target + within-range trend signals |
-| 8 | **Panel expansion — high-yield markers, derived ratios, confounder tooltips** |
+| 8 ◐ | **Panel expansion — high-yield markers, derived ratios, confounder tooltips** (high-yield markers, refeeding electrolytes, triglycerides target, confounder notes ✅; further Medium markers + derived ratios — follow-up) |
 | 9 | **Food diary depth — sodium & saturated fat, better food source, daily targets** |
 | 10 | **Body metrics & longitudinal context — weight, waist, blood pressure** |
 
@@ -432,31 +468,37 @@ Severity tags below mirror the review: **High** = change a decision a user could
 - Update `in_range` rendering so the green flag never overrides a flagged trend.
 - ADR documenting the reference-vs-target distinction and the trend-signal rules.
 
-### Sprint 8 — Panel expansion, derived ratios, confounder tooltips
+### Sprint 8 — Panel expansion, derived ratios, confounder tooltips ◐
 
 > **Why:** for these specific diets, several of the *most* informative markers are simply absent,
 > and two markers we already track are confounded by the diet itself.
+>
+> **Status:** the **High**-severity slice has shipped (ADR-015) — new high-yield markers, the
+> refeeding electrolytes, the triglycerides target, the confounder notes, and the tooltip-honesty
+> pass. The **Medium**-severity items below (further markers + derived ratios) are the follow-up.
 
-- **High-yield new markers** (High): **triglycerides** (the signature low-carb response; the Lipids
-  tooltip already promises it), **ApoB** ± **Lp(a)** (gold-standard atherogenic burden — the marker
-  to add for the lean-mass hyper-responder pattern), **uric acid** (raised by both high-purine
-  carnivore intake and fasting).
-- **Refeeding fix** (High, fasting): add **magnesium** and **phosphate**. The Fasting profile claims
-  to watch "refeeding-syndrome risk," which is defined by phosphate/magnesium/potassium — today only
-  potassium is present, so the stated purpose and the markers don't match.
-- **Further markers** (Medium): **fasting insulin / C-peptide** and **fasting glucose** (HbA1c alone
-  misses early insulin resistance), **hs-CRP** (inflammation is a headline claimed benefit),
-  **AST/ASAT** (normally paired with ALT).
-- **Derived markers** (Medium): compute and chart **TG/HDL ratio** (insulin-resistance surrogate)
-  and **AST:ALT ratio**.
-- Plumb the above through the parser keyword rules (`biomarkerCategories.ts`), the marker-key rules
-  and diet focus lists (`dietProfiles.ts` + `DIET_BIOMARKERS.md`): TG/ApoB into every lipid view;
-  uric acid into carnivore + fasting; Mg/phosphate into fasting; insulin/glucose into low-carb.
-- **Confounder tooltips** (Low–Medium): eGFR — creatinine-based eGFR is depressed by high meat
+- **High-yield new markers** (High) ✅: **triglycerides** (the signature low-carb response; the Lipids
+  tooltip already promises it — and now carries a clinical target ≤ 1.7 mmol/L), **ApoB** ± **Lp(a)**
+  (gold-standard atherogenic burden — the marker to add for the lean-mass hyper-responder pattern),
+  **uric acid** (raised by both high-purine carnivore intake and fasting).
+- **Refeeding fix** (High, fasting) ✅: added **magnesium** and **phosphate**. The Fasting profile
+  claimed to watch "refeeding-syndrome risk," which is defined by phosphate/magnesium/potassium —
+  previously only potassium was present, so the stated purpose and the markers now match.
+- **Further markers** (Medium — follow-up): **fasting insulin / C-peptide** and **fasting glucose**
+  (HbA1c alone misses early insulin resistance), **hs-CRP** (inflammation is a headline claimed
+  benefit), **AST/ASAT** (normally paired with ALT).
+- **Derived markers** (Medium — follow-up): compute and chart **TG/HDL ratio** (insulin-resistance
+  surrogate) and **AST:ALT ratio**, in a dedicated "Derived — calculated, not measured" section.
+- Plumbing ✅: the new markers are wired through the category keyword rules (`biomarkerCategories.ts`),
+  the marker-key rules and diet focus lists (`dietProfiles.ts` + `DIET_BIOMARKERS.md`): TG/ApoB/Lp(a)
+  into every lipid view; uric acid into carnivore + fasting; Mg/phosphate into fasting.
+  (Insulin/glucose into low-carb arrives with the Medium follow-up.)
+- **Confounder tooltips** (Low–Medium) ✅: eGFR — creatinine-based eGFR is depressed by high meat
   intake/muscle mass, suggest cystatin-C; HbA1c — can read paradoxically high on keto/carnivore from
   altered RBC turnover; ferritin — an acute-phase reactant, rises with inflammation, not just iron.
-- Trim or fulfil tooltips that promise markers not in the panel (triglycerides, glucose, calcium,
-  ASAT) so the app never describes what it can't show.
+  Delivered as a per-marker note map (`web/src/lib/markerNotes.ts`) rendered on the detail page.
+- Trim or fulfil tooltips that promise markers not in the panel ✅: triglycerides is now fulfilled;
+  glucose, calcium, and ASAT were trimmed so the app never describes what it can't show.
 
 ### Sprint 9 — Food diary depth & better food data
 
@@ -553,9 +595,11 @@ pytest -v   # 37 tests, should all pass
 | `web/src/lib/api.ts` | All the API calls from the frontend |
 | `web/src/lib/mockData.ts` | Realistic test data (biomarkers, diet events, food entries) |
 | `web/src/lib/dietProfiles.ts` | Diet → biomarker focus sets + name classifier |
-| `web/src/lib/clinicalTargets.ts` | Guideline clinical-target bounds, keyed by marker (Sprint 7) |
+| `web/src/lib/clinicalTargets.ts` | Guideline clinical-target bounds, keyed by marker (Sprint 7; +triglycerides Sprint 8) |
 | `web/src/lib/markerSignals.ts` | Trend signals + combined marker assessment (Sprint 7) |
 | `web/src/components/MarkerSignals.tsx` | Detail-page target + trend signal panel (Sprint 7) |
+| `web/src/lib/markerNotes.ts` | Per-marker diet-confounder notes, keyed by marker (Sprint 8) |
+| `web/src/components/MarkerNote.tsx` | Detail-page confounder note panel, EN/NO (Sprint 8) |
 | `web/src/lib/chartAnnotations.ts` | Projects diet events onto the chart's x-axis |
 | `web/src/lib/i18n.ts` | English/Norwegian string dictionary |
 | `web/src/app/panels/page.tsx` | Panel timeline — list of all blood draw sessions |

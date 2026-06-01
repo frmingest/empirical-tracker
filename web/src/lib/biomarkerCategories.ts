@@ -16,14 +16,14 @@ export type Category = (typeof CATEGORY_ORDER)[number];
 
 /** Keyword-to-category map — first match wins. */
 const RULES: [Category, string[]][] = [
-  ["Lipids",       ["HDL", "LDL", "Kolesterol", "non-HDL"]],
+  ["Lipids",       ["HDL", "LDL", "Kolesterol", "non-HDL", "Triglyserid", "Triglycerid", "Apolipoprotein", "ApoB", "Lp(a)", "Lipoprotein (a)"]],
   ["Thyroid",      ["TSH", "T4", "Tyroxin"]],
-  ["Metabolic",    ["HbA1c", "HBA1C", "Glukose"]],
+  ["Metabolic",    ["HbA1c", "HBA1C", "Glukose", "Urinsyre", "Uric Acid", "Urat"]],
   ["CBC",          ["Hemoglobin", "Erytrocytter", "Leukocytter", "Hematokritt", "MCH", "MCV", "MCHC", "Trombocytter", "HB"]],
   ["Renal",        ["Kreatinin", "GFR", "Nyre"]],
   ["Liver",        ["ALAT", "ASAT", "GT", "Bilirubin", "ALP"]],
   ["Nutrients",    ["Ferritin", "Folat", "B12", "Vitamin D", "Transferrin", "Jern", "TIBC", "MMA", "Homocystein"]],
-  ["Electrolytes", ["Natrium", "Kalium", "Kalsium", "Magnesium", "Fosfat"]],
+  ["Electrolytes", ["Natrium", "Kalium", "Kalsium", "Magnesium", "Fosfat", "Phosphate"]],
 ];
 
 export function getCategory(name: string): Category {
