@@ -48,6 +48,8 @@ export default function DashboardPage() {
   const [diet, setDiet] = useState<DietKey>("all");
   const [customMarkers, setCustomMarkers] = useState<string[]>([]);
   const [showCustom, setShowCustom] = useState(false);
+  // When on, the grid is narrowed to markers that are out of range or "Watch".
+  const [flaggedOnly, setFlaggedOnly] = useState(false);
 
   const token = session?.access_token ?? null;
 
@@ -100,7 +102,6 @@ export default function DashboardPage() {
   const visible = filterByDiet(results, diet, customMarkers);
 
   const stats = derivedStats(visible);
-  const grouped = groupByCategory(visible);
   const outOfRangeTotal = visible.filter(
     (r) => r.series.at(-1)?.in_range === false
   ).length;
@@ -109,10 +110,19 @@ export default function DashboardPage() {
     (r) => assessMarker(r.biomarker, r.series).level === "attention"
   ).length;
 
+  // A marker is "flagged" if it's out of range or carries a Watch signal.
+  const flaggedCount = outOfRangeTotal + attentionTotal;
+  const isFlagged = (r: BiomarkerWithSeries) => {
+    const level = assessMarker(r.biomarker, r.series).level;
+    return level === "out_of_range" || level === "attention";
+  };
+  const displayed = flaggedOnly ? visible.filter(isFlagged) : visible;
+  const grouped = groupByCategory(displayed);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[var(--bg-base)] flex items-center justify-center">
-        <div className="w-5 h-5 border-2 border-[var(--border-card)] border-t-blue-400 rounded-full animate-spin" />
+        <div className="w-5 h-5 border-2 border-[var(--border-card)] border-t-[var(--color-accent)] rounded-full animate-spin" />
       </div>
     );
   }
@@ -122,10 +132,10 @@ export default function DashboardPage() {
       {/* ── Top nav ─────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-40 border-b border-[var(--border-subtle)] bg-[var(--bg-base)]/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <span className="text-base font-semibold tracking-tight bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+          <span className="shrink-0 mr-2 text-base font-semibold tracking-tight bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
             Empirical
           </span>
-          <nav className="flex items-center gap-1">
+          <nav className="flex items-center gap-1 min-w-0 flex-1 justify-end overflow-x-auto">
             <LanguageToggle />
             <ThemeToggle />
             <Link
@@ -165,7 +175,7 @@ export default function DashboardPage() {
                 </span>
                 <button
                   onClick={() => setShowImport(true)}
-                  className="flex items-center gap-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg transition-colors"
+                  className="shrink-0 flex items-center gap-1.5 text-xs font-medium bg-[var(--btn-accent)] hover:bg-[var(--btn-accent-hover)] text-[var(--btn-accent-text)] px-3 py-1.5 rounded-lg transition-colors"
                 >
                   <span className="text-base leading-none">↑</span>
                   {t("nav.import")}
@@ -180,7 +190,7 @@ export default function DashboardPage() {
             ) : (
               <Link
                 href="/login"
-                className="text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg transition-colors ml-1"
+                className="shrink-0 text-xs font-medium bg-[var(--btn-accent)] hover:bg-[var(--btn-accent-hover)] text-[var(--btn-accent-text)] px-3 py-1.5 rounded-lg transition-colors ml-1"
               >
                 {t("nav.signIn")}
               </Link>
@@ -238,12 +248,23 @@ export default function DashboardPage() {
               dataLoading ? "…" : outOfRangeTotal.toString()
             }
             accent={outOfRangeTotal > 0 ? "rose" : "emerald"}
+            onClick={
+              flaggedCount > 0 ? () => setFlaggedOnly((v) => !v) : undefined
+            }
+            active={flaggedOnly}
+            title={flaggedCount > 0 ? t("filter.viewFlagged") : undefined}
           />
         </div>
 
-        {/* Sprint 7 — within-range markers worth a second look */}
+        {/* Sprint 7 — within-range markers worth a second look. Acts as a
+            shortcut into the flagged-only view. */}
         {!dataLoading && attentionTotal > 0 && (
-          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+          <button
+            type="button"
+            onClick={() => setFlaggedOnly(true)}
+            aria-pressed={flaggedOnly}
+            className="w-full text-left rounded-xl border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/5 px-4 py-3 transition-colors hover:bg-[var(--color-warning)]/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+          >
             <p className="text-sm text-[var(--text-secondary)]">
               {t("signals.watchNote").replace(
                 "{n}",
@@ -253,6 +274,22 @@ export default function DashboardPage() {
                 )
               )}
             </p>
+          </button>
+        )}
+
+        {/* Flagged-only filter status bar */}
+        {!dataLoading && flaggedOnly && (
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/5 px-4 py-2.5">
+            <span className="text-xs font-medium text-[var(--text-secondary)]">
+              {t("filter.flaggedOnly")} · {displayed.length} / {visible.length}
+            </span>
+            <button
+              type="button"
+              onClick={() => setFlaggedOnly(false)}
+              className="text-xs font-medium text-[var(--color-accent)] hover:underline"
+            >
+              {t("filter.showAll")}
+            </button>
           </div>
         )}
 
@@ -267,6 +304,18 @@ export default function DashboardPage() {
               className="mt-3 text-xs font-medium text-[var(--color-accent)] hover:underline"
             >
               {t("empty.choose")}
+            </button>
+          </div>
+        ) : flaggedOnly && displayed.length === 0 ? (
+          <div className="rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] px-4 py-10 text-center">
+            <p className="text-sm text-[var(--text-secondary)]">
+              {t("filter.allClear")}
+            </p>
+            <button
+              onClick={() => setFlaggedOnly(false)}
+              className="mt-3 text-xs font-medium text-[var(--color-accent)] hover:underline"
+            >
+              {t("filter.showAll")}
             </button>
           </div>
         ) : (
@@ -321,21 +370,28 @@ function StatCard({
   value,
   mono = true,
   accent,
+  onClick,
+  active = false,
+  title,
 }: {
   label: string;
   value: string;
   mono?: boolean;
   accent?: "rose" | "emerald";
+  /** When set, the card becomes a toggle button. */
+  onClick?: () => void;
+  active?: boolean;
+  title?: string;
 }) {
   const valueColor =
     accent === "rose"
-      ? "text-rose-500"
+      ? "text-[var(--color-out-range)]"
       : accent === "emerald"
-        ? "text-emerald-600"
+        ? "text-[var(--color-in-range)]"
         : "text-[var(--text-primary)]";
 
-  return (
-    <div className="rounded-xl border border-[var(--border-card)] bg-[var(--bg-card)] px-4 py-4 shadow-sm">
+  const body = (
+    <>
       <p className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1.5">
         {label}
       </p>
@@ -346,6 +402,29 @@ function StatCard({
       >
         {value}
       </p>
-    </div>
+    </>
   );
+
+  const base =
+    "rounded-xl border bg-[var(--bg-card)] px-4 py-4 shadow-sm text-left";
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={active}
+        title={title}
+        className={`${base} transition-colors hover:bg-[var(--bg-elevated)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${
+          active
+            ? "border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]"
+            : "border-[var(--border-card)]"
+        }`}
+      >
+        {body}
+      </button>
+    );
+  }
+
+  return <div className={`${base} border-[var(--border-card)]`}>{body}</div>;
 }

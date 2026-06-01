@@ -131,7 +131,7 @@ export function PlannedMealPicker({
         <button
           onClick={handleConfirmFreeText}
           disabled={!freeText.trim()}
-          className="shrink-0 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-sm font-semibold px-4 transition-colors"
+          className="shrink-0 rounded-lg bg-[var(--btn-accent)] hover:bg-[var(--btn-accent-hover)] disabled:opacity-40 text-[var(--btn-accent-text)] text-sm font-semibold px-4 transition-colors"
         >
           Add
         </button>
@@ -220,7 +220,7 @@ export function PlannedMealPicker({
                       </div>
                       <button
                         onClick={handleConfirmFromSearch}
-                        className="rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-2 transition-colors"
+                        className="rounded-lg bg-[var(--btn-accent)] hover:bg-[var(--btn-accent-hover)] text-[var(--btn-accent-text)] text-sm font-semibold px-4 py-2 transition-colors"
                       >
                         Plan it
                       </button>

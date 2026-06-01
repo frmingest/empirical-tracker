@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import Link from "next/link";
 import type { BiomarkerWithSeries } from "@/lib/api";
 import { addManualResult } from "@/lib/api";
 import { shortLabel } from "@/lib/biomarkerCategories";
+import { useModalA11y } from "@/lib/useModalA11y";
 
 interface Props {
   onClose: () => void;
@@ -33,6 +34,8 @@ export function ManualEntryModal({
   const [valueStr, setValueStr] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
+  const titleId = useId();
 
   const handleSubmit = async () => {
     if (!token) {
@@ -70,14 +73,22 @@ export function ManualEntryModal({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="w-full max-w-md rounded-2xl border border-[var(--border-card)] bg-[var(--bg-surface)] shadow-2xl">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="w-full max-w-md rounded-2xl border border-[var(--border-card)] bg-[var(--bg-surface)] shadow-2xl focus:outline-none"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[var(--border-card)]">
-          <h2 className="text-base font-semibold text-[var(--text-primary)]">
+          <h2 id={titleId} className="text-base font-semibold text-[var(--text-primary)]">
             Add result
           </h2>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-xl leading-none"
           >
             ×
@@ -167,7 +178,7 @@ export function ManualEntryModal({
           <button
             onClick={handleSubmit}
             disabled={!token || status === "submitting" || status === "success"}
-            className="w-full rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-[var(--bg-elevated)] disabled:text-[var(--text-muted)] text-white text-sm font-semibold py-2.5 transition-colors"
+            className="w-full rounded-lg bg-[var(--btn-accent)] hover:bg-[var(--btn-accent-hover)] disabled:bg-[var(--bg-elevated)] disabled:text-[var(--text-muted)] text-[var(--btn-accent-text)] text-sm font-semibold py-2.5 transition-colors"
           >
             {status === "submitting" ? "Saving…" : status === "success" ? "Saved" : "Add result"}
           </button>

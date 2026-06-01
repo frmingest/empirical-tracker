@@ -233,7 +233,7 @@ export function DietEventManager({ token, events, onChange }: Props) {
           <button
             onClick={handleAdd}
             disabled={busy}
-            className="w-full rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-[var(--bg-elevated)] disabled:text-[var(--text-muted)] text-white text-sm font-semibold py-2.5 transition-colors"
+            className="w-full rounded-lg bg-[var(--btn-accent)] hover:bg-[var(--btn-accent-hover)] disabled:bg-[var(--bg-elevated)] disabled:text-[var(--text-muted)] text-[var(--btn-accent-text)] text-sm font-semibold py-2.5 transition-colors"
           >
             {busy ? "Saving…" : "Save annotation"}
           </button>

@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import type { BiomarkerWithSeries } from "@/lib/api";
 import {
   CATEGORY_ORDER,
   groupByCategory,
   shortLabel,
 } from "@/lib/biomarkerCategories";
+import { useModalA11y } from "@/lib/useModalA11y";
 
 interface Props {
   results: BiomarkerWithSeries[];
@@ -29,6 +30,8 @@ export function CustomMarkerModal({
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(initialSelected)
   );
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
+  const titleId = useId();
 
   const grouped = useMemo(() => groupByCategory(results), [results]);
   const allNames = useMemo(
@@ -57,13 +60,18 @@ export function CustomMarkerModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl border border-[var(--border-card)] bg-[var(--bg-surface)] shadow-2xl"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl border border-[var(--border-card)] bg-[var(--bg-surface)] shadow-2xl focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-[var(--border-subtle)]">
           <div>
-            <h2 className="text-base font-semibold text-[var(--text-primary)]">
+            <h2 id={titleId} className="text-base font-semibold text-[var(--text-primary)]">
               Customize markers
             </h2>
             <p className="text-xs text-[var(--text-muted)] mt-0.5">
@@ -162,7 +170,7 @@ export function CustomMarkerModal({
           </button>
           <button
             onClick={() => onSave([...selected])}
-            className="text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg transition-colors"
+            className="text-xs font-medium bg-[var(--btn-accent)] hover:bg-[var(--btn-accent-hover)] text-[var(--btn-accent-text)] px-4 py-1.5 rounded-lg transition-colors"
           >
             Apply selection
           </button>

@@ -161,7 +161,7 @@ export function FoodSearch({ token, loggedOn, onAdd }: Props) {
                       </div>
                       <button
                         onClick={handleConfirmAdd}
-                        className="rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-2 transition-colors"
+                        className="rounded-lg bg-[var(--btn-accent)] hover:bg-[var(--btn-accent-hover)] text-[var(--btn-accent-text)] text-sm font-semibold px-4 py-2 transition-colors"
                       >
                         Log it
                       </button>

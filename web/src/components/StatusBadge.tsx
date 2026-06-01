@@ -10,57 +10,95 @@ interface StatusBadgeProps {
   size?: "sm" | "md";
 }
 
+type Kind = "ok" | "watch" | "alert" | "unknown";
+
+/**
+ * Status is conveyed by **shape as well as colour**, so it survives red/green
+ * colour-blindness (≈8% of men) and greyscale printing:
+ *   ok → circle · watch → triangle · alert → diamond · unknown → dash.
+ * The wrapper carries a `role="img"` + `aria-label` so screen readers announce
+ * the status even when no text label is shown.
+ */
+function StatusGlyph({ kind, px }: { kind: Kind; px: number }) {
+  const color =
+    kind === "alert"
+      ? "var(--color-out-range)"
+      : kind === "watch"
+        ? "var(--color-warning)"
+        : kind === "ok"
+          ? "var(--color-in-range)"
+          : "var(--text-muted)";
+
+  const shape =
+    kind === "ok" ? (
+      <circle cx="5" cy="5" r="4" />
+    ) : kind === "watch" ? (
+      <path d="M5 0.6 L9.4 9 L0.6 9 Z" />
+    ) : kind === "alert" ? (
+      <path d="M5 0.6 L9.4 5 L5 9.4 L0.6 5 Z" />
+    ) : (
+      <rect x="0.8" y="4.1" width="8.4" height="1.8" rx="0.9" />
+    );
+
+  return (
+    <svg
+      width={px}
+      height={px}
+      viewBox="0 0 10 10"
+      fill={color}
+      aria-hidden="true"
+      className="shrink-0"
+    >
+      {shape}
+    </svg>
+  );
+}
+
 export function StatusBadge({
   inRange,
   attention = false,
   showLabel = false,
   size = "md",
 }: StatusBadgeProps) {
-  const dotSize = size === "sm" ? "w-1.5 h-1.5" : "w-2 h-2";
+  const kind: Kind =
+    inRange === null
+      ? "unknown"
+      : inRange === false
+        ? "alert"
+        : attention
+          ? "watch"
+          : "ok";
 
-  if (inRange === null) {
-    return (
-      <span className="inline-flex items-center gap-1.5">
-        <span className={`${dotSize} rounded-full bg-[var(--text-muted)]`} />
-        {showLabel && (
-          <span className="text-xs text-[var(--text-muted)] font-mono">—</span>
-        )}
-      </span>
-    );
-  }
+  const label =
+    kind === "unknown"
+      ? "No data"
+      : kind === "alert"
+        ? "Out of range"
+        : kind === "watch"
+          ? "Watch"
+          : "In range";
 
-  // In range, but a target/trend signal wants attention → amber "Watch".
-  if (inRange && attention) {
-    return (
-      <span className="inline-flex items-center gap-1.5">
-        <span
-          className={`${dotSize} rounded-full bg-amber-500 shadow-[0_0_6px_rgba(217,160,68,0.6)]`}
-        />
-        {showLabel && (
-          <span className="text-xs font-mono text-[var(--color-warning)]">
-            Watch
-          </span>
-        )}
-      </span>
-    );
-  }
+  const textColor =
+    kind === "alert"
+      ? "var(--color-out-range)"
+      : kind === "watch"
+        ? "var(--color-warning)"
+        : kind === "ok"
+          ? "var(--color-in-range)"
+          : "var(--text-muted)";
+
+  const px = size === "sm" ? 9 : 11;
 
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <span
-        className={`${dotSize} rounded-full ${
-          inRange
-            ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]"
-            : "bg-rose-400 shadow-[0_0_6px_rgba(248,113,113,0.6)]"
-        }`}
-      />
+    <span
+      className="inline-flex items-center gap-1.5"
+      role="img"
+      aria-label={label}
+    >
+      <StatusGlyph kind={kind} px={px} />
       {showLabel && (
-        <span
-          className={`text-xs font-mono ${
-            inRange ? "text-emerald-400" : "text-rose-400"
-          }`}
-        >
-          {inRange ? "In range" : "Out of range"}
+        <span className="text-xs font-mono" style={{ color: textColor }}>
+          {kind === "unknown" ? "—" : label}
         </span>
       )}
     </span>

@@ -43,6 +43,11 @@ const en: Dict = {
     "{n} in range but worth a look — at or above a clinical target, or showing a notable trend. Open a marker to see why.",
   "signals.watchNote.one": "1 marker is",
   "signals.watchNote.many": "{n} markers are",
+  // flagged-only filter (out-of-range + watch)
+  "filter.viewFlagged": "View flagged markers only",
+  "filter.flaggedOnly": "Showing flagged markers only",
+  "filter.showAll": "Show all",
+  "filter.allClear": "Nothing flagged — every marker in this view is in range.",
   // empty state
   "empty.none": "No markers selected for this view.",
   "empty.choose": "Choose markers",
@@ -103,6 +108,11 @@ const no: Dict = {
     "{n} innenfor referansen, men verdt en titt — på eller over et klinisk mål, eller med en tydelig trend. Åpne en markør for å se hvorfor.",
   "signals.watchNote.one": "1 markør er",
   "signals.watchNote.many": "{n} markører er",
+  // flagged-only filter (out-of-range + watch)
+  "filter.viewFlagged": "Vis bare markerte markører",
+  "filter.flaggedOnly": "Viser kun markerte markører",
+  "filter.showAll": "Vis alle",
+  "filter.allClear": "Ingenting markert — alle markører i denne visningen er innenfor referansen.",
   // empty state
   "empty.none": "Ingen markører er valgt for denne visningen.",
   "empty.choose": "Velg markører",
