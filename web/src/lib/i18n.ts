@@ -37,6 +37,11 @@ const en: Dict = {
   "stats.panels": "Test panels",
   "stats.lastTested": "Last tested",
   "stats.outOfRange": "Out of range",
+  // within-range signals (Sprint 7)
+  "signals.watchNote":
+    "{n} in range but worth a look — at or above a clinical target, or showing a notable trend. Open a marker to see why.",
+  "signals.watchNote.one": "1 marker is",
+  "signals.watchNote.many": "{n} markers are",
   // empty state
   "empty.none": "No markers selected for this view.",
   "empty.choose": "Choose markers",
@@ -91,6 +96,11 @@ const no: Dict = {
   "stats.panels": "Testpaneler",
   "stats.lastTested": "Sist testet",
   "stats.outOfRange": "Utenfor referanse",
+  // within-range signals (Sprint 7)
+  "signals.watchNote":
+    "{n} innenfor referansen, men verdt en titt — på eller over et klinisk mål, eller med en tydelig trend. Åpne en markør for å se hvorfor.",
+  "signals.watchNote.one": "1 markør er",
+  "signals.watchNote.many": "{n} markører er",
   // empty state
   "empty.none": "Ingen markører er valgt for denne visningen.",
   "empty.choose": "Velg markører",

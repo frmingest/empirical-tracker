@@ -287,6 +287,37 @@ now sends baseline **security headers** (CSP, `X-Frame-Options`, `nosniff`, HSTS
 
 ---
 
+## Reference range vs. clinical target + trend signals (Sprint 7)
+
+The lab **reference range** is a population interval, not a verdict of "healthy."
+Sprint 7 stops the app conflating the two, in two ways:
+
+- **Clinical targets** — for the markers where the gap matters first (LDL,
+  non-HDL, total cholesterol, HbA1c), the app knows a guideline *optimal* upper
+  bound that is tighter than the lab's reference. A value can sit inside the lab
+  range yet **at or above the clinical target** (e.g. LDL 4.1 with lab upper 4.7
+  but a low-risk target of 3.0). The chart draws the target as a distinct amber
+  dashed line, separate from the green reference band. These are **general
+  guideline values, not personalised** — and not per-user data, so they live as a
+  static reference map keyed off the same `markerKey()` the diet focus uses (no
+  database table).
+- **Within-range trend signals** — the app surfaces movement the green flag used
+  to hide: a large step between draws (≥ 50%, so any doubling trips it — e.g. ALT
+  25 → 55), a notable step (≥ 25%), and a value sitting near a reference bound.
+
+A single `assessMarker()` combines the in/out-of-range flag, the target check,
+and the trend signals into one status. An in-range marker with a flagged target
+or trend now reads as **"Watch"** (amber) — the green flag never overrides a
+flagged trend. The dashboard counts these "in range but worth a look" markers,
+and each marker's detail page lists the signals with their reasoning.
+
+Everything here is **decision-support, not medical advice**: targets are general
+guideline values, the trend signals are descriptive (no slopes, p-values, or
+causation on a handful of draws), and the UI says so. The design and the exact
+rules are in `docs/adr/014-clinical-targets-trend-signals.md`.
+
+---
+
 ## Where the "Add result" button lives
 
 Manual single-result entry now lives on each **biomarker detail page** (an "Add
@@ -327,7 +358,7 @@ The app understands the standard Norwegian blood panel Excel format:
 | 4 ✅ | Food diary — log what you eat each day, with Open Food Facts search |
 | 5 ✅ | Meal plans and calendar — plan the week ahead, log planned meals to the diary |
 | 6 | GDPR data export + account deletion ✅ and security headers ✅; doctor sharing (PDF report) — follow-up |
-| 7 | **Reference range vs. clinical target + within-range trend signals** |
+| 7 ✅ | Reference range vs. clinical target + within-range trend signals |
 | 8 | **Panel expansion — high-yield markers, derived ratios, confounder tooltips** |
 | 9 | **Food diary depth — sodium & saturated fat, better food source, daily targets** |
 | 10 | **Body metrics & longitudinal context — weight, waist, blood pressure** |
@@ -377,7 +408,13 @@ dependency: ranges first (safety), then the panel, then the diary, then body met
 Severity tags below mirror the review: **High** = change a decision a user could get wrong today;
 **Medium** = meaningful gap; **Low** = polish / consistency.
 
-### Sprint 7 — Reference range vs. clinical target + within-range trend signals
+### Sprint 7 — Reference range vs. clinical target + within-range trend signals ✅
+
+> **Delivered.** Implemented as a static, client-side clinical-target reference map
+> (`web/src/lib/clinicalTargets.ts`, keyed off `markerKey()`) rather than a DB table or
+> per-user biomarker columns — the targets are universal guideline values, not per-user PII.
+> Trend signals and the combined `assessMarker()` status live in `web/src/lib/markerSignals.ts`.
+> Triglycerides are seeded in Sprint 8 when the marker is added. See ADR-014.
 
 > **Why:** "in range" is being conflated with "healthy." A user on a high-saturated-fat diet can
 > see LDL 4.1 mmol/L flagged green (lab ref_high 4.7) when guideline targets for an at-risk person
@@ -516,6 +553,9 @@ pytest -v   # 37 tests, should all pass
 | `web/src/lib/api.ts` | All the API calls from the frontend |
 | `web/src/lib/mockData.ts` | Realistic test data (biomarkers, diet events, food entries) |
 | `web/src/lib/dietProfiles.ts` | Diet → biomarker focus sets + name classifier |
+| `web/src/lib/clinicalTargets.ts` | Guideline clinical-target bounds, keyed by marker (Sprint 7) |
+| `web/src/lib/markerSignals.ts` | Trend signals + combined marker assessment (Sprint 7) |
+| `web/src/components/MarkerSignals.tsx` | Detail-page target + trend signal panel (Sprint 7) |
 | `web/src/lib/chartAnnotations.ts` | Projects diet events onto the chart's x-axis |
 | `web/src/lib/i18n.ts` | English/Norwegian string dictionary |
 | `web/src/app/panels/page.tsx` | Panel timeline — list of all blood draw sessions |
