@@ -49,7 +49,7 @@ async def search_foods(
     _user_id: str = Depends(current_user_id),
 ) -> list[dict]:
     try:
-        return openfoodfacts.search_products(q)
+        return await openfoodfacts.search_products(q)
     except httpx.HTTPError as exc:
         raise HTTPException(
             status_code=502, detail="Open Food Facts is unavailable"
@@ -62,7 +62,7 @@ async def lookup_barcode(
     _user_id: str = Depends(current_user_id),
 ) -> dict:
     try:
-        product = openfoodfacts.lookup_barcode(barcode)
+        product = await openfoodfacts.lookup_barcode(barcode)
     except httpx.HTTPError as exc:
         raise HTTPException(
             status_code=502, detail="Open Food Facts is unavailable"
