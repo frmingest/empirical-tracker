@@ -341,6 +341,31 @@ priority for each item are captured in **Clinical-feedback roadmap (Sprints 7–
 
 ---
 
+## Sprint 6 — remaining work (follow-up)
+
+The data-rights half of Sprint 6 has shipped: **GDPR data export, account deletion, and security
+headers** (ADR-013). Two items remain before Sprint 6 is closed:
+
+- **Doctor sharing — PDF / printable report** (the headline Sprint 6 item, still open). Rather than
+  granting a doctor live access (which would need multi-tenant read RLS and a doctor login), the
+  user exports a **formatted, printable report** to hand or email to their clinician. Scope:
+  - A read-only report covering the biomarker panel — latest value, reference range, in/out-of-range
+    state, and the trend per marker — plus any active diet-event annotations for context.
+  - Generated server-side as a new `GET /account/report` endpoint (or printed from a dedicated
+    `/account/report` print-CSS page), reusing the existing per-user data access.
+  - Must carry the same intellectual-honesty caveats as the rest of the app: "decision-support, not
+    medical advice," and no implied causation from the diet-event overlay.
+  - Decision to record in its own ADR: server-rendered PDF (new dependency, e.g. a PDF lib) vs. a
+    browser print-CSS page (no dependency). Lean toward print-CSS first to avoid a new dependency.
+
+- **Export/erasure coverage is a maintenance contract** (carried from ADR-013). `USER_TABLES` and
+  `DELETE_ORDER` in `api/app/account/repository.py` must be extended whenever a new user-owned table
+  or nutrient column is added — specifically **Sprint 9** (sodium / saturated-fat columns) and
+  **Sprint 10** (`body_metrics`). A table left out would silently drop from both export and erasure,
+  so each of those sprints' reviews must check this off.
+
+---
+
 ## Clinical-feedback roadmap (Sprints 7–10)
 
 These four sprints translate a clinical review of the app into work. The review's central
