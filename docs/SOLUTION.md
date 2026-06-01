@@ -262,6 +262,31 @@ are in `docs/adr/012-meal-plans-calendar.md`.
 
 ---
 
+## Data export and account deletion (Sprint 6)
+
+Your blood test data is GDPR special-category health data, so the app gives you
+the two rights that matter most over it, from a single **Account** page (linked in
+the header when you're signed in):
+
+- **Export everything** (right to data portability) — download all your data as
+  one **JSON** file, or as a **CSV zip** with one spreadsheet per table. The export
+  covers every table you own: biomarkers, panels, results, settings, diet events,
+  food diary, and meal plans, plus a metadata header with per-table row counts.
+- **Delete your account** (right to erasure) — permanently erase all your data and
+  your login. The danger-zone action requires typing `DELETE` to confirm, then
+  signs you out. Deletion removes rows child-first (so foreign keys never block it)
+  and then removes the auth user itself.
+
+Both are served by a new `GET /account/export` and `DELETE /account`. The API also
+now sends baseline **security headers** (CSP, `X-Frame-Options`, `nosniff`, HSTS,
+`Referrer-Policy`) on every response. The design and the GDPR mapping are in
+`docs/adr/013-data-export-account-deletion.md`.
+
+> Sprint 6 also includes **doctor sharing**, scoped as a PDF/printable report — a
+> follow-up to this slice, not yet shipped.
+
+---
+
 ## Where the "Add result" button lives
 
 Manual single-result entry now lives on each **biomarker detail page** (an "Add
@@ -301,7 +326,7 @@ The app understands the standard Norwegian blood panel Excel format:
 | 3 ✅ | Correlation overlay — draw a diet annotation on top of a biomarker chart |
 | 4 ✅ | Food diary — log what you eat each day, with Open Food Facts search |
 | 5 ✅ | Meal plans and calendar — plan the week ahead, log planned meals to the diary |
-| 6 | Doctor sharing, GDPR data export, security audit |
+| 6 | GDPR data export + account deletion ✅ and security headers ✅; doctor sharing (PDF report) — follow-up |
 | 7 | **Reference range vs. clinical target + within-range trend signals** |
 | 8 | **Panel expansion — high-yield markers, derived ratios, confounder tooltips** |
 | 9 | **Food diary depth — sodium & saturated fat, better food source, daily targets** |
@@ -313,6 +338,31 @@ biomarker filtering (ADR-008) and English/Norwegian internationalization with ca
 
 Sprints 7–10 come from a clinical review of the app (diet & nutrition lens); the rationale and
 priority for each item are captured in **Clinical-feedback roadmap (Sprints 7–10)** below.
+
+---
+
+## Sprint 6 — remaining work (follow-up)
+
+The data-rights half of Sprint 6 has shipped: **GDPR data export, account deletion, and security
+headers** (ADR-013). Two items remain before Sprint 6 is closed:
+
+- **Doctor sharing — PDF / printable report** (the headline Sprint 6 item, still open). Rather than
+  granting a doctor live access (which would need multi-tenant read RLS and a doctor login), the
+  user exports a **formatted, printable report** to hand or email to their clinician. Scope:
+  - A read-only report covering the biomarker panel — latest value, reference range, in/out-of-range
+    state, and the trend per marker — plus any active diet-event annotations for context.
+  - Generated server-side as a new `GET /account/report` endpoint (or printed from a dedicated
+    `/account/report` print-CSS page), reusing the existing per-user data access.
+  - Must carry the same intellectual-honesty caveats as the rest of the app: "decision-support, not
+    medical advice," and no implied causation from the diet-event overlay.
+  - Decision to record in its own ADR: server-rendered PDF (new dependency, e.g. a PDF lib) vs. a
+    browser print-CSS page (no dependency). Lean toward print-CSS first to avoid a new dependency.
+
+- **Export/erasure coverage is a maintenance contract** (carried from ADR-013). `USER_TABLES` and
+  `DELETE_ORDER` in `api/app/account/repository.py` must be extended whenever a new user-owned table
+  or nutrient column is added — specifically **Sprint 9** (sodium / saturated-fat columns) and
+  **Sprint 10** (`body_metrics`). A table left out would silently drop from both export and erasure,
+  so each of those sprints' reviews must check this off.
 
 ---
 
@@ -448,6 +498,8 @@ pytest -v   # 37 tests, should all pass
 | `api/app/food_diary/openfoodfacts.py` | Open Food Facts client (search + barcode, normalised) |
 | `api/app/meal_plans/router.py` | Meal-plan + calendar (planned-meal) CRUD endpoints |
 | `api/app/meal_plans/repository.py` | Saves/retrieves meal plans and planned meals |
+| `api/app/account/router.py` | GDPR data export + account-deletion endpoints |
+| `api/app/account/repository.py` | Gathers / erases all of a user's data across tables |
 | `api/supabase/migrations/001_biomarkers.sql` | Creates the three blood-test tables |
 | `api/supabase/migrations/003_user_settings.sql` | Creates the `user_settings` table |
 | `api/supabase/migrations/004_diet_events.sql` | Creates the `diet_events` table |
@@ -457,6 +509,7 @@ pytest -v   # 37 tests, should all pass
 | `web/src/app/biomarkers/[id]/page.tsx` | Biomarker detail — chart, annotations, Add result |
 | `web/src/app/food-diary/page.tsx` | The food diary page (Sprint 4) |
 | `web/src/app/meal-plans/page.tsx` | The meal-plan weekly calendar page (Sprint 5) |
+| `web/src/app/account/page.tsx` | Account page — data export + account deletion (Sprint 6) |
 | `web/src/components/PlannedMealPicker.tsx` | Add a planned meal (OFF search or free-text) |
 | `web/src/lib/useFoodSearch.ts` | Shared Open Food Facts search hook (diary + meal plans) |
 | `web/src/app/import/page.tsx` | The file upload page |

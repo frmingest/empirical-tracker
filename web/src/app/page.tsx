@@ -143,6 +143,12 @@ export default function DashboardPage() {
             </Link>
             {session ? (
               <>
+                <Link
+                  href="/account"
+                  className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] px-2 py-1.5 rounded transition-colors"
+                >
+                  {t("nav.account")}
+                </Link>
                 <span className="text-xs text-[var(--text-muted)] px-2 hidden sm:block truncate max-w-[160px]">
                   {session.user.email}
                 </span>
