@@ -30,7 +30,7 @@ Create **two services** in one Railway project, both pointing at this GitHub rep
 
 | Service | Root directory | Env vars to set |
 |---------|---------------|-----------------|
-| `api`   | `api`         | `ENVIRONMENT=production`, `CORS_ORIGINS=<web public URL>`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` |
+| `api`   | `api`         | `ENVIRONMENT=production`, `CORS_ORIGINS=<web public URL>`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `USDA_FDC_API_KEY` (optional — enables the USDA whole-food source) |
 | `web`   | `web`         | `NEXT_PUBLIC_API_URL=<api public URL>`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
 
 Steps in the Railway dashboard:

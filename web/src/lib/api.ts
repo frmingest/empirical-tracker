@@ -62,9 +62,27 @@ export interface DietEventInput {
   note?: string | null;
 }
 
-// ── Sprint 4: food diary + Open Food Facts ──────────────────────────────────────
+// ── Sprint 4: food diary + multi-source food data ───────────────────────────────
 
-/** A normalised Open Food Facts product (nutrients per 100 g, as published). */
+/**
+ * Where a food's numbers came from (ADR-018):
+ *   off  — Open Food Facts (branded / barcode)
+ *   mvt  — Matvaretabellen (Norwegian whole foods, lab-analysed)
+ *   usda — USDA FoodData Central (American whole foods, lab-analysed)
+ */
+export type FoodSource = "off" | "mvt" | "usda";
+
+/** A source the search box can target — a real source or "all" merged. */
+export type FoodSearchSource = FoodSource | "all";
+
+/** Short labels for the source badge / selector, keyed by source code. */
+export const FOOD_SOURCE_LABEL: Record<FoodSource, string> = {
+  off: "Open Food Facts",
+  mvt: "Matvaretabellen",
+  usda: "USDA",
+};
+
+/** A normalised food (nutrients per 100 g, as published — never estimated). */
 export interface FoodItem {
   code: string;
   name: string;
@@ -76,6 +94,7 @@ export interface FoodItem {
   fat_100g: number | null;
   saturated_fat_100g: number | null;
   sodium_mg_100g: number | null;
+  source: FoodSource;
 }
 
 export type Meal = "breakfast" | "lunch" | "dinner" | "snack" | "other";
@@ -95,6 +114,7 @@ export interface FoodEntry {
   fat_g: number | null;
   sodium_mg: number | null;
   saturated_fat_g: number | null;
+  source: FoodSource | null;
   note: string | null;
 }
 
@@ -111,6 +131,7 @@ export interface FoodEntryInput {
   fat_g?: number | null;
   sodium_mg?: number | null;
   saturated_fat_g?: number | null;
+  source?: FoodSource | null;
   note?: string | null;
 }
 
@@ -145,6 +166,7 @@ export interface PlannedMeal {
   fat_g: number | null;
   sodium_mg: number | null;
   saturated_fat_g: number | null;
+  source: FoodSource | null;
   note: string | null;
   done: boolean;
 }
@@ -163,6 +185,7 @@ export interface PlannedMealInput {
   fat_g?: number | null;
   sodium_mg?: number | null;
   saturated_fat_g?: number | null;
+  source?: FoodSource | null;
   note?: string | null;
   done?: boolean;
 }
@@ -295,9 +318,13 @@ export async function deleteDietEvent(token: string, id: string): Promise<void> 
 
 // ── Food diary + Open Food Facts ─────────────────────────────────────────────────
 
-export async function searchFoods(token: string, q: string): Promise<FoodItem[]> {
+export async function searchFoods(
+  token: string,
+  q: string,
+  source: FoodSearchSource = "off"
+): Promise<FoodItem[]> {
   const res = await fetch(
-    `${API_BASE}/food-diary/search?q=${encodeURIComponent(q)}`,
+    `${API_BASE}/food-diary/search?q=${encodeURIComponent(q)}&source=${source}`,
     { headers: bearerHeaders(token), cache: "no-store" }
   );
   if (!res.ok) throw new Error(`GET /food-diary/search → ${res.status}`);

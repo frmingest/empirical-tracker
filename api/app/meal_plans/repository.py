@@ -9,7 +9,7 @@ VALID_MEALS = {"breakfast", "lunch", "dinner", "snack", "other"}
 _PLAN_COLUMNS = "id,name,description,created_at"
 _MEAL_COLUMNS = (
     "id,plan_id,scheduled_on,meal,food_name,brand,barcode,"
-    "quantity_g,energy_kcal,carbs_g,protein_g,fat_g,sodium_mg,saturated_fat_g,note,done"
+    "quantity_g,energy_kcal,carbs_g,protein_g,fat_g,sodium_mg,saturated_fat_g,source,note,done"
 )
 
 
@@ -95,6 +95,7 @@ def create_planned_meal(user_id: str, meal: dict) -> dict:
         "fat_g": meal.get("fat_g"),
         "sodium_mg": meal.get("sodium_mg"),
         "saturated_fat_g": meal.get("saturated_fat_g"),
+        "source": meal.get("source"),
         "note": meal.get("note"),
         "done": meal.get("done", False),
     }

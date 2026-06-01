@@ -13,6 +13,7 @@ import {
 } from "@/lib/api";
 import { MOCK_FOOD_ENTRIES } from "@/lib/mockData";
 import { FoodSearch } from "@/components/FoodSearch";
+import { FoodSourceBadge } from "@/components/FoodSourceSelect";
 import { fmtDateLong } from "@/lib/biomarkerCategories";
 
 const MEAL_ORDER: Meal[] = ["breakfast", "lunch", "dinner", "snack", "other"];
@@ -223,11 +224,14 @@ export default function FoodDiaryPage() {
                     {meals.map((e) => (
                       <div key={e.id} className="flex items-center gap-3 px-4 py-3">
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm text-[var(--text-primary)] truncate">
-                            {e.food_name}
-                            {e.brand && (
-                              <span className="text-[var(--text-muted)]"> · {e.brand}</span>
-                            )}
+                          <p className="flex items-center gap-1.5 text-sm text-[var(--text-primary)]">
+                            <FoodSourceBadge source={e.source} />
+                            <span className="truncate">
+                              {e.food_name}
+                              {e.brand && (
+                                <span className="text-[var(--text-muted)]"> · {e.brand}</span>
+                              )}
+                            </span>
                           </p>
                           <p className="text-[11px] text-[var(--text-muted)] font-mono">
                             {e.quantity_g != null ? `${e.quantity_g} g · ` : ""}
@@ -256,6 +260,24 @@ export default function FoodDiaryPage() {
         <footer className="border-t border-[var(--border-subtle)] pt-6 pb-4">
           <p className="text-xs text-[var(--text-muted)] text-center">
             Nutrition data from{" "}
+            <a
+              href="https://www.matvaretabellen.no"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[var(--color-accent)] hover:underline"
+            >
+              Matvaretabellen
+            </a>{" "}
+            (NLOD / CC BY),{" "}
+            <a
+              href="https://fdc.nal.usda.gov"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[var(--color-accent)] hover:underline"
+            >
+              USDA FoodData Central
+            </a>{" "}
+            (public domain), and{" "}
             <a
               href="https://world.openfoodfacts.org"
               target="_blank"

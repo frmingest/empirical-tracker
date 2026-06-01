@@ -1,6 +1,7 @@
 # ADR-018: Whole-foods data sources — Matvaretabellen & USDA FoodData Central
 
-**Status:** Proposed
+**Status:** Accepted — Phases 1 & 2 implemented (macros). Phase 3
+(micronutrients) deferred to its own ADR.
 **Date:** 2026-06-01
 **Author:** Architecture proposal (Claude)
 **Sprint:** 9 follow-up ("Whole-foods reference source")
@@ -262,6 +263,41 @@ Add a nullable `source` column to **`food_entries`** *and* **`planned_meals`**
 | Micronutrients in this slice | Much larger scope (storage, targets, biomarker links) — own sprint |
 
 ---
+
+## Implementation notes (Phases 1 & 2)
+
+Shipped as designed above, with these concrete choices:
+
+- **Package.** `app/food_sources/` holds `base.py` (the `FoodItem` shape +
+  `make_food_item` + `FoodSource` protocol + source codes), `openfoodfacts.py`
+  (moved verbatim, now stamping `source="off"`), `matvaretabellen.py`, `usda.py`,
+  and `registry.py`. The diary/meal-plan routers call `registry.search(q,
+  source)` and stay source-agnostic.
+- **Search endpoint.** `GET /food-diary/search?q=…&source=…` accepts `off`
+  (default, unchanged behaviour), `mvt`, `usda`, or `all`. A single named source
+  propagates errors as 502; `all` fans out with `asyncio.gather` and **degrades
+  gracefully** — one source failing (or USDA having no key) never blanks the
+  rest. Barcode lookup stays OFF-only.
+- **Matvaretabellen.** Vendored at `app/food_sources/data/matvaretabellen.<ver>.json`
+  and searched in-process with a small AND-term/prefix ranker; refreshed via
+  `scripts/ingest_matvaretabellen.py`. The committed file is a curated seed of
+  common whole foods — run the ingest script against the upstream open data to
+  produce the full ~2 000-food table, then bump `DATASET_VERSION`.
+- **USDA.** Keyed proxy (`USDA_FDC_API_KEY`, server-only) over FDC
+  `POST /v1/foods/search`, restricted to `Foundation` + `SR Legacy`, with a tiny
+  in-memory TTL cache. Absent key → empty results (graceful degrade), never an
+  error.
+- **Provenance.** `009_food_source.sql` adds a nullable `source text default
+  'off'` to `food_entries` *and* `planned_meals`. It flows into the GDPR
+  export/erasure automatically (`select("*")`) — no `USER_TABLES`/`DELETE_ORDER`
+  change. The frontend shows a source selector (default *Whole foods (NO)*) and a
+  per-row source badge.
+
+**Resolved open questions:** (1) default source — inferred from the
+Norwegian-first framing (selector defaults to `mvt`); a `user_settings`
+preference is left for later. (2) USDA Branded — excluded; OFF owns branded. (3)
+Matvaretabellen refresh — pinned version, bumped deliberately. (4) USDA cache —
+in-memory to start, as proposed.
 
 ## Open questions
 

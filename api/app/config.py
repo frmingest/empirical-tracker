@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_service_key: str = ""
 
+    # USDA FoodData Central — free api.data.gov key, server-only (never exposed
+    # to the browser). When unset, the USDA food source degrades gracefully to
+    # "unavailable" rather than erroring (ADR-018).
+    usda_fdc_api_key: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

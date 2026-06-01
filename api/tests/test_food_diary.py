@@ -5,7 +5,8 @@ import httpx
 from fastapi.testclient import TestClient
 
 from app.auth import current_user_id
-from app.food_diary import openfoodfacts, repository
+from app.food_diary import repository
+from app.food_sources import openfoodfacts
 from app.main import app
 
 client = TestClient(app)
@@ -100,6 +101,7 @@ def test_normalise_maps_off_fields():
     assert out["energy_kcal_100g"] == 291.0
     assert out["carbs_100g"] == 0.0
     assert out["protein_100g"] == 24.0
+    assert out["source"] == "off"
 
 
 def test_normalise_drops_nameless_product():
@@ -160,7 +162,7 @@ def test_num_handles_bad_values():
     assert openfoodfacts._num("12.5") == 12.5
 
 
-@patch("app.food_diary.openfoodfacts.httpx.AsyncClient")
+@patch("app.food_sources.openfoodfacts.httpx.AsyncClient")
 def test_search_products_normalises(mock_client_cls):
     mock_client = AsyncMock()
     mock_client.__aenter__.return_value = mock_client
@@ -174,7 +176,7 @@ def test_search_products_normalises(mock_client_cls):
     assert out[0]["name"] == "Ribeye steak"
 
 
-@patch("app.food_diary.openfoodfacts.httpx.AsyncClient")
+@patch("app.food_sources.openfoodfacts.httpx.AsyncClient")
 def test_lookup_barcode_returns_none_when_not_found(mock_client_cls):
     mock_client = AsyncMock()
     mock_client.__aenter__.return_value = mock_client
@@ -228,20 +230,43 @@ def test_create_endpoint_rejects_invalid_meal():
         app.dependency_overrides.clear()
 
 
-@patch("app.food_diary.router.openfoodfacts.search_products")
+@patch("app.food_diary.router.registry.search")
 def test_search_endpoint(mock_search):
-    mock_search.return_value = [{"code": "1", "name": "Ribeye"}]
+    mock_search.return_value = [{"code": "1", "name": "Ribeye", "source": "off"}]
     app.dependency_overrides[current_user_id] = lambda: "u1"
     try:
         res = client.get("/food-diary/search?q=ribeye")
         assert res.status_code == 200
         assert res.json()[0]["name"] == "Ribeye"
+        # Default source preserves the original Open Food Facts behaviour.
+        assert mock_search.call_args.args == ("ribeye", "off")
     finally:
         app.dependency_overrides.clear()
 
 
-@patch("app.food_diary.router.openfoodfacts.search_products")
-def test_search_endpoint_handles_off_outage(mock_search):
+@patch("app.food_diary.router.registry.search")
+def test_search_endpoint_forwards_source(mock_search):
+    mock_search.return_value = []
+    app.dependency_overrides[current_user_id] = lambda: "u1"
+    try:
+        res = client.get("/food-diary/search?q=egg&source=mvt")
+        assert res.status_code == 200
+        assert mock_search.call_args.args == ("egg", "mvt")
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_search_endpoint_rejects_unknown_source():
+    app.dependency_overrides[current_user_id] = lambda: "u1"
+    try:
+        res = client.get("/food-diary/search?q=egg&source=bogus")
+        assert res.status_code == 422
+    finally:
+        app.dependency_overrides.clear()
+
+
+@patch("app.food_diary.router.registry.search")
+def test_search_endpoint_handles_source_outage(mock_search):
     mock_search.side_effect = httpx.ConnectError("boom")
     app.dependency_overrides[current_user_id] = lambda: "u1"
     try:
