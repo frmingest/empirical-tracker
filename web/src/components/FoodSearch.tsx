@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type { FoodEntryInput, FoodItem, Meal } from "@/lib/api";
-import { lookupBarcode, searchFoods } from "@/lib/api";
+import { scaleNutrient, useFoodSearch } from "@/lib/useFoodSearch";
 
 interface Props {
   token: string | null;
@@ -20,66 +20,14 @@ const MEAL_LABEL: Record<Meal, string> = {
   other: "Other",
 };
 
-/** Scale a per-100g nutrient to the consumed amount, rounded to 1 decimal. */
-function scale(per100g: number | null, grams: number): number | null {
-  if (per100g === null) return null;
-  return Math.round((per100g * grams) / 100 * 10) / 10;
-}
-
 export function FoodSearch({ token, loggedOn, onAdd }: Props) {
-  const [query, setQuery] = useState("");
-  const [barcode, setBarcode] = useState("");
-  const [results, setResults] = useState<FoodItem[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [error, setError] = useState("");
+  const search = useFoodSearch(token);
+  const { query, setQuery, barcode, setBarcode, results, searching, error, handleBarcode } =
+    search;
   // The result currently being added, plus its quantity/meal selection.
   const [selected, setSelected] = useState<FoodItem | null>(null);
   const [grams, setGrams] = useState("100");
   const [meal, setMeal] = useState<Meal>("breakfast");
-  const reqId = useRef(0);
-
-  // Debounced full-text search. OFF rate-limits search to ~10 req/min, so we
-  // wait until the user pauses typing before firing.
-  useEffect(() => {
-    if (!token) return;
-    const q = query.trim();
-    if (q.length < 2) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setResults([]);
-      return;
-    }
-    const id = ++reqId.current;
-    setSearching(true);
-    setError("");
-    const timer = setTimeout(() => {
-      searchFoods(token, q)
-        .then((items) => {
-          if (id === reqId.current) setResults(items);
-        })
-        .catch(() => {
-          if (id === reqId.current) setError("Couldn't reach Open Food Facts. Try again.");
-        })
-        .finally(() => {
-          if (id === reqId.current) setSearching(false);
-        });
-    }, 450);
-    return () => clearTimeout(timer);
-  }, [query, token]);
-
-  const handleBarcode = async () => {
-    if (!token || !barcode.trim()) return;
-    setSearching(true);
-    setError("");
-    try {
-      const item = await lookupBarcode(token, barcode.trim());
-      setResults([item]);
-    } catch {
-      setError("No product found for that barcode.");
-      setResults([]);
-    } finally {
-      setSearching(false);
-    }
-  };
 
   const handleConfirmAdd = async () => {
     if (!selected) return;
@@ -92,16 +40,14 @@ export function FoodSearch({ token, loggedOn, onAdd }: Props) {
       brand: selected.brand,
       barcode: selected.code || null,
       quantity_g: qty,
-      energy_kcal: qty !== null ? scale(selected.energy_kcal_100g, qty) : null,
-      carbs_g: qty !== null ? scale(selected.carbs_100g, qty) : null,
-      protein_g: qty !== null ? scale(selected.protein_100g, qty) : null,
-      fat_g: qty !== null ? scale(selected.fat_100g, qty) : null,
+      energy_kcal: qty !== null ? scaleNutrient(selected.energy_kcal_100g, qty) : null,
+      carbs_g: qty !== null ? scaleNutrient(selected.carbs_100g, qty) : null,
+      protein_g: qty !== null ? scaleNutrient(selected.protein_100g, qty) : null,
+      fat_g: qty !== null ? scaleNutrient(selected.fat_100g, qty) : null,
     });
     setSelected(null);
     setGrams("100");
-    setQuery("");
-    setBarcode("");
-    setResults([]);
+    search.reset();
   };
 
   const inputCls =

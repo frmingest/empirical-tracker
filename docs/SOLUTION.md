@@ -115,6 +115,16 @@ food_entries:  What you ate each day (food diary, sourced from Open Food Facts)
                "logged_on: 2026-05-31 | meal: dinner | food: Ribeye | 728 kcal"
 ```
 
+Sprint 5 added two more tables for forward planning:
+
+```
+meal_plans:    A named, reusable plan (a label/grouping for planned meals)
+               "name: Carnivore week | description: High-protein, zero-carb"
+
+planned_meals: A meal scheduled on the calendar (optionally filed under a plan)
+               "scheduled_on: 2026-06-02 | meal: dinner | Ribeye | done: false"
+```
+
 Every row in every table has a `user_id` column. This means your data and someone else's data
 are completely separate — the database itself enforces this (not just the application code).
 
@@ -227,6 +237,31 @@ is reached through a small authenticated **backend proxy** (`GET
 
 ---
 
+## Meal plans and calendar (Sprint 5)
+
+Where the food diary records what you *did* eat, **meal plans** are the
+forward-looking half: planning what you *intend* to eat, laid out on a weekly
+calendar so you can prep a carnivore/low-carb week ahead of time.
+
+- The `/meal-plans` page shows a **week-at-a-glance calendar** (Monday→Sunday),
+  navigable across weeks, with per-day energy totals.
+- You schedule a meal into any day either by **searching Open Food Facts** for
+  real macros (reusing the same search as the food diary) or with a quick
+  **free-text** note for things that aren't barcoded products.
+- **Named plans** ("Carnivore week", "Low-carb reset") group scheduled meals and
+  let you filter the calendar. Deleting a plan keeps its meals on the calendar —
+  it only removes the label.
+- Each planned meal has a **"Log to diary"** action that copies it into the
+  Sprint 4 food diary for its scheduled date and marks it done — so the plan and
+  the actual record stay one click apart, with no re-entry.
+
+Meal plans live in two new tables — `meal_plans` and `planned_meals` (both RLS
+self-scoped) — served by `GET/POST/DELETE /meal-plans` and
+`GET/POST/PATCH/DELETE /meal-plans/calendar`. The design rationale and scope cuts
+are in `docs/adr/012-meal-plans-calendar.md`.
+
+---
+
 ## Where the "Add result" button lives
 
 Manual single-result entry now lives on each **biomarker detail page** (an "Add
@@ -265,7 +300,7 @@ The app understands the standard Norwegian blood panel Excel format:
 | 2 ✅ | Panel timeline, per-marker trend charts, in/out-of-range highlighting, manual entry |
 | 3 ✅ | Correlation overlay — draw a diet annotation on top of a biomarker chart |
 | 4 ✅ | Food diary — log what you eat each day, with Open Food Facts search |
-| 5 | Meal plans and calendar |
+| 5 ✅ | Meal plans and calendar — plan the week ahead, log planned meals to the diary |
 | 6 | Doctor sharing, GDPR data export, security audit |
 
 Additional UX enhancements shipped alongside Sprint 2 (outside the original roadmap): diet-focus
@@ -314,13 +349,19 @@ pytest -v   # 37 tests, should all pass
 | `api/app/diet_events/` | Diet-event (correlation annotation) router + repository |
 | `api/app/food_diary/router.py` | Food-diary CRUD + Open Food Facts proxy endpoints |
 | `api/app/food_diary/openfoodfacts.py` | Open Food Facts client (search + barcode, normalised) |
+| `api/app/meal_plans/router.py` | Meal-plan + calendar (planned-meal) CRUD endpoints |
+| `api/app/meal_plans/repository.py` | Saves/retrieves meal plans and planned meals |
 | `api/supabase/migrations/001_biomarkers.sql` | Creates the three blood-test tables |
 | `api/supabase/migrations/003_user_settings.sql` | Creates the `user_settings` table |
 | `api/supabase/migrations/004_diet_events.sql` | Creates the `diet_events` table |
 | `api/supabase/migrations/005_food_entries.sql` | Creates the `food_entries` table |
+| `api/supabase/migrations/006_meal_plans.sql` | Creates the `meal_plans` + `planned_meals` tables |
 | `web/src/app/page.tsx` | The main dashboard page |
 | `web/src/app/biomarkers/[id]/page.tsx` | Biomarker detail — chart, annotations, Add result |
 | `web/src/app/food-diary/page.tsx` | The food diary page (Sprint 4) |
+| `web/src/app/meal-plans/page.tsx` | The meal-plan weekly calendar page (Sprint 5) |
+| `web/src/components/PlannedMealPicker.tsx` | Add a planned meal (OFF search or free-text) |
+| `web/src/lib/useFoodSearch.ts` | Shared Open Food Facts search hook (diary + meal plans) |
 | `web/src/app/import/page.tsx` | The file upload page |
 | `web/src/lib/api.ts` | All the API calls from the frontend |
 | `web/src/lib/mockData.ts` | Realistic test data (biomarkers, diet events, food entries) |
