@@ -1,4 +1,10 @@
-import type { BiomarkerWithSeries, DietEvent, FoodEntry } from "./api";
+import type {
+  BiomarkerWithSeries,
+  DietEvent,
+  FoodEntry,
+  MealPlan,
+  PlannedMeal,
+} from "./api";
 
 /** Representative mock data matching the real XLSX structure.
  *  Dates: 2023-09-15, 2024-05-31, 2025-03-13, 2026-05-22 (chronological).
@@ -523,6 +529,103 @@ export const MOCK_FOOD_ENTRIES: FoodEntry[] = [
     protein_g: 60,
     fat_g: 55,
     note: null,
+  },
+];
+
+// ── Sprint 5: meal plans + calendar ─────────────────────────────────────────────
+
+/** ISO date for the Monday of the current week, plus an offset in days. */
+function weekDay(offset: number): string {
+  const now = new Date();
+  const dow = (now.getUTCDay() + 6) % 7; // 0 = Monday
+  const monday = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  );
+  monday.setUTCDate(monday.getUTCDate() - dow + offset);
+  return monday.toISOString().slice(0, 10);
+}
+
+/** Sample meal plans for the signed-out demo. */
+export const MOCK_MEAL_PLANS: MealPlan[] = [
+  {
+    id: "mock-plan-carnivore",
+    name: "Carnivore week",
+    description: "High-protein, zero-carb template for an elimination block.",
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "mock-plan-lowcarb",
+    name: "Low-carb reset",
+    description: "Under 50 g carbs/day with plenty of healthy fats.",
+    created_at: new Date().toISOString(),
+  },
+];
+
+/** Sample planned meals laid across the current week for the demo calendar. */
+export const MOCK_PLANNED_MEALS: PlannedMeal[] = [
+  {
+    id: "mock-pm-1",
+    plan_id: "mock-plan-carnivore",
+    scheduled_on: weekDay(0),
+    meal: "breakfast",
+    food_name: "Eggs & bacon",
+    brand: null,
+    barcode: null,
+    quantity_g: 200,
+    energy_kcal: 540,
+    carbs_g: 1,
+    protein_g: 34,
+    fat_g: 44,
+    note: null,
+    done: true,
+  },
+  {
+    id: "mock-pm-2",
+    plan_id: "mock-plan-carnivore",
+    scheduled_on: weekDay(0),
+    meal: "dinner",
+    food_name: "Ribeye steak",
+    brand: null,
+    barcode: null,
+    quantity_g: 300,
+    energy_kcal: 873,
+    carbs_g: 0,
+    protein_g: 72,
+    fat_g: 66,
+    note: null,
+    done: false,
+  },
+  {
+    id: "mock-pm-3",
+    plan_id: "mock-plan-carnivore",
+    scheduled_on: weekDay(2),
+    meal: "lunch",
+    food_name: "Ground beef patties",
+    brand: null,
+    barcode: null,
+    quantity_g: 250,
+    energy_kcal: 625,
+    carbs_g: 0,
+    protein_g: 50,
+    fat_g: 47,
+    note: null,
+    done: false,
+  },
+  {
+    id: "mock-pm-4",
+    plan_id: "mock-plan-lowcarb",
+    scheduled_on: weekDay(4),
+    meal: "dinner",
+    food_name: "Salmon & greens",
+    brand: null,
+    barcode: null,
+    quantity_g: 350,
+    energy_kcal: 520,
+    carbs_g: 8,
+    protein_g: 40,
+    fat_g: 36,
+    note: null,
+    done: false,
   },
 ];
 

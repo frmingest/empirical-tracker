@@ -135,6 +135,12 @@ export default function DashboardPage() {
             >
               {t("nav.foodDiary")}
             </Link>
+            <Link
+              href="/meal-plans"
+              className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] px-2 py-1.5 rounded transition-colors"
+            >
+              {t("nav.mealPlans")}
+            </Link>
             {session ? (
               <>
                 <span className="text-xs text-[var(--text-muted)] px-2 hidden sm:block truncate max-w-[160px]">

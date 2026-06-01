@@ -123,6 +123,12 @@ export default function FoodDiaryPage() {
           <span className="text-xs text-[var(--text-muted)] uppercase tracking-wide">
             Food diary
           </span>
+          <Link
+            href="/meal-plans"
+            className="ml-auto text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+          >
+            Meal plans →
+          </Link>
         </div>
       </header>
 

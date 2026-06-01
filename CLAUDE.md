@@ -19,7 +19,7 @@ This applies to all changes — code, docs, migrations, single-file edits.
 
 ## Sprint order
 
-0 ✅ → 1 ✅ → 2 ✅ → 3 ✅ → 4 ✅ → 5 🔄 → 6
+0 ✅ → 1 ✅ → 2 ✅ → 3 ✅ → 4 ✅ → 5 ✅ → 6
 
 See `docs/SOLUTION.md` for full sprint descriptions.
 

@@ -108,6 +108,55 @@ export interface FoodEntryInput {
   note?: string | null;
 }
 
+// ── Sprint 5: meal plans + calendar ─────────────────────────────────────────────
+
+/** A named, reusable meal plan ("Carnivore week"). Groups planned meals. */
+export interface MealPlan {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+}
+
+export interface MealPlanInput {
+  name: string;
+  description?: string | null;
+}
+
+/** A meal scheduled on the calendar. Nutrient fields mirror FoodEntry. */
+export interface PlannedMeal {
+  id: string;
+  plan_id: string | null;
+  scheduled_on: string;
+  meal: Meal;
+  food_name: string;
+  brand: string | null;
+  barcode: string | null;
+  quantity_g: number | null;
+  energy_kcal: number | null;
+  carbs_g: number | null;
+  protein_g: number | null;
+  fat_g: number | null;
+  note: string | null;
+  done: boolean;
+}
+
+export interface PlannedMealInput {
+  scheduled_on: string;
+  meal: Meal;
+  food_name: string;
+  plan_id?: string | null;
+  brand?: string | null;
+  barcode?: string | null;
+  quantity_g?: number | null;
+  energy_kcal?: number | null;
+  carbs_g?: number | null;
+  protein_g?: number | null;
+  fat_g?: number | null;
+  note?: string | null;
+  done?: boolean;
+}
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 function bearerHeaders(token: string): HeadersInit {
@@ -289,4 +338,88 @@ export async function deleteFoodEntry(token: string, id: string): Promise<void> 
     headers: bearerHeaders(token),
   });
   if (!res.ok) throw new Error(`DELETE /food-diary/${id} → ${res.status}`);
+}
+
+// ── Meal plans + calendar ────────────────────────────────────────────────────────
+
+export async function listMealPlans(token: string): Promise<MealPlan[]> {
+  const res = await fetch(`${API_BASE}/meal-plans`, {
+    headers: bearerHeaders(token),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`GET /meal-plans → ${res.status}`);
+  return res.json() as Promise<MealPlan[]>;
+}
+
+export async function createMealPlan(
+  token: string,
+  input: MealPlanInput
+): Promise<MealPlan> {
+  const res = await fetch(`${API_BASE}/meal-plans`, {
+    method: "POST",
+    headers: { ...bearerHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<MealPlan>;
+}
+
+export async function deleteMealPlan(token: string, id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/meal-plans/${id}`, {
+    method: "DELETE",
+    headers: bearerHeaders(token),
+  });
+  if (!res.ok) throw new Error(`DELETE /meal-plans/${id} → ${res.status}`);
+}
+
+export async function listPlannedMeals(
+  token: string,
+  start?: string,
+  end?: string
+): Promise<PlannedMeal[]> {
+  const params = new URLSearchParams();
+  if (start) params.set("start", start);
+  if (end) params.set("end", end);
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  const res = await fetch(`${API_BASE}/meal-plans/calendar${qs}`, {
+    headers: bearerHeaders(token),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`GET /meal-plans/calendar → ${res.status}`);
+  return res.json() as Promise<PlannedMeal[]>;
+}
+
+export async function createPlannedMeal(
+  token: string,
+  input: PlannedMealInput
+): Promise<PlannedMeal> {
+  const res = await fetch(`${API_BASE}/meal-plans/calendar`, {
+    method: "POST",
+    headers: { ...bearerHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<PlannedMeal>;
+}
+
+export async function setPlannedMealDone(
+  token: string,
+  id: string,
+  done: boolean
+): Promise<PlannedMeal> {
+  const res = await fetch(`${API_BASE}/meal-plans/calendar/${id}`, {
+    method: "PATCH",
+    headers: { ...bearerHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify({ done }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<PlannedMeal>;
+}
+
+export async function deletePlannedMeal(token: string, id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/meal-plans/calendar/${id}`, {
+    method: "DELETE",
+    headers: bearerHeaders(token),
+  });
+  if (!res.ok) throw new Error(`DELETE /meal-plans/calendar/${id} → ${res.status}`);
 }

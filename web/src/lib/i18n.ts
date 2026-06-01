@@ -18,6 +18,7 @@ const en: Dict = {
   // nav
   "nav.panels": "Panels",
   "nav.foodDiary": "Food diary",
+  "nav.mealPlans": "Meal plans",
   "nav.addResult": "Add result",
   "nav.import": "Import",
   "nav.signOut": "Sign out",
@@ -70,6 +71,7 @@ const no: Dict = {
   // nav
   "nav.panels": "Paneler",
   "nav.foodDiary": "Matdagbok",
+  "nav.mealPlans": "Måltidsplaner",
   "nav.addResult": "Legg til resultat",
   "nav.import": "Importer",
   "nav.signOut": "Logg ut",
