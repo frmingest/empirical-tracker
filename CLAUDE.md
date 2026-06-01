@@ -19,7 +19,10 @@ This applies to all changes — code, docs, migrations, single-file edits.
 
 ## Sprint order
 
-0 ✅ → 1 ✅ → 2 ✅ → 3 ✅ → 4 ✅ → 5 ✅ → 6
+0 ✅ → 1 ✅ → 2 ✅ → 3 ✅ → 4 ✅ → 5 ✅ → 6 → 7 → 8 → 9 → 10
+
+Sprints 7–10 come from a clinical review of the app; see "Clinical-feedback
+roadmap (Sprints 7–10)" in `docs/SOLUTION.md`.
 
 See `docs/SOLUTION.md` for full sprint descriptions.
 

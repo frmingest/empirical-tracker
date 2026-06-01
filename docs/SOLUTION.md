@@ -302,10 +302,107 @@ The app understands the standard Norwegian blood panel Excel format:
 | 4 ✅ | Food diary — log what you eat each day, with Open Food Facts search |
 | 5 ✅ | Meal plans and calendar — plan the week ahead, log planned meals to the diary |
 | 6 | Doctor sharing, GDPR data export, security audit |
+| 7 | **Reference range vs. clinical target + within-range trend signals** |
+| 8 | **Panel expansion — high-yield markers, derived ratios, confounder tooltips** |
+| 9 | **Food diary depth — sodium & saturated fat, better food source, daily targets** |
+| 10 | **Body metrics & longitudinal context — weight, waist, blood pressure** |
 
 Additional UX enhancements shipped alongside Sprint 2 (outside the original roadmap): diet-focus
 biomarker filtering (ADR-008) and English/Norwegian internationalization with category tooltips
 (ADR-009).
+
+Sprints 7–10 come from a clinical review of the app (diet & nutrition lens); the rationale and
+priority for each item are captured in **Clinical-feedback roadmap (Sprints 7–10)** below.
+
+---
+
+## Clinical-feedback roadmap (Sprints 7–10)
+
+These four sprints translate a clinical review of the app into work. The review's central
+finding was that the app is **honest and well-built, but treats the lab "reference range" as if
+it meant "healthy,"** and is missing several of the markers (and food fields) that matter most for
+the carnivore / low-carb / fasting users it targets. Sprints are ordered by clinical priority and
+dependency: ranges first (safety), then the panel, then the diary, then body metrics.
+
+Severity tags below mirror the review: **High** = change a decision a user could get wrong today;
+**Medium** = meaningful gap; **Low** = polish / consistency.
+
+### Sprint 7 — Reference range vs. clinical target + within-range trend signals
+
+> **Why:** "in range" is being conflated with "healthy." A user on a high-saturated-fat diet can
+> see LDL 4.1 mmol/L flagged green (lab ref_high 4.7) when guideline targets for an at-risk person
+> are far lower; and a doubling of ALT (25 → 55 U/L) stays green because it's still under 70. The
+> binary flag actively hides the trends that matter.
+
+- **Clinical-target layer, separate from the lab reference range** (High). Add optional
+  `target_low` / `target_high` to the biomarker model (or a seeded `marker_targets` reference
+  table — guideline values, not per-user PII). Seed for lipids (LDL, non-HDL, total, and
+  triglycerides once added) and HbA1c. The UI distinguishes **"within lab reference"** from
+  **"at/above clinical target,"** with a distinct state/colour rather than reusing in/out-of-range.
+- **Within-range trend signals** (High). Surface "rising/falling fast," "trending toward a bound,"
+  and large relative jumps (e.g. a doubling) even when every point is technically in range. The
+  trend charts already make this visible to an attentive user; this makes the app say it.
+- Update `in_range` rendering so the green flag never overrides a flagged trend.
+- ADR documenting the reference-vs-target distinction and the trend-signal rules.
+
+### Sprint 8 — Panel expansion, derived ratios, confounder tooltips
+
+> **Why:** for these specific diets, several of the *most* informative markers are simply absent,
+> and two markers we already track are confounded by the diet itself.
+
+- **High-yield new markers** (High): **triglycerides** (the signature low-carb response; the Lipids
+  tooltip already promises it), **ApoB** ± **Lp(a)** (gold-standard atherogenic burden — the marker
+  to add for the lean-mass hyper-responder pattern), **uric acid** (raised by both high-purine
+  carnivore intake and fasting).
+- **Refeeding fix** (High, fasting): add **magnesium** and **phosphate**. The Fasting profile claims
+  to watch "refeeding-syndrome risk," which is defined by phosphate/magnesium/potassium — today only
+  potassium is present, so the stated purpose and the markers don't match.
+- **Further markers** (Medium): **fasting insulin / C-peptide** and **fasting glucose** (HbA1c alone
+  misses early insulin resistance), **hs-CRP** (inflammation is a headline claimed benefit),
+  **AST/ASAT** (normally paired with ALT).
+- **Derived markers** (Medium): compute and chart **TG/HDL ratio** (insulin-resistance surrogate)
+  and **AST:ALT ratio**.
+- Plumb the above through the parser keyword rules (`biomarkerCategories.ts`), the marker-key rules
+  and diet focus lists (`dietProfiles.ts` + `DIET_BIOMARKERS.md`): TG/ApoB into every lipid view;
+  uric acid into carnivore + fasting; Mg/phosphate into fasting; insulin/glucose into low-carb.
+- **Confounder tooltips** (Low–Medium): eGFR — creatinine-based eGFR is depressed by high meat
+  intake/muscle mass, suggest cystatin-C; HbA1c — can read paradoxically high on keto/carnivore from
+  altered RBC turnover; ferritin — an acute-phase reactant, rises with inflammation, not just iron.
+- Trim or fulfil tooltips that promise markers not in the panel (triglycerides, glucose, calcium,
+  ASAT) so the app never describes what it can't show.
+
+### Sprint 9 — Food diary depth & better food data
+
+> **Why:** the diary's four macros omit the two things the biomarker side cares about most
+> (sodium and saturated fat), Open Food Facts is a branded-product database ill-suited to whole-food
+> carnivore eating, and energy frequently shows "—" unnecessarily.
+
+- **Add sodium and saturated fat** to tracked nutrients (High): schema column, scaling, UI, and OFF
+  field mapping (`salt_100g` → sodium, `saturated-fat_100g`). Closes the loop with the labs, which
+  emphasise electrolyte management and saturated-fat-driven LDL.
+- **kJ → kcal fallback** in the OFF client (Low, quick win): when `energy-kcal_100g` is absent, fall
+  back to `energy_100g` (kJ) ÷ 4.184 instead of storing nothing.
+- **Whole-foods reference source** (Medium): add USDA FoodData Central and/or the Norwegian
+  *Matvaretabellen* alongside OFF, prioritised for unbranded whole foods (steak, eggs, mince), which
+  OFF covers poorly. Matvaretabellen also fits the Norwegian-first framing.
+- **Daily targets / needs context** (Medium): per-day energy and macro targets, including
+  **protein in g/kg body weight** (renal-load concern), with intake-vs-target shown. The g/kg target
+  depends on body weight from Sprint 10 — ship the targets UI here and enable the g/kg view once
+  weight tracking lands (or capture a single weight value as a prerequisite).
+
+### Sprint 10 — Body metrics & longitudinal context
+
+> **Why:** for diet tracking, weight, waist, and blood pressure respond faster and matter more than
+> most labs, and BP ties directly to the app's sodium emphasis — yet there are no body metrics at all.
+
+- New `body_metrics` table (RLS self-scoped): **weight, waist, blood pressure**, with trend charts on
+  the same timeline and the same diet-event correlation overlay as biomarkers.
+- Feed body weight into the Sprint 9 **protein g/kg** target.
+- Optionally overlay body metrics against the biomarker timeline for at-a-glance context.
+
+> **Cross-cutting (all four sprints):** keep the review's intellectual honesty. Every new number is
+> "decision-support, not medical advice"; with only a handful of blood draws, the app must keep
+> declining to imply causation or statistical significance.
 
 ---
 
