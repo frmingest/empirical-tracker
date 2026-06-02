@@ -18,6 +18,8 @@ struct DashboardView: View {
 
     // Sprint 3 — marker drill-down
     @State private var selectedMarker: BiomarkerWithSeries?
+    // Category graph view — pushed when a category header is tapped.
+    @State private var selectedCategory: BiomarkerCategory?
 
     var body: some View {
         NavigationStack {
@@ -32,6 +34,11 @@ struct DashboardView: View {
             .toolbar { toolbarContent }
             .navigationDestination(item: $selectedMarker) { marker in
                 BiomarkerDetailView(initialMarker: marker)
+            }
+            .navigationDestination(item: $selectedCategory) { category in
+                CategoryGraphsView(initialCategory: category) { marker in
+                    selectedMarker = marker
+                }
             }
         }
         .task {
@@ -121,9 +128,11 @@ struct DashboardView: View {
                 } else {
                     LazyVStack(alignment: .leading, spacing: 24) {
                         ForEach(vm.sections) { group in
-                            CategorySectionView(group: group) { tapped in
-                                selectedMarker = tapped
-                            }
+                            CategorySectionView(
+                                group: group,
+                                onTapCard: { tapped in selectedMarker = tapped },
+                                onTapHeader: { category in selectedCategory = category }
+                            )
                         }
                     }
                     .padding(16)

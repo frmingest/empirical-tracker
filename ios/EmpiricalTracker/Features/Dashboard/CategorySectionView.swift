@@ -6,6 +6,8 @@ import SwiftUI
 struct CategorySectionView: View {
     let group: BiomarkerGroup
     let onTapCard: (BiomarkerWithSeries) -> Void
+    /// Tapping the header opens the per-category graph view.
+    var onTapHeader: ((BiomarkerCategory) -> Void)? = nil
 
     private let columns = [GridItem(.flexible()), GridItem(.flexible())]
 
@@ -23,16 +25,30 @@ struct CategorySectionView: View {
     }
 
     private var sectionHeader: some View {
-        HStack(spacing: 6) {
-            Text(group.category.displayName)
-                .font(.headlineSmall)
-                .foregroundStyle(Color.textPrimary)
+        Button {
+            onTapHeader?(group.category)
+        } label: {
+            HStack(spacing: 6) {
+                Text(group.category.displayName)
+                    .font(.headlineSmall)
+                    .foregroundStyle(Color.textPrimary)
 
-            Spacer()
+                if onTapHeader != nil {
+                    Image(systemName: "chevron.right")
+                        .font(.labelSmall)
+                        .foregroundStyle(Color.textMuted)
+                }
 
-            outOfRangeCount
+                Spacer()
+
+                outOfRangeCount
+            }
+            .padding(.horizontal, 2)
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 2)
+        .buttonStyle(.plain)
+        .disabled(onTapHeader == nil)
+        .accessibilityHint(onTapHeader != nil ? "Shows every graph in this group" : "")
     }
 
     @ViewBuilder
@@ -58,7 +74,7 @@ struct CategorySectionView: View {
     return ScrollView {
         LazyVStack(alignment: .leading, spacing: 24) {
             ForEach(groups) { group in
-                CategorySectionView(group: group) { _ in }
+                CategorySectionView(group: group, onTapCard: { _ in })
             }
         }
         .padding()
