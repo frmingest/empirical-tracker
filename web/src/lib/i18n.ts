@@ -57,6 +57,14 @@ const en: Dict = {
   // category section
   "category.off": "off",
   "category.aboutGroup": "About this group",
+  // category graph view (all trends in one group)
+  "category.viewGraphs": "View all graphs",
+  "category.subtitle": "All trends in this group",
+  "category.jumpTo": "Jump to group",
+  "category.empty": "No markers in this group for the current view.",
+  "category.prev": "Previous",
+  "category.next": "Next",
+  "category.openDetail": "Open full history",
   // diet filter
   "diet.focus": "Diet focus",
   "diet.markers": "markers",
@@ -122,6 +130,14 @@ const no: Dict = {
   // category section
   "category.off": "utenfor",
   "category.aboutGroup": "Om denne gruppen",
+  // category graph view (all trends in one group)
+  "category.viewGraphs": "Vis alle grafer",
+  "category.subtitle": "Alle trender i denne gruppen",
+  "category.jumpTo": "Gå til gruppe",
+  "category.empty": "Ingen markører i denne gruppen for gjeldende visning.",
+  "category.prev": "Forrige",
+  "category.next": "Neste",
+  "category.openDetail": "Åpne full historikk",
   // diet filter
   "diet.focus": "Diettfokus",
   "diet.markers": "markører",
