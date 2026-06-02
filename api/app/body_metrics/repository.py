@@ -4,7 +4,7 @@ from app.db import get_supabase
 
 # Columns returned to the client. `created_at` is omitted — the chart and log
 # order on `measured_on` only.
-_COLUMNS = "id,measured_on,weight_kg,waist_cm,systolic,diastolic,note"
+_COLUMNS = "id,measured_on,weight_kg,waist_cm,systolic,diastolic,note,source"
 
 
 def list_metrics(user_id: str) -> list[dict]:
@@ -31,6 +31,7 @@ def create_metric(user_id: str, metric: dict) -> dict:
         "systolic": metric.get("systolic"),
         "diastolic": metric.get("diastolic"),
         "note": metric.get("note"),
+        "source": metric.get("source", "manual"),
     }
     resp = db.table("body_metrics").insert(row).execute()
     return resp.data[0] if resp.data else {}

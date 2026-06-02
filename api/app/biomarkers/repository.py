@@ -83,6 +83,48 @@ def insert_results(
     return len(resp.data)
 
 
+def list_panels(user_id: str) -> list[dict]:
+    """Return all panels for a user with per-panel result counts."""
+    db = get_supabase()
+    panels_resp = (
+        db.table("panels")
+        .select("id,tested_at,source")
+        .eq("user_id", user_id)
+        .order("tested_at", desc=True)
+        .execute()
+    )
+    if not panels_resp.data:
+        return []
+
+    results_resp = (
+        db.table("results")
+        .select("panel_id,in_range")
+        .eq("user_id", user_id)
+        .execute()
+    )
+
+    counts: dict[str, dict] = {}
+    for r in results_resp.data:
+        pid = r["panel_id"]
+        if pid not in counts:
+            counts[pid] = {"result_count": 0, "in_range_count": 0, "out_range_count": 0}
+        counts[pid]["result_count"] += 1
+        if r["in_range"] is True:
+            counts[pid]["in_range_count"] += 1
+        elif r["in_range"] is False:
+            counts[pid]["out_range_count"] += 1
+
+    return [
+        {
+            "id": p["id"],
+            "tested_at": p["tested_at"],
+            "source": p["source"],
+            **counts.get(p["id"], {"result_count": 0, "in_range_count": 0, "out_range_count": 0}),
+        }
+        for p in panels_resp.data
+    ]
+
+
 def delete_panel(user_id: str, panel_id: str) -> None:
     """Delete a panel and its results (cascade via FK)."""
     db = get_supabase()
