@@ -34,6 +34,17 @@ export function getCategory(name: string): Category {
   return "Other";
 }
 
+/** URL-safe slug for a category (e.g. "CBC" → "cbc"). */
+export function categorySlug(cat: Category): string {
+  return cat.toLowerCase();
+}
+
+/** Resolve a URL slug back to a Category, or null when it matches none. */
+export function categoryFromSlug(slug: string): Category | null {
+  const lower = slug.toLowerCase();
+  return CATEGORY_ORDER.find((c) => c.toLowerCase() === lower) ?? null;
+}
+
 export type Grouped = Record<Category, BiomarkerWithSeries[]>;
 
 export function groupByCategory(items: BiomarkerWithSeries[]): Grouped {

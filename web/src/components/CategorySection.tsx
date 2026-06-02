@@ -1,6 +1,7 @@
 "use client";
+import Link from "next/link";
 import type { BiomarkerWithSeries } from "@/lib/api";
-import type { Category } from "@/lib/biomarkerCategories";
+import { categorySlug, type Category } from "@/lib/biomarkerCategories";
 import { CATEGORY_DESCRIPTIONS, CATEGORY_LABELS } from "@/lib/i18n";
 import { useLanguage } from "./LanguageProvider";
 import { InfoTooltip } from "./InfoTooltip";
@@ -36,12 +37,25 @@ export function CategorySection({ category, items }: Props) {
   return (
     <section>
       <div className="flex items-center gap-3 mb-4">
-        <span className="text-[var(--text-muted)] text-sm select-none">
-          {CATEGORY_ICONS[category]}
-        </span>
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-[var(--text-secondary)]">
-          {CATEGORY_LABELS[lang][category]}
-        </h2>
+        {/* The heading links to a dedicated view with every graph in this group. */}
+        <Link
+          href={`/categories/${categorySlug(category)}`}
+          title={t("category.viewGraphs")}
+          className="group flex items-center gap-3 min-w-0 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+        >
+          <span className="text-[var(--text-muted)] text-sm select-none group-hover:text-[var(--color-accent)] transition-colors">
+            {CATEGORY_ICONS[category]}
+          </span>
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">
+            {CATEGORY_LABELS[lang][category]}
+          </h2>
+          <span
+            aria-hidden
+            className="text-[var(--text-muted)] text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            →
+          </span>
+        </Link>
         <InfoTooltip
           label={t("category.aboutGroup")}
           text={CATEGORY_DESCRIPTIONS[lang][category]}
