@@ -36,6 +36,21 @@ public extension Color {
     static let inRange   = Color("InRange",  bundle: .module)
     /// Out-of-range indicator (rose). CSS: --color-out-range
     static let outRange  = Color("OutRange", bundle: .module)
+
+    // MARK: - Meal tones
+    /// Per-meal accent tints used to colour-code the diary's meal sections so the
+    /// eye can tell breakfast / lunch / dinner / snack apart at a glance. These are
+    /// supplementary to the meal name + icon (never colour-as-only-signal).
+    /// Breakfast tone (amber / sunrise).
+    static let mealBreakfast = Color("MealBreakfast", bundle: .module)
+    /// Lunch tone (teal / midday).
+    static let mealLunch     = Color("MealLunch",     bundle: .module)
+    /// Dinner tone (violet / evening).
+    static let mealDinner    = Color("MealDinner",    bundle: .module)
+    /// Snack tone (green / leaf).
+    static let mealSnack     = Color("MealSnack",     bundle: .module)
+    /// Other / uncategorised tone (slate).
+    static let mealOther     = Color("MealOther",     bundle: .module)
 }
 
 // MARK: - UIColor convenience (for UIKit interop)
