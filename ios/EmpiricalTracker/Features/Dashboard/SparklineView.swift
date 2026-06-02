@@ -63,10 +63,12 @@ struct SparklineView: View {
             RectangleMark(yStart: .value("Low", lo), yEnd: .value("High", hi))
                 .foregroundStyle(Color.inRange.opacity(0.08))
         } else if refType == .lt, let hi = refHigh {
-            RectangleMark(yEnd: .value("High", hi))
+            let yMin = (series.map(\.value).min() ?? 0) - domainPadding
+            RectangleMark(yStart: .value("Low", yMin), yEnd: .value("High", hi))
                 .foregroundStyle(Color.inRange.opacity(0.08))
         } else if refType == .gt, let lo = refLow {
-            RectangleMark(yStart: .value("Low", lo))
+            let yMax = (series.map(\.value).max() ?? 0) + domainPadding
+            RectangleMark(yStart: .value("Low", lo), yEnd: .value("High", yMax))
                 .foregroundStyle(Color.inRange.opacity(0.08))
         }
     }

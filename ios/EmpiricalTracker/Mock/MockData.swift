@@ -1,3 +1,4 @@
+import BodyMetrics
 import Core
 import Foundation
 
@@ -109,6 +110,86 @@ public enum MockData {
             endedOn: nil,
             note: "4000 IU daily."
         ),
+    ]
+
+    // MARK: - Food diary (Sprint 6)
+
+    /// A representative carnivore-diet day: whole foods from Matvaretabellen / USDA plus
+    /// one branded OFF product. Demonstrates source badges and sodium / saturated-fat totals.
+    public static let foodEntries: [FoodEntry] = [
+        FoodEntry(
+            id: "fe-1", loggedOn: .now, meal: .breakfast,
+            foodName: "Egg, whole, raw", quantityG: 150,
+            energyKcal: 215, carbsG: 1.7, proteinG: 18.9, fatG: 15.0,
+            saturatedFatG: 4.6, sodiumMg: 213, source: .usda
+        ),
+        FoodEntry(
+            id: "fe-2", loggedOn: .now, meal: .breakfast,
+            foodName: "Smør", brand: nil, quantityG: 20,
+            energyKcal: 149, carbsG: 0.1, proteinG: 0.2, fatG: 16.4,
+            saturatedFatG: 10.4, sodiumMg: 2, source: .mvt
+        ),
+        FoodEntry(
+            id: "fe-3", loggedOn: .now, meal: .dinner,
+            foodName: "Storfe, ribeye, rå", quantityG: 300,
+            energyKcal: 873, carbsG: 0, proteinG: 62.4, fatG: 69.0,
+            saturatedFatG: 28.5, sodiumMg: 156, source: .mvt
+        ),
+        FoodEntry(
+            id: "fe-4", loggedOn: .now, meal: .snack,
+            foodName: "Jarlsberg", brand: "TINE", barcode: "7038010009457", quantityG: 40,
+            energyKcal: 137, carbsG: 0, proteinG: 10.8, fatG: 10.6,
+            saturatedFatG: 6.9, sodiumMg: 244, source: .off
+        ),
+    ]
+
+    // MARK: - Meal plans (Sprint 7)
+
+    public static let mealPlans: [MealPlan] = [
+        MealPlan(id: "mp-1", name: "Carnivore week", description: "Beef, eggs, butter — zero plants."),
+        MealPlan(id: "mp-2", name: "Low-carb reset", description: "Under 30 g carbs/day."),
+    ]
+
+    /// A couple of planned meals across the current week, demonstrating per-day energy
+    /// totals, the done toggle, plan grouping, and a free-text (no-macro) entry.
+    public static let plannedMeals: [PlannedMeal] = [
+        PlannedMeal(
+            id: "pm-1", scheduledOn: Date(), meal: .breakfast,
+            foodName: "Egg, whole, raw", quantityG: 150,
+            energyKcal: 215, carbsG: 1.7, proteinG: 18.9, fatG: 15.0,
+            done: false, planId: "mp-1"
+        ),
+        PlannedMeal(
+            id: "pm-2", scheduledOn: Date(), meal: .dinner,
+            foodName: "Storfe, ribeye, rå", quantityG: 300,
+            energyKcal: 873, carbsG: 0, proteinG: 62.4, fatG: 69.0,
+            done: false, planId: "mp-1"
+        ),
+        PlannedMeal(
+            id: "pm-3", scheduledOn: Calendar.current.date(byAdding: .day, value: 1, to: Date())!,
+            meal: .lunch, foodName: "Ribeye + eggs", note: "Free-text — no macros published.",
+            done: false, planId: "mp-1"
+        ),
+    ]
+
+    // MARK: - Body metrics (Sprint 8)
+
+    /// A carnivore-diet weight-loss arc with periodic waist and blood-pressure readings,
+    /// demonstrating each metric's own series (charts skip the rows where it is null) and
+    /// the diet-event correlation overlay sharing the same timeline.
+    public static let bodyMetrics: [BodyMetric] = [
+        BodyMetric(id: "bm-1", measuredOn: daysAgo(180), weightKg: 92.4, waistCm: 104,
+                   systolic: 138, diastolic: 88, note: "Baseline before carnivore."),
+        BodyMetric(id: "bm-2", measuredOn: daysAgo(150), weightKg: 89.1, waistCm: 101),
+        BodyMetric(id: "bm-3", measuredOn: daysAgo(120), weightKg: 86.7, waistCm: 98,
+                   systolic: 131, diastolic: 84),
+        BodyMetric(id: "bm-4", measuredOn: daysAgo(90), weightKg: 84.2, waistCm: 95,
+                   systolic: 126, diastolic: 81),
+        BodyMetric(id: "bm-5", measuredOn: daysAgo(60), weightKg: 82.0, waistCm: 92),
+        BodyMetric(id: "bm-6", measuredOn: daysAgo(30), weightKg: 80.3, waistCm: 90,
+                   systolic: 120, diastolic: 78),
+        BodyMetric(id: "bm-7", measuredOn: daysAgo(0), weightKg: 79.1, waistCm: 89,
+                   systolic: 118, diastolic: 76, note: "Down 13 kg."),
     ]
 }
 

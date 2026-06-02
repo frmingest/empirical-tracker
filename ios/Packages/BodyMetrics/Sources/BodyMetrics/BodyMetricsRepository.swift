@@ -12,6 +12,7 @@ public struct BodyMetric: Codable, Identifiable, Sendable {
     public let waistCm: Double?
     public let systolic: Int?
     public let diastolic: Int?
+    public let note: String?
     /// `manual` | `healthkit` | `withings` — added in Sprint 8 backend migration.
     public let source: Source
 
@@ -19,6 +20,26 @@ public struct BodyMetric: Codable, Identifiable, Sendable {
         case manual
         case healthkit
         case withings
+    }
+
+    public init(
+        id: String,
+        measuredOn: Date,
+        weightKg: Double? = nil,
+        waistCm: Double? = nil,
+        systolic: Int? = nil,
+        diastolic: Int? = nil,
+        note: String? = nil,
+        source: Source = .manual
+    ) {
+        self.id = id
+        self.measuredOn = measuredOn
+        self.weightKg = weightKg
+        self.waistCm = waistCm
+        self.systolic = systolic
+        self.diastolic = diastolic
+        self.note = note
+        self.source = source
     }
 }
 
@@ -30,19 +51,28 @@ public struct BodyMetricPayload: Encodable, Sendable {
     public let waistCm: Double?
     public let systolic: Int?
     public let diastolic: Int?
+    public let note: String?
+    /// Provenance of the reading. `nil` lets the backend default to `manual`
+    /// (the manual log path), so the JSON key is omitted for hand-entered rows.
+    /// Sprint 9 sets `.healthkit` for Apple Health imports.
+    public let source: BodyMetric.Source?
 
     public init(
         measuredOn: Date = .now,
         weightKg: Double? = nil,
         waistCm: Double? = nil,
         systolic: Int? = nil,
-        diastolic: Int? = nil
+        diastolic: Int? = nil,
+        note: String? = nil,
+        source: BodyMetric.Source? = nil
     ) {
         self.measuredOn = measuredOn
         self.weightKg = weightKg
         self.waistCm = waistCm
         self.systolic = systolic
         self.diastolic = diastolic
+        self.note = note
+        self.source = source
     }
 }
 

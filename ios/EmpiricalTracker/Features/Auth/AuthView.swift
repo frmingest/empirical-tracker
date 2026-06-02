@@ -1,6 +1,6 @@
 import SwiftUI
 import Core
-import Auth
+import AppAuth
 
 /// Login screen. Mirrors `/login` on the web app.
 /// Supports email/password sign-in + a debug-only "Demo mode" shortcut.

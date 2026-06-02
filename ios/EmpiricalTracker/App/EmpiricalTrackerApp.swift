@@ -1,6 +1,6 @@
 import SwiftUI
 import Core
-import Auth
+import AppAuth
 
 @main
 struct EmpiricalTrackerApp: App {

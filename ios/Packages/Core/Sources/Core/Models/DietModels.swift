@@ -34,6 +34,22 @@ public struct DietEvent: Codable, Identifiable, Sendable {
         }
     }
 
+    public init(
+        id: String,
+        label: String,
+        kind: Kind,
+        startedOn: Date,
+        endedOn: Date? = nil,
+        note: String? = nil
+    ) {
+        self.id = id
+        self.label = label
+        self.kind = kind
+        self.startedOn = startedOn
+        self.endedOn = endedOn
+        self.note = note
+    }
+
     /// True when the event spans a date range rather than a single point.
     public var isPeriod: Bool { endedOn != nil }
 }

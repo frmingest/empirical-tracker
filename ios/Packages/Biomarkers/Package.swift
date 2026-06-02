@@ -17,5 +17,10 @@ let package = Package(
             path: "Sources/Biomarkers",
             swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
         ),
+        .testTarget(
+            name: "BiomarkersTests",
+            dependencies: ["Biomarkers", "Core"],
+            path: "Tests/BiomarkersTests"
+        ),
     ]
 )

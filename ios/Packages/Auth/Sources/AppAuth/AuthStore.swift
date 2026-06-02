@@ -74,9 +74,9 @@ public enum AuthError: LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case .invalidCredentials: return String(localized: "auth.error.invalid_credentials",
-                                                bundle: .module)
+                                                bundle: .main)
         case .networkError:       return String(localized: "auth.error.network",
-                                                bundle: .module)
+                                                bundle: .main)
         case .underlying(let e):  return e.localizedDescription
         }
     }

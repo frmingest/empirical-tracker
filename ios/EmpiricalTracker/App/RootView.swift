@@ -1,6 +1,6 @@
 import SwiftUI
 import Core
-import Auth
+import AppAuth
 
 /// Root navigator. Switches between `AuthView` (unauthenticated) and the main
 /// `TabView` (authenticated) based on live `AuthStore` state.
@@ -31,13 +31,13 @@ struct MainTabView: View {
                 DashboardView()
             }
             Tab(String(localized: "tab.diary"), systemImage: "fork.knife") {
-                DiaryPlaceholderView()
+                FoodDiaryView()
             }
             Tab(String(localized: "tab.plan"), systemImage: "calendar") {
-                PlanPlaceholderView()
+                MealPlanCalendarView()
             }
             Tab(String(localized: "tab.body"), systemImage: "figure.walk") {
-                BodyPlaceholderView()
+                BodyMetricsView()
             }
             Tab(String(localized: "tab.settings"), systemImage: "gearshape") {
                 SettingsView()
@@ -47,34 +47,4 @@ struct MainTabView: View {
     }
 }
 
-// MARK: - Placeholder screens (replaced sprint-by-sprint)
-
-private struct DiaryPlaceholderView: View {
-    var body: some View {
-        EmptyStateView(
-            icon: "fork.knife",
-            title: String(localized: "tab.diary"),
-            message: String(localized: "placeholder.sprint", defaultValue: "Sprint 6 — coming soon.")
-        )
-    }
-}
-
-private struct PlanPlaceholderView: View {
-    var body: some View {
-        EmptyStateView(
-            icon: "calendar",
-            title: String(localized: "tab.plan"),
-            message: String(localized: "placeholder.sprint", defaultValue: "Sprint 7 — coming soon.")
-        )
-    }
-}
-
-private struct BodyPlaceholderView: View {
-    var body: some View {
-        EmptyStateView(
-            icon: "figure.walk",
-            title: String(localized: "tab.body"),
-            message: String(localized: "placeholder.sprint", defaultValue: "Sprint 8 — coming soon.")
-        )
-    }
-}
+// All five tabs are now backed by real feature screens.

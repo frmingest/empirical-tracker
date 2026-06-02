@@ -27,7 +27,7 @@ public actor APIClient {
         /// falling back to the Railway production URL.
         public static func resolved() -> Configuration {
             let raw = ProcessInfo.processInfo.environment["EMPIRICAL_API_URL"]
-                ?? "https://api-empirical.up.railway.app"
+                ?? "https://api-production-42c5.up.railway.app"
             let url = URL(string: raw) ?? URL(string: "http://localhost:8000")!
             return Configuration(baseURL: url)
         }
@@ -139,7 +139,7 @@ public actor APIClient {
 // MARK: - Encoder / Decoder
 
 extension JSONEncoder {
-    static let api: JSONEncoder = {
+    public static let api: JSONEncoder = {
         let enc = JSONEncoder()
         enc.keyEncodingStrategy = .convertToSnakeCase
         enc.dateEncodingStrategy = .iso8601
@@ -148,7 +148,7 @@ extension JSONEncoder {
 }
 
 extension JSONDecoder {
-    static let api: JSONDecoder = {
+    public static let api: JSONDecoder = {
         let dec = JSONDecoder()
         dec.keyDecodingStrategy = .convertFromSnakeCase
         // Backend sends dates as "YYYY-MM-DD"; use a flexible strategy.

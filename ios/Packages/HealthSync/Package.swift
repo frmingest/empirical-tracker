@@ -16,8 +16,13 @@ let package = Package(
             name: "HealthSync",
             dependencies: ["Core", "BodyMetrics"],
             path: "Sources/HealthSync",
-            // HealthKit framework is linked in the app target, not here.
+            // HealthKit autolinks via `import HealthKit`; nothing to link here.
             swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
+        ),
+        .testTarget(
+            name: "HealthSyncTests",
+            dependencies: ["HealthSync", "BodyMetrics"],
+            path: "Tests/HealthSyncTests"
         ),
     ]
 )

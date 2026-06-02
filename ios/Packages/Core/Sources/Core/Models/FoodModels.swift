@@ -32,6 +32,64 @@ public enum Meal: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 }
 
+// MARK: - FoodSource (provenance)
+
+/// Where a food's numbers came from. Stamped on every search result and stored on
+/// each logged entry so the diary can show a provenance badge (ADR-018).
+/// - `off`  Open Food Facts — branded / barcode products (crowd-sourced)
+/// - `mvt`  Matvaretabellen — Norwegian whole foods (government, lab-analysed)
+/// - `usda` USDA FoodData Central — American whole foods (government, lab-analysed)
+public enum FoodSource: String, Codable, CaseIterable, Identifiable, Sendable {
+    case off
+    case mvt
+    case usda
+
+    public var id: String { rawValue }
+
+    /// Short badge text shown on rows. Mirrors the badges in `docs/NUTRITION_DATA.md`.
+    public var badge: String {
+        switch self {
+        case .off:  return "OFF"
+        case .mvt:  return "NO"
+        case .usda: return "US"
+        }
+    }
+
+    /// Full attribution name.
+    public var displayName: String {
+        switch self {
+        case .off:  return "Open Food Facts"
+        case .mvt:  return "Matvaretabellen"
+        case .usda: return "USDA FoodData Central"
+        }
+    }
+
+    /// Whether barcodes route to this source. Only Open Food Facts carries barcodes;
+    /// the whole-food composition tables do not (ADR-018).
+    public var supportsBarcode: Bool { self == .off }
+}
+
+// MARK: - FoodSearchSource (selector)
+
+/// The source the user is searching against. Adds `all` (fan-out merge) on top of the
+/// three provenance sources. Maps to `GET /food-diary/search?source=…` (ADR-018 §2).
+/// Defaults to Matvaretabellen, honouring the Norwegian-first framing.
+public enum FoodSearchSource: String, CaseIterable, Identifiable, Sendable {
+    case mvt
+    case usda
+    case off
+    case all
+
+    public var id: String { rawValue }
+
+    /// Value sent as the `source` query parameter.
+    public var queryValue: String { rawValue }
+
+    /// Whether the native barcode scanner is offered for this selection.
+    /// Barcodes are Open Food Facts only, so they apply to `.off` and `.all`.
+    public var supportsBarcode: Bool { self == .off || self == .all }
+}
+
 // MARK: - FoodEntry
 
 /// A logged food item in the diary. Mirrors `FoodEntry` in `web/src/lib/api.ts`.
@@ -48,44 +106,126 @@ public struct FoodEntry: Codable, Identifiable, Sendable {
     public let carbsG: Double?
     public let proteinG: Double?
     public let fatG: Double?
+    /// Saturated fat consumed, in grams (ADR-016).
+    public let saturatedFatG: Double?
+    /// Sodium consumed, in milligrams (ADR-016).
+    public let sodiumMg: Double?
+    /// Provenance of the numbers (ADR-018). `nil` for legacy / free-text entries.
+    public let source: FoodSource?
     public let note: String?
+
+    public init(
+        id: String,
+        loggedOn: Date,
+        meal: Meal,
+        foodName: String,
+        brand: String? = nil,
+        barcode: String? = nil,
+        quantityG: Double? = nil,
+        energyKcal: Double? = nil,
+        carbsG: Double? = nil,
+        proteinG: Double? = nil,
+        fatG: Double? = nil,
+        saturatedFatG: Double? = nil,
+        sodiumMg: Double? = nil,
+        source: FoodSource? = nil,
+        note: String? = nil
+    ) {
+        self.id = id
+        self.loggedOn = loggedOn
+        self.meal = meal
+        self.foodName = foodName
+        self.brand = brand
+        self.barcode = barcode
+        self.quantityG = quantityG
+        self.energyKcal = energyKcal
+        self.carbsG = carbsG
+        self.proteinG = proteinG
+        self.fatG = fatG
+        self.saturatedFatG = saturatedFatG
+        self.sodiumMg = sodiumMg
+        self.source = source
+        self.note = note
+    }
 }
 
-// MARK: - FoodItem (search result from Open Food Facts proxy)
+// MARK: - FoodItem (search result from the multi-source food proxy)
 
 public struct FoodItem: Codable, Identifiable, Sendable {
     public let code: String
     public let name: String
     public let brand: String?
     public let quantity: String?
+    /// Provenance of these numbers (ADR-018). Defaults to `.off` for legacy payloads.
+    public let source: FoodSource
     /// Nutrients expressed per 100 g — scale by (quantityG / 100) client-side.
     public let energyKcal100g: Double?
     public let carbs100g: Double?
     public let protein100g: Double?
     public let fat100g: Double?
+    /// Saturated fat per 100 g, in grams (ADR-016).
+    public let saturatedFat100g: Double?
+    /// Sodium per 100 g, in milligrams (ADR-016).
+    public let sodium100g: Double?
 
     public var id: String { code }
 
+    public init(
+        code: String,
+        name: String,
+        brand: String? = nil,
+        quantity: String? = nil,
+        source: FoodSource = .off,
+        energyKcal100g: Double? = nil,
+        carbs100g: Double? = nil,
+        protein100g: Double? = nil,
+        fat100g: Double? = nil,
+        saturatedFat100g: Double? = nil,
+        sodium100g: Double? = nil
+    ) {
+        self.code = code
+        self.name = name
+        self.brand = brand
+        self.quantity = quantity
+        self.source = source
+        self.energyKcal100g = energyKcal100g
+        self.carbs100g = carbs100g
+        self.protein100g = protein100g
+        self.fat100g = fat100g
+        self.saturatedFat100g = saturatedFat100g
+        self.sodium100g = sodium100g
+    }
+
+    // Decode defensively: `source` is always stamped by the backend today, but default
+    // to `.off` so older cached payloads still decode.
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        code             = try c.decode(String.self, forKey: .code)
+        name             = try c.decode(String.self, forKey: .name)
+        brand            = try c.decodeIfPresent(String.self, forKey: .brand)
+        quantity         = try c.decodeIfPresent(String.self, forKey: .quantity)
+        source           = try c.decodeIfPresent(FoodSource.self, forKey: .source) ?? .off
+        energyKcal100g   = try c.decodeIfPresent(Double.self, forKey: .energyKcal100g)
+        carbs100g        = try c.decodeIfPresent(Double.self, forKey: .carbs100g)
+        protein100g      = try c.decodeIfPresent(Double.self, forKey: .protein100g)
+        fat100g          = try c.decodeIfPresent(Double.self, forKey: .fat100g)
+        saturatedFat100g = try c.decodeIfPresent(Double.self, forKey: .saturatedFat100g)
+        sodium100g       = try c.decodeIfPresent(Double.self, forKey: .sodium100g)
+    }
+
     // MARK: Computed nutrients for a given serving
 
-    public func energyKcal(forGrams g: Double) -> Double? {
-        guard let base = energyKcal100g else { return nil }
-        return base * g / 100
-    }
+    public func energyKcal(forGrams g: Double) -> Double? { scale(energyKcal100g, g) }
+    public func carbsG(forGrams g: Double) -> Double?     { scale(carbs100g, g) }
+    public func proteinG(forGrams g: Double) -> Double?   { scale(protein100g, g) }
+    public func fatG(forGrams g: Double) -> Double?       { scale(fat100g, g) }
+    public func saturatedFatG(forGrams g: Double) -> Double? { scale(saturatedFat100g, g) }
+    public func sodiumMg(forGrams g: Double) -> Double?      { scale(sodium100g, g) }
 
-    public func carbsG(forGrams g: Double) -> Double? {
-        guard let base = carbs100g else { return nil }
-        return base * g / 100
-    }
-
-    public func proteinG(forGrams g: Double) -> Double? {
-        guard let base = protein100g else { return nil }
-        return base * g / 100
-    }
-
-    public func fatG(forGrams g: Double) -> Double? {
-        guard let base = fat100g else { return nil }
-        return base * g / 100
+    /// Linear mass scaling only — never invents a value when the source omits one.
+    private func scale(_ per100g: Double?, _ grams: Double) -> Double? {
+        guard let per100g else { return nil }
+        return per100g * grams / 100
     }
 }
 
@@ -102,6 +242,9 @@ public struct FoodEntryPayload: Encodable, Sendable {
     public let carbsG: Double?
     public let proteinG: Double?
     public let fatG: Double?
+    public let saturatedFatG: Double?
+    public let sodiumMg: Double?
+    public let source: FoodSource?
     public let note: String?
 
     /// Convenience initialiser that pre-scales per-100g nutrients from a `FoodItem`.
@@ -112,20 +255,23 @@ public struct FoodEntryPayload: Encodable, Sendable {
         quantityG: Double,
         note: String? = nil
     ) {
-        self.loggedOn   = loggedOn
-        self.meal       = meal
-        self.foodName   = item.name
-        self.brand      = item.brand
-        self.barcode    = item.code
-        self.quantityG  = quantityG
-        self.energyKcal = item.energyKcal(forGrams: quantityG)
-        self.carbsG     = item.carbsG(forGrams: quantityG)
-        self.proteinG   = item.proteinG(forGrams: quantityG)
-        self.fatG       = item.fatG(forGrams: quantityG)
-        self.note       = note
+        self.loggedOn      = loggedOn
+        self.meal          = meal
+        self.foodName      = item.name
+        self.brand         = item.brand
+        self.barcode       = item.source.supportsBarcode ? item.code : nil
+        self.quantityG     = quantityG
+        self.energyKcal    = item.energyKcal(forGrams: quantityG)
+        self.carbsG        = item.carbsG(forGrams: quantityG)
+        self.proteinG      = item.proteinG(forGrams: quantityG)
+        self.fatG          = item.fatG(forGrams: quantityG)
+        self.saturatedFatG = item.saturatedFatG(forGrams: quantityG)
+        self.sodiumMg      = item.sodiumMg(forGrams: quantityG)
+        self.source        = item.source
+        self.note          = note
     }
 
-    /// Freetext-only entry (no OFF product).
+    /// Freetext-only entry (no product match).
     public init(
         loggedOn: Date,
         meal: Meal,
@@ -136,37 +282,99 @@ public struct FoodEntryPayload: Encodable, Sendable {
         carbsG: Double? = nil,
         proteinG: Double? = nil,
         fatG: Double? = nil,
+        saturatedFatG: Double? = nil,
+        sodiumMg: Double? = nil,
         note: String? = nil
     ) {
-        self.loggedOn   = loggedOn
-        self.meal       = meal
-        self.foodName   = foodName
-        self.brand      = brand
-        self.barcode    = nil
-        self.quantityG  = quantityG
-        self.energyKcal = energyKcal
-        self.carbsG     = carbsG
-        self.proteinG   = proteinG
-        self.fatG       = fatG
-        self.note       = note
+        self.loggedOn      = loggedOn
+        self.meal          = meal
+        self.foodName      = foodName
+        self.brand         = brand
+        self.barcode       = nil
+        self.quantityG     = quantityG
+        self.energyKcal    = energyKcal
+        self.carbsG        = carbsG
+        self.proteinG      = proteinG
+        self.fatG          = fatG
+        self.saturatedFatG = saturatedFatG
+        self.sodiumMg      = sodiumMg
+        self.source        = nil
+        self.note          = note
+    }
+
+    /// Raw initialiser used when promoting an already-stored record (e.g. a planned
+    /// meal — ADR-012) whose nutrient fields are already consumed-amount totals.
+    /// Preserves `barcode` and `source` so the promoted diary entry keeps its
+    /// provenance rather than degrading to a free-text row.
+    public init(
+        loggedOn: Date,
+        meal: Meal,
+        foodName: String,
+        brand: String?,
+        barcode: String?,
+        quantityG: Double?,
+        energyKcal: Double?,
+        carbsG: Double?,
+        proteinG: Double?,
+        fatG: Double?,
+        saturatedFatG: Double?,
+        sodiumMg: Double?,
+        source: FoodSource?,
+        note: String?
+    ) {
+        self.loggedOn      = loggedOn
+        self.meal          = meal
+        self.foodName      = foodName
+        self.brand         = brand
+        self.barcode       = barcode
+        self.quantityG     = quantityG
+        self.energyKcal    = energyKcal
+        self.carbsG        = carbsG
+        self.proteinG      = proteinG
+        self.fatG          = fatG
+        self.saturatedFatG = saturatedFatG
+        self.sodiumMg      = sodiumMg
+        self.source        = source
+        self.note          = note
     }
 }
 
 // MARK: - DailyTotals
 
-/// Computed from a day's `FoodEntry` array.
+/// Computed from a day's `FoodEntry` array. Sums only the values that are present —
+/// missing nutrients are skipped, never estimated (`docs/NUTRITION_DATA.md`).
 public struct DailyTotals: Sendable {
     public let energyKcal: Double
     public let carbsG: Double
     public let proteinG: Double
     public let fatG: Double
+    public let saturatedFatG: Double
+    public let sodiumMg: Double
+
+    public init(
+        energyKcal: Double,
+        carbsG: Double,
+        proteinG: Double,
+        fatG: Double,
+        saturatedFatG: Double,
+        sodiumMg: Double
+    ) {
+        self.energyKcal = energyKcal
+        self.carbsG = carbsG
+        self.proteinG = proteinG
+        self.fatG = fatG
+        self.saturatedFatG = saturatedFatG
+        self.sodiumMg = sodiumMg
+    }
 
     public static func compute(from entries: [FoodEntry]) -> DailyTotals {
         DailyTotals(
-            energyKcal: entries.compactMap(\.energyKcal).reduce(0, +),
-            carbsG:     entries.compactMap(\.carbsG).reduce(0, +),
-            proteinG:   entries.compactMap(\.proteinG).reduce(0, +),
-            fatG:       entries.compactMap(\.fatG).reduce(0, +)
+            energyKcal:    entries.compactMap(\.energyKcal).reduce(0, +),
+            carbsG:        entries.compactMap(\.carbsG).reduce(0, +),
+            proteinG:      entries.compactMap(\.proteinG).reduce(0, +),
+            fatG:          entries.compactMap(\.fatG).reduce(0, +),
+            saturatedFatG: entries.compactMap(\.saturatedFatG).reduce(0, +),
+            sodiumMg:      entries.compactMap(\.sodiumMg).reduce(0, +)
         )
     }
 }

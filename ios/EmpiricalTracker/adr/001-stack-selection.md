@@ -1,0 +1,80 @@
+# ADR-001: Technology Stack Selection
+
+**Status:** Accepted  
+**Date:** 2026-05-31  
+**Author:** Faiz (solo developer)
+
+---
+
+## Context
+
+Building a personal health tracker that ingests blood-test results from Norwegian lab reports
+and correlates them with elimination-diet adherence. The app is the user's own primary tool,
+but the architecture must support sharing with doctors and a future iOS/Android client.
+
+Key constraints:
+- Solo developer — minimal operational overhead
+- EU/Norway — health data is GDPR special-category (Article 9); must be EU-resident
+- The blood-test ingestion is the core differentiator; everything else is secondary
+- Future mobile app must share the same data model and API
+
+---
+
+## Decision
+
+**Backend:** Python + FastAPI  
+**Frontend (web):** Next.js (TypeScript, App Router)  
+**Database / Auth:** Supabase (Postgres + Auth + RLS)  
+**Hosting:** Railway  
+**Mobile path:** React Native (post-MVP, reuses React patterns and shared types)
+
+---
+
+## Rationale
+
+### Python + FastAPI (not Node/Go/Rust)
+The blood-test parsing pipeline needs openpyxl for Excel ingestion and will eventually need
+NumPy/Pandas/scikit-learn for biomarker trend analysis and diet correlation. Python is the
+only first-class language for this stack. FastAPI specifically over Django/Flask: async-first,
+Pydantic validation, automatic OpenAPI docs, and fast enough for the expected load.
+
+### Next.js (not plain React, not SvelteKit)
+App Router enables server-component data fetching without a separate BFF layer. TypeScript
+types can be shared or mirrored with the API response shapes. The React skill carries over
+directly to the planned React Native mobile client — a SvelteKit frontend would not.
+
+### Supabase (not raw Postgres + Auth0 + S3)
+A solo developer cannot responsibly maintain separate auth, database, storage, and row-level
+security systems. Supabase bundles all four with a generous free tier and a compliant EU region
+(Frankfurt). RLS policies enforce at the database layer that users can only see their own data —
+this is the GDPR isolation boundary. The alternative (building auth middleware + service-level
+tenant isolation) would take weeks and be harder to audit.
+
+### Railway (not Vercel/Render/Fly.io)
+Railway deploys both the FastAPI and Next.js services from a single GitHub repo without a
+complex monorepo build config. Automatic preview deployments, straightforward environment
+variable management, and no cold-start latency on paid plans.
+
+---
+
+## Consequences
+
+- **Good:** Managed services mean ~0 infra maintenance; auth, SSL, backups all handled
+- **Good:** Python backend can evolve into biomarker analytics / ML without a rewrite
+- **Good:** RLS means even a compromised service-role token can only access data via correct
+  user_id scoping
+- **Trade-off:** Supabase is a vendor lock-in. Mitigation: all data is in standard Postgres;
+  an export path is a first-class Sprint 6 feature
+- **Trade-off:** Railway costs money at scale. At single-user load this is negligible
+
+---
+
+## Alternatives Considered
+
+| Option | Rejected because |
+|--------|-----------------|
+| Node.js backend | No path to biomarker ML/stats without rewriting to Python later |
+| Django | Too much ceremony for an API-only service; FastAPI's type system is better |
+| PlanetScale/Neon | No built-in auth or RLS; would need separate Auth0/Clerk |
+| Vercel | Can't run FastAPI (Python long-running process) on the same platform |
+| Self-hosted Postgres | Too much ops for a solo developer handling health data |

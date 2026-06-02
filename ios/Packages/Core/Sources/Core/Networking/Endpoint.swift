@@ -41,6 +41,10 @@ public struct Endpoint: Sendable {
         Endpoint(method: .put, path: path, body: body)
     }
 
+    public static func patch<B: Encodable & Sendable>(_ path: String, body: B) -> Self {
+        Endpoint(method: .patch, path: path, body: body)
+    }
+
     public static func delete(_ path: String) -> Self {
         Endpoint(method: .delete, path: path)
     }

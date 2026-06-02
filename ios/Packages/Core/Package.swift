@@ -11,6 +11,7 @@ let package = Package(
         .target(
             name: "Core",
             path: "Sources/Core",
+            resources: [.process("Resources")],
             swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
         ),
         .testTarget(

@@ -17,5 +17,10 @@ let package = Package(
             path: "Sources/BodyMetrics",
             swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
         ),
+        .testTarget(
+            name: "BodyMetricsTests",
+            dependencies: ["BodyMetrics", "Core"],
+            path: "Tests/BodyMetricsTests"
+        ),
     ]
 )

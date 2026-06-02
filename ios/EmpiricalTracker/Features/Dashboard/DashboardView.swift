@@ -1,6 +1,6 @@
 import Biomarkers
 import Core
-import Auth
+import AppAuth
 import SwiftUI
 
 /// Home tab — faithful replica of the web dashboard.
@@ -11,6 +11,13 @@ struct DashboardView: View {
 
     @State private var viewModel: DashboardViewModel?
     @State private var customMarkerDraft: Set<String> = []
+
+    // Sprint 4 — import & panel timeline state
+    @State private var importViewModel: ImportViewModel?
+    @State private var isPanelTimelinePresented = false
+
+    // Sprint 3 — marker drill-down
+    @State private var selectedMarker: BiomarkerWithSeries?
 
     var body: some View {
         NavigationStack {
@@ -23,6 +30,9 @@ struct DashboardView: View {
             }
             .navigationTitle("Dashboard")
             .toolbar { toolbarContent }
+            .navigationDestination(item: $selectedMarker) { marker in
+                BiomarkerDetailView(initialMarker: marker)
+            }
         }
         .task {
             // Initialise once; preserve local UI state across tab switches.
@@ -32,7 +42,38 @@ struct DashboardView: View {
                     accountRepo: env.account
                 )
             }
+            if importViewModel == nil {
+                importViewModel = ImportViewModel(
+                    biomarkersRepo: env.biomarkers,
+                    importService: env.biomarkersImport
+                )
+            }
             await viewModel?.load()
+        }
+        // Present import sheet
+        .sheet(isPresented: Binding(
+            get: { importViewModel?.isPresented ?? false },
+            set: { importViewModel?.isPresented = $0 }
+        )) {
+            if let ivm = importViewModel {
+                ImportSheetView(viewModel: ivm)
+            }
+        }
+        // Present panel timeline
+        .sheet(isPresented: $isPanelTimelinePresented) {
+            PanelTimelineView()
+        }
+        // Handle .xlsx files opened from Files / Mail / AirDrop
+        .onOpenURL { url in
+            guard url.pathExtension.lowercased() == "xlsx" else { return }
+            if importViewModel == nil {
+                importViewModel = ImportViewModel(
+                    biomarkersRepo: env.biomarkers,
+                    importService: env.biomarkersImport
+                )
+            }
+            importViewModel?.pendingFileURL = url
+            importViewModel?.isPresented = true
         }
     }
 
@@ -81,8 +122,7 @@ struct DashboardView: View {
                     LazyVStack(alignment: .leading, spacing: 24) {
                         ForEach(vm.sections) { group in
                             CategorySectionView(group: group) { tapped in
-                                // Sprint 3: push BiomarkerDetailView
-                                _ = tapped
+                                selectedMarker = tapped
                             }
                         }
                     }
@@ -153,10 +193,21 @@ struct DashboardView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            // Sprint 4: ImportSheet trigger
+        // History button
+        ToolbarItem(placement: .topBarLeading) {
             Button {
-                // TODO Sprint 4: present ImportSheet
+                isPanelTimelinePresented = true
+            } label: {
+                Image(systemName: "calendar.badge.clock")
+                    .accessibilityLabel("Blood test history")
+            }
+            .foregroundStyle(Color.accent)
+        }
+        // Import button
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                importViewModel?.reset()
+                importViewModel?.isPresented = true
             } label: {
                 Image(systemName: "square.and.arrow.down")
                     .accessibilityLabel("Import blood test")

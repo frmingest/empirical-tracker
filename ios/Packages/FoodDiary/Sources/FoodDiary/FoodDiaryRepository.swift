@@ -52,9 +52,11 @@ public final class FoodDiaryRepository {
         entries.removeAll { $0.id == id }
     }
 
-    // MARK: - Open Food Facts search (via backend proxy)
+    // MARK: - Multi-source search (via backend proxy)
 
-    public func search(query: String) async {
+    /// Full-text search against the selected source (Matvaretabellen / USDA / Open Food
+    /// Facts / all). Mirrors `GET /food-diary/search?q=…&source=…` (ADR-018).
+    public func search(query: String, source: FoodSearchSource = .mvt) async {
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {
             searchResults = []
             return
@@ -62,7 +64,10 @@ public final class FoodDiaryRepository {
         isSearching = true
         do {
             let items: [FoodItem] = try await client.request(
-                .get("/food-diary/search", query: [URLQueryItem(name: "q", value: query)])
+                .get("/food-diary/search", query: [
+                    URLQueryItem(name: "q", value: query),
+                    URLQueryItem(name: "source", value: source.queryValue),
+                ])
             )
             searchResults = items
         } catch {

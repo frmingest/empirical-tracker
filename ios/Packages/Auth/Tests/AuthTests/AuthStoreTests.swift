@@ -1,5 +1,5 @@
 import Testing
-@testable import Auth
+@testable import AppAuth
 
 @Suite("AuthStore")
 struct AuthStoreTests {

@@ -34,3 +34,11 @@ Thumbs.db
 coverage/
 .coverage
 htmlcov/
+
+# ---- iOS / Xcode ----
+ios/Config.xcconfig
+ios/**/*.xcuserstate
+ios/**/xcuserdata/
+ios/**/.DS_Store
+ios/DerivedData/
+ios/**/*.xcworkspace/xcuserdata/

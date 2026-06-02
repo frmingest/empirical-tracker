@@ -1,6 +1,6 @@
 import SwiftUI
 import Core
-import Auth
+import AppAuth
 
 /// Global settings tab.
 /// Sprint 1: theme toggle, language toggle, account info, sign-out.
@@ -15,10 +15,15 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 appearanceSection(settings: settings)
+                dataSection
+                devicesSection
                 accountSection
             }
             .navigationTitle(String(localized: "settings.title"))
             .listStyle(.insetGrouped)
+            // Resolve Withings Cloud availability so its row appears here even if the
+            // Body tab hasn't been opened yet (Sprint 10).
+            .task { await env.withingsCloudState.refreshStatus() }
             .alert(
                 String(localized: "settings.language.restart.title"),
                 isPresented: $showRestartNotice
@@ -71,8 +76,77 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
+    private var dataSection: some View {
+        Section(String(localized: "settings.section.data")) {
+            NavigationLink {
+                DietEventManagerView()
+            } label: {
+                Label(
+                    String(localized: "diet_events.title"),
+                    systemImage: "fork.knife.circle"
+                )
+                .foregroundStyle(Color.textPrimary)
+            }
+        }
+    }
+
+    /// Connected health-data sources (Sprint 9: Apple Health; Sprint 10: Withings Cloud).
+    /// Each row hides when its path is unavailable — Apple Health when HealthKit is
+    /// absent, Withings Cloud until the backend exposes the `/withings/*` endpoints.
+    @ViewBuilder
+    private var devicesSection: some View {
+        let showHealth = env.healthSyncState.connection != .unavailable
+        let showWithings = env.withingsCloudState.connection != .unavailable
+        if showHealth || showWithings {
+            Section(String(localized: "settings.section.devices")) {
+                if showHealth {
+                    NavigationLink {
+                        HealthSyncSettingsView()
+                    } label: {
+                        Label(
+                            String(localized: "healthsync.settings.title"),
+                            systemImage: "heart.text.square"
+                        )
+                        .foregroundStyle(Color.textPrimary)
+                    }
+                }
+                if showWithings {
+                    NavigationLink {
+                        WithingsCloudSettingsView()
+                    } label: {
+                        Label(
+                            String(localized: "withings.settings.title"),
+                            systemImage: "antenna.radiowaves.left.and.right"
+                        )
+                        .foregroundStyle(Color.textPrimary)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
     private var accountSection: some View {
         Section(String(localized: "settings.section.account")) {
+            // Demo-mode diagnostic: when Supabase isn't configured the app signs in
+            // as the hardcoded demo user, not the real account. Make that obvious.
+            if AppConfig.isUsingMockAuth {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: "Demo mode — backend not configured")
+                            .font(.bodyMedium)
+                            .foregroundStyle(Color.textPrimary)
+                        Text(verbatim: "Login and data are simulated. Set Supabase/API keys to use your real account.")
+                            .font(.bodySmall)
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                }
+                .accessibilityElement(children: .combine)
+            }
+
             // Signed-in email
             Label {
                 VStack(alignment: .leading, spacing: 2) {

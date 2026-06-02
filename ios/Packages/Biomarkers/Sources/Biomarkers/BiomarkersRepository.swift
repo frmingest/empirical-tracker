@@ -66,6 +66,23 @@ public final class BiomarkersRepository {
         results = []
     }
 
+    // MARK: - Import
+
+    /// Uploads a .xlsx file to the server and refreshes both panels and results on success.
+    /// Progress (0→1) is forwarded to `onProgress` on the MainActor.
+    public func importXLSX(
+        fileURL: URL,
+        importService: BiomarkersImportService,
+        onProgress: @MainActor @escaping (Double) -> Void
+    ) async throws -> ImportResult {
+        let result = try await importService.upload(fileURL: fileURL) { fraction in
+            Task { @MainActor in onProgress(fraction) }
+        }
+        await loadPanels()
+        await loadResults()
+        return result
+    }
+
     // MARK: - Filtering helpers
 
     /// Returns only the markers visible for the given diet focus.

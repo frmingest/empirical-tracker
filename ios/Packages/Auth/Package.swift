@@ -5,7 +5,7 @@ let package = Package(
     name: "Auth",
     platforms: [.iOS(.v17)],
     products: [
-        .library(name: "Auth", targets: ["Auth"]),
+        .library(name: "AppAuth", targets: ["AppAuth"]),
     ],
     dependencies: [
         .package(path: "../Core"),
@@ -16,19 +16,17 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "Auth",
+            name: "AppAuth",
             dependencies: [
                 "Core",
-                // Import top-level Supabase module only — avoids naming conflict
-                // with our own "Auth" target.
                 .product(name: "Supabase", package: "supabase-swift"),
             ],
-            path: "Sources/Auth",
+            path: "Sources/AppAuth",
             swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
         ),
         .testTarget(
             name: "AuthTests",
-            dependencies: ["Auth"],
+            dependencies: ["AppAuth"],
             path: "Tests/AuthTests"
         ),
     ]

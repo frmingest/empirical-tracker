@@ -41,6 +41,27 @@ struct DTOContractTests {
         #expect(result.trend == .rising)
     }
 
+    // MARK: - ManualResultPayload (POST /biomarkers/results/manual)
+
+    /// The backend keys manual results on `biomarker_id` (not `name_no`) and
+    /// expects `tested_at` as a calendar date. See ADR-007.
+    @Test func manualResultPayloadEncodesBiomarkerId() throws {
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 6
+        components.day = 2
+        let testedAt = Calendar(identifier: .gregorian).date(from: components)!
+
+        let payload = ManualResultPayload(biomarkerId: "abc-123", value: 5.4, testedAt: testedAt)
+        let data = try JSONEncoder.api.encode(payload)
+        let object = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+
+        #expect(object["biomarker_id"] as? String == "abc-123")
+        #expect(object["value"] as? Double == 5.4)
+        #expect(object["tested_at"] as? String == "2026-06-02")
+        #expect(object["name_no"] == nil)
+    }
+
     // MARK: - DietEvent
 
     @Test func dietEventDecodes() throws {
@@ -114,5 +135,47 @@ struct DTOContractTests {
         let grams = 15.0 // one tablespoon
         #expect(item.energyKcal(forGrams: grams) == 744 * 15 / 100)
         #expect(item.fatG(forGrams: grams) == 81.0 * 15 / 100)
+    }
+
+    // MARK: - MealPlan (Sprint 7 / ADR-012)
+
+    @Test func mealPlanDecodes() throws {
+        let json = """
+        { "id": "mp-1", "name": "Carnivore week", "description": "Beef, eggs, butter." }
+        """.data(using: .utf8)!
+
+        let plan = try JSONDecoder.api.decode(MealPlan.self, from: json)
+        #expect(plan.id == "mp-1")
+        #expect(plan.name == "Carnivore week")
+        #expect(plan.description == "Beef, eggs, butter.")
+    }
+
+    // MARK: - PlannedMeal (calendar)
+
+    @Test func plannedMealDecodes() throws {
+        let json = """
+        {
+            "id": "pm-1",
+            "scheduled_on": "2024-06-03",
+            "meal": "dinner",
+            "food_name": "Ribeye",
+            "brand": null,
+            "barcode": null,
+            "quantity_g": 300.0,
+            "energy_kcal": 873.0,
+            "carbs_g": 0.0,
+            "protein_g": 62.4,
+            "fat_g": 69.0,
+            "note": null,
+            "done": false,
+            "plan_id": "mp-1"
+        }
+        """.data(using: .utf8)!
+
+        let meal = try JSONDecoder.api.decode(PlannedMeal.self, from: json)
+        #expect(meal.meal == .dinner)
+        #expect(meal.energyKcal == 873.0)
+        #expect(meal.done == false)
+        #expect(meal.planId == "mp-1")
     }
 }

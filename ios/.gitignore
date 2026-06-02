@@ -1,0 +1,42 @@
+# Xcode
+*.xcuserstate
+xcuserdata/
+*.xcscmblueprint
+
+# Build
+DerivedData/
+build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.build/
+Packages/checkouts/
+.swiftpm/
+
+# CocoaPods (not used, but just in case)
+Pods/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# macOS
+.DS_Store
+*.DS_Store
+
+# Secrets
+*.p8
+*.p12
+*.mobileprovision
+AuthKey_*.p8
+
+# Local backend configuration (copy of Config.xcconfig.example with real keys)
+Config.xcconfig
+*.local.xcconfig
+
+# Xcode Cloud / CI
+ci_scripts/*.sh.bak
