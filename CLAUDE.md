@@ -35,16 +35,14 @@ See `docs/SOLUTION.md` for full sprint descriptions.
 
 ## Stack
 
+- **iOS app:** Swift / SwiftUI, Xcode 15+ (`ios/`)
 - **Backend:** Python + FastAPI (`api/`)
-- **Frontend:** Next.js 14 App Router, TypeScript strict, Tailwind v4 (`web/`)
 - **DB/Auth:** Supabase (Postgres + RLS) — EU region (Frankfurt)
 - **Deploy:** Railway (auto-deploys on push to `main`)
 
 ## Key conventions
 
-- All frontend colors use CSS custom properties (`var(--bg-card)`, `var(--text-primary)`, etc.) — never hardcode zinc/slate Tailwind classes
-- TypeScript strict mode — no `any`
 - DB migrations live in `api/supabase/migrations/` — numbered sequentially, run manually in Supabase SQL editor
-- Tests: `cd api && pytest -v` (all must pass) — Sprints 3 & 4 added diet-event and food-diary suites
-- Frontend checks: `cd web && npx tsc --noEmit && npx eslint src && npm run build` must all pass
-- External data (Open Food Facts) is reached through an authenticated backend proxy that sets a `User-Agent`; never call third-party APIs directly from the browser
+- Tests: `cd api && pytest -v` (all must pass)
+- External data (Open Food Facts) is reached through an authenticated backend proxy that sets a `User-Agent`; never call third-party APIs directly from the iOS app
+- Xcode project uses folder synchronization (Xcode 15) — new `.swift` files added to `ios/EmpiricalTracker/` subdirectories are picked up automatically, no `.pbxproj` edits needed

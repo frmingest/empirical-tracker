@@ -6,13 +6,11 @@ diet adherence.
 
 ## Architecture
 
-API-first monorepo so future iOS/Android clients (React Native) reuse the same backend.
-
 | Part | Stack | Dir |
 |------|-------|-----|
+| iOS app | Swift / SwiftUI (Xcode 15+) | [`ios/`](ios/) |
 | Backend API | Python 3.11 + FastAPI | [`api/`](api/) |
-| Web client | Next.js (TypeScript, App Router) | [`web/`](web/) |
-| Database / Auth | Supabase (Postgres + Auth + RLS) | managed |
+| Database / Auth | Supabase (Postgres + Auth + RLS) — EU Frankfurt | managed |
 | Hosting | Railway | — |
 
 ## Local development
@@ -21,7 +19,7 @@ API-first monorepo so future iOS/Android clients (React Native) reuse the same b
 ```bash
 cd api
 python -m venv .venv
-.venv\Scripts\activate        # Windows
+source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env          # fill in values
 uvicorn app.main:app --reload --port 8000
@@ -29,18 +27,16 @@ uvicorn app.main:app --reload --port 8000
 pytest
 ```
 
-### Web (`web/`)
-```bash
-cd web
-npm install
-cp .env.example .env.local    # fill in values
-npm run dev                   # http://localhost:3000
-```
+### iOS (`ios/`)
+Open `ios/EmpiricalTracker.xcodeproj` in Xcode 15+, set the active scheme to
+`EmpiricalTracker`, and run on a simulator or device. Copy
+`ios/Config.xcconfig.example` to `ios/Config.xcconfig` and fill in your
+Supabase URL and anon key before building.
 
 ## Deployment
 
-Both services deploy to Railway from this GitHub repo. See [`docs/SETUP.md`](docs/SETUP.md)
-for the one-time account setup (GitHub, Supabase, Railway).
+The API deploys to Railway automatically on push to `main`. See
+[`docs/SETUP.md`](docs/SETUP.md) for one-time account setup.
 
 ## Compliance
 
