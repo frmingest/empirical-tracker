@@ -204,28 +204,35 @@ private struct DailyTotalsCard: View {
 
     var body: some View {
         CardView {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
+            VStack(alignment: .leading, spacing: 14) {
+                // Hero: the day's energy, captioned above so the number never has to
+                // share its baseline with a label that pushes it onto a second line.
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(String(localized: "food.totals.title"))
+                        .font(.labelSmall)
+                        .foregroundStyle(Color.textMuted)
                     Text(NutritionFormat.energy(totals.energyKcal))
                         .font(.numericLarge)
                         .foregroundStyle(Color.textPrimary)
-                    Text(String(localized: "food.totals.title"))
-                        .font(.bodySmall)
-                        .foregroundStyle(Color.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
                 }
 
                 Divider().background(Color.borderSubtle)
 
+                // Primary macros: one even row of three.
                 HStack(spacing: 0) {
                     macro(String(localized: "food.macro.carbs"),   NutritionFormat.grams(totals.carbsG))
                     macro(String(localized: "food.macro.protein"), NutritionFormat.grams(totals.proteinG))
                     macro(String(localized: "food.macro.fat"),     NutritionFormat.grams(totals.fatG))
                 }
 
-                HStack(spacing: 0) {
-                    macro(String(localized: "food.macro.sat_fat"), NutritionFormat.grams(totals.saturatedFatG))
-                    macro(String(localized: "food.macro.sodium"),  NutritionFormat.milligrams(totals.sodiumMg))
-                    Spacer().frame(maxWidth: .infinity)
+                // Secondary nutrients inline on one muted line, rather than a second
+                // grid row with an empty third cell.
+                HStack(spacing: 16) {
+                    micro(String(localized: "food.macro.sat_fat"), NutritionFormat.grams(totals.saturatedFatG))
+                    micro(String(localized: "food.macro.sodium"),  NutritionFormat.milligrams(totals.sodiumMg))
+                    Spacer(minLength: 0)
                 }
             }
         }
@@ -240,8 +247,22 @@ private struct DailyTotalsCard: View {
             Text(value)
                 .font(.numericSmall)
                 .foregroundStyle(Color.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func micro(_ label: String, _ value: String) -> some View {
+        HStack(spacing: 4) {
+            Text(label)
+                .font(.labelSmall)
+                .foregroundStyle(Color.textMuted)
+            Text(value)
+                .font(.numericSmall)
+                .foregroundStyle(Color.textSecondary)
+        }
+        .lineLimit(1)
     }
 }
 
@@ -282,6 +303,7 @@ private struct FoodEntryRow: View {
                 Text(macroSummary)
                     .font(.bodySmall)
                     .foregroundStyle(Color.textSecondary)
+                    .lineLimit(1)
             }
         }
         .padding(.vertical, 2)
@@ -290,10 +312,7 @@ private struct FoodEntryRow: View {
     }
 
     private var macroSummary: String {
-        let c = NutritionFormat.grams(entry.carbsG)
-        let p = NutritionFormat.grams(entry.proteinG)
-        let f = NutritionFormat.grams(entry.fatG)
-        return "C \(c) · P \(p) · F \(f)"
+        NutritionFormat.macroSummary(carbs: entry.carbsG, protein: entry.proteinG, fat: entry.fatG)
     }
 
     private var accessibilityText: String {

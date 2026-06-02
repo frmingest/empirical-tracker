@@ -66,4 +66,18 @@ enum NutritionFormat {
         guard let mg else { return "—" }
         return "\(Int(mg.rounded())) \(String(localized: "food.unit.mg"))"
     }
+
+    /// Compact one-line macro summary with a single trailing unit, e.g. "C 8 · P 8 · F 17 g".
+    /// Values round to whole grams so diary rows stay on a single, scannable line — the
+    /// per-item detail keeps full precision. When every macro is missing the whole summary
+    /// collapses to a single em dash rather than "C — · P — · F —".
+    static func macroSummary(carbs: Double?, protein: Double?, fat: Double?) -> String {
+        guard [carbs, protein, fat].contains(where: { $0 != nil }) else { return "—" }
+        func whole(_ value: Double?) -> String {
+            guard let value else { return "—" }
+            return "\(Int(value.rounded()))"
+        }
+        let unit = String(localized: "food.unit.g")
+        return "C \(whole(carbs)) · P \(whole(protein)) · F \(whole(fat)) \(unit)"
+    }
 }
