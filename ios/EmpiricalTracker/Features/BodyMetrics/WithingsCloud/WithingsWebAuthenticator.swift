@@ -63,6 +63,9 @@ extension WithingsWebAuthenticator: ASWebAuthenticationPresentationContextProvid
         let scene = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
             .first { $0.activationState == .foregroundActive }
-        return scene?.keyWindow ?? ASPresentationAnchor()
+        if let scene {
+            return ASPresentationAnchor(windowScene: scene)
+        }
+        return ASPresentationAnchor()
     }
 }
