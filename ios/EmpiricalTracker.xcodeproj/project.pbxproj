@@ -12,11 +12,11 @@
 		B134049A2FCE16CF0012EB6E /* Biomarkers in Frameworks */ = {isa = PBXBuildFile; productRef = B13404992FCE16CF0012EB6E /* Biomarkers */; };
 		B134049C2FCE16D50012EB6E /* DietEvents in Frameworks */ = {isa = PBXBuildFile; productRef = B134049B2FCE16D50012EB6E /* DietEvents */; };
 		B134049E2FCE16D80012EB6E /* FoodDiary in Frameworks */ = {isa = PBXBuildFile; productRef = B134049D2FCE16D80012EB6E /* FoodDiary */; };
-		B13404B02FCE20000012EB6E /* MealPlans in Frameworks */ = {isa = PBXBuildFile; productRef = B13404B12FCE20000012EB6E /* MealPlans */; };
 		B13404A02FCE16DC0012EB6E /* BodyMetrics in Frameworks */ = {isa = PBXBuildFile; productRef = B134049F2FCE16DC0012EB6E /* BodyMetrics */; };
 		B13404A22FCE16E30012EB6E /* HealthSync in Frameworks */ = {isa = PBXBuildFile; productRef = B13404A12FCE16E30012EB6E /* HealthSync */; };
 		B13404A42FCE16E70012EB6E /* Account in Frameworks */ = {isa = PBXBuildFile; productRef = B13404A32FCE16E70012EB6E /* Account */; };
 		B13404A72FCE18510012EB6E /* AppAuth in Frameworks */ = {isa = PBXBuildFile; productRef = B13404A62FCE18510012EB6E /* AppAuth */; };
+		B13404B02FCE20000012EB6E /* MealPlans in Frameworks */ = {isa = PBXBuildFile; productRef = B13404B12FCE20000012EB6E /* MealPlans */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -655,10 +655,6 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/FoodDiary;
 		};
-		B13404B22FCE20000012EB6E /* XCLocalSwiftPackageReference "Packages/MealPlans" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/MealPlans;
-		};
 		B13404912FCE0FBA0012EB6E /* XCLocalSwiftPackageReference "Packages/BodyMetrics" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/BodyMetrics;
@@ -674,6 +670,10 @@
 		B13404A52FCE183D0012EB6E /* XCLocalSwiftPackageReference "Packages/Auth" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/Auth;
+		};
+		B13404B22FCE20000012EB6E /* XCLocalSwiftPackageReference "Packages/MealPlans" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/MealPlans;
 		};
 /* End XCLocalSwiftPackageReference section */
 
@@ -698,11 +698,6 @@
 			package = B13404902FCE0FAB0012EB6E /* XCLocalSwiftPackageReference "Packages/FoodDiary" */;
 			productName = FoodDiary;
 		};
-		B13404B12FCE20000012EB6E /* MealPlans */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B13404B22FCE20000012EB6E /* XCLocalSwiftPackageReference "Packages/MealPlans" */;
-			productName = MealPlans;
-		};
 		B134049F2FCE16DC0012EB6E /* BodyMetrics */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = B13404912FCE0FBA0012EB6E /* XCLocalSwiftPackageReference "Packages/BodyMetrics" */;
@@ -722,6 +717,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B13404A52FCE183D0012EB6E /* XCLocalSwiftPackageReference "Packages/Auth" */;
 			productName = AppAuth;
+		};
+		B13404B12FCE20000012EB6E /* MealPlans */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B13404B22FCE20000012EB6E /* XCLocalSwiftPackageReference "Packages/MealPlans" */;
+			productName = MealPlans;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
