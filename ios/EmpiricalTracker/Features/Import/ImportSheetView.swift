@@ -190,7 +190,7 @@ struct ImportSheetView: View {
                 }
 
                 if progress > 0 {
-                    Text("\(Int(progress * 100))%")
+                    Text(progress, format: .percent.precision(.fractionLength(0)))
                         .font(.numericSmall)
                         .foregroundStyle(Color.textSecondary)
                 }

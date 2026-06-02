@@ -13,7 +13,12 @@ public struct SupabaseAuthService: AuthServiceProtocol {
     public init(supabaseURL: URL, supabaseAnonKey: String) {
         self.client = SupabaseClient(
             supabaseURL: supabaseURL,
-            supabaseKey: supabaseAnonKey
+            supabaseKey: supabaseAnonKey,
+            options: SupabaseClientOptions(
+                auth: SupabaseClientOptions.AuthOptions(
+                    emitLocalSessionAsInitialSession: true
+                )
+            )
         )
     }
 
