@@ -119,7 +119,10 @@ struct FoodDiaryView: View {
                 if !mealEntries.isEmpty {
                     Section {
                         ForEach(mealEntries) { entry in
-                            FoodEntryRow(entry: entry)
+                            FoodEntryRow(entry: entry, tint: meal.tint)
+                                // Faint per-meal wash tints the whole section box so the
+                                // eye can separate breakfast / lunch / dinner at a glance.
+                                .listRowBackground(meal.tint.opacity(0.09))
                                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                     Button(role: .destructive) {
                                         Task { await vm.delete(entry) }
@@ -183,8 +186,11 @@ private struct MealSectionHeader: View {
     let onAdd: () -> Void
 
     var body: some View {
-        HStack {
-            Label(meal.localizedName, systemImage: meal.icon)
+        HStack(spacing: 8) {
+            Image(systemName: meal.icon)
+                .font(.headlineSmall)
+                .foregroundStyle(meal.tint)
+            Text(meal.localizedName)
                 .font(.headlineSmall)
                 .foregroundStyle(Color.textSecondary)
             Spacer()
@@ -270,40 +276,49 @@ private struct DailyTotalsCard: View {
 
 private struct FoodEntryRow: View {
     let entry: FoodEntry
+    /// Tone of the owning meal section — drawn as a leading accent bar so the row
+    /// stays visually tied to its meal even while scrolling.
+    var tint: Color = .accent
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 8) {
-                Text(entry.foodName)
-                    .font(.bodyMedium)
-                    .foregroundStyle(Color.textPrimary)
-                    .lineLimit(1)
-                if let source = entry.source {
-                    FoodSourceBadge(source: source)
-                }
-                Spacer()
-                Text(NutritionFormat.energy(entry.energyKcal))
-                    .font(.numericSmall)
-                    .foregroundStyle(Color.textPrimary)
-            }
+        HStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(tint)
+                .frame(width: 3)
 
-            HStack(spacing: 8) {
-                if let brand = entry.brand, !brand.isEmpty {
-                    Text(brand)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Text(entry.foodName)
+                        .font(.bodyMedium)
+                        .foregroundStyle(Color.textPrimary)
+                        .lineLimit(1)
+                    if let source = entry.source {
+                        FoodSourceBadge(source: source)
+                    }
+                    Spacer()
+                    Text(NutritionFormat.energy(entry.energyKcal))
+                        .font(.numericSmall)
+                        .foregroundStyle(Color.textPrimary)
+                }
+
+                HStack(spacing: 8) {
+                    if let brand = entry.brand, !brand.isEmpty {
+                        Text(brand)
+                            .font(.bodySmall)
+                            .foregroundStyle(Color.textSecondary)
+                            .lineLimit(1)
+                    }
+                    if let q = entry.quantityG {
+                        Text(NutritionFormat.grams(q))
+                            .font(.bodySmall)
+                            .foregroundStyle(Color.textMuted)
+                    }
+                    Spacer()
+                    Text(macroSummary)
                         .font(.bodySmall)
                         .foregroundStyle(Color.textSecondary)
                         .lineLimit(1)
                 }
-                if let q = entry.quantityG {
-                    Text(NutritionFormat.grams(q))
-                        .font(.bodySmall)
-                        .foregroundStyle(Color.textMuted)
-                }
-                Spacer()
-                Text(macroSummary)
-                    .font(.bodySmall)
-                    .foregroundStyle(Color.textSecondary)
-                    .lineLimit(1)
             }
         }
         .padding(.vertical, 2)

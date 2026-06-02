@@ -14,6 +14,19 @@ extension Meal {
         case .other:     return String(localized: "food.meal.other")
         }
     }
+
+    /// Accent tone that colour-codes the meal's diary section (header icon, leading
+    /// accent bar, and a faint row wash). Supplements the name + icon so meals are
+    /// distinguishable at a glance — colour is never the only signal (ADR-006).
+    var tint: Color {
+        switch self {
+        case .breakfast: return .mealBreakfast
+        case .lunch:     return .mealLunch
+        case .dinner:    return .mealDinner
+        case .snack:     return .mealSnack
+        case .other:     return .mealOther
+        }
+    }
 }
 
 // MARK: - Source colour (view layer only — mirrors DietEvent.Kind.color)
