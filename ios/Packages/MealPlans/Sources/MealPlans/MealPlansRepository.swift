@@ -115,7 +115,7 @@ public final class MealPlansRepository {
 
     // MARK: - Food search proxy (shared with the diary — ADR-018 / ADR-019)
 
-    public func search(query: String, source: FoodSearchSource = .mvt) async {
+    public func search(query: String, source: FoodSearchSource = .off) async {
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {
             searchResults = []
             return

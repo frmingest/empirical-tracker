@@ -73,7 +73,8 @@ public enum FoodSource: String, Codable, CaseIterable, Identifiable, Sendable {
 
 /// The source the user is searching against. Adds `all` (fan-out merge) on top of the
 /// three provenance sources. Maps to `GET /food-diary/search?source=…` (ADR-018 §2).
-/// Defaults to Matvaretabellen, honouring the Norwegian-first framing.
+/// Defaults to Open Food Facts; switching source is a secondary, opt-in filter (the
+/// UI surfaces it as a compact menu chip rather than an always-visible segmented bar).
 public enum FoodSearchSource: String, CaseIterable, Identifiable, Sendable {
     case mvt
     case usda
