@@ -1,0 +1,3 @@
+SUPABASE_URL = https://qhflfjndvkhulmqatdqx.supabase.co
+SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFoZmxmam5kdmtodWxtcWF0ZHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyMTMyMjAsImV4cCI6MjA5NTc4OTIyMH0.NyMQ87lhKXr0TGeoFsj80Ajgb-_cvB5cNA6fFqNRek0
+EMPIRICAL_API_URL = https://api-production-42c5.up.railway.app
