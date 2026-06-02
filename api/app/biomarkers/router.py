@@ -118,6 +118,14 @@ async def delete_all_imports(
     return {"deleted": "all"}
 
 
+# ── Panels list ────────────────────────────────────────────────────────────────
+
+@router.get("/panels")
+async def list_panels(user_id: str = Depends(current_user_id)) -> list:
+    """Return all panels (blood-draw sessions) with per-panel result counts."""
+    return repository.list_panels(user_id)
+
+
 # ── Manual entry ───────────────────────────────────────────────────────────────
 
 @router.post("/results/manual", status_code=201)

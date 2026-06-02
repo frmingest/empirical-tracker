@@ -16,6 +16,14 @@ class BodyMetricIn(BaseModel):
     systolic: int | None = None
     diastolic: int | None = None
     note: str | None = None
+    source: str = "manual"
+
+    @field_validator("source")
+    @classmethod
+    def _valid_source(cls, v: str) -> str:
+        if v not in {"manual", "healthkit", "withings"}:
+            raise ValueError("source must be manual, healthkit, or withings")
+        return v
 
     @field_validator("weight_kg", "waist_cm")
     @classmethod

@@ -47,6 +47,9 @@ public struct PlannedMeal: Codable, Identifiable, Sendable {
     public let carbsG: Double?
     public let proteinG: Double?
     public let fatG: Double?
+    public let saturatedFatG: Double?
+    public let sodiumMg: Double?
+    public let source: FoodSource?
     public let note: String?
     /// Cooked / eaten flag. Advisory only — it does not by itself create a diary
     /// entry; "Log to diary" is the explicit, auditable step (ADR-012).
@@ -66,6 +69,9 @@ public struct PlannedMeal: Codable, Identifiable, Sendable {
         carbsG: Double? = nil,
         proteinG: Double? = nil,
         fatG: Double? = nil,
+        saturatedFatG: Double? = nil,
+        sodiumMg: Double? = nil,
+        source: FoodSource? = nil,
         note: String? = nil,
         done: Bool = false,
         planId: String? = nil
@@ -81,6 +87,9 @@ public struct PlannedMeal: Codable, Identifiable, Sendable {
         self.carbsG = carbsG
         self.proteinG = proteinG
         self.fatG = fatG
+        self.saturatedFatG = saturatedFatG
+        self.sodiumMg = sodiumMg
+        self.source = source
         self.note = note
         self.done = done
         self.planId = planId
@@ -89,20 +98,23 @@ public struct PlannedMeal: Codable, Identifiable, Sendable {
     // `done` may be absent on legacy payloads; default to `false`.
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        id          = try c.decode(String.self, forKey: .id)
-        scheduledOn = try c.decode(Date.self, forKey: .scheduledOn)
-        meal        = try c.decode(Meal.self, forKey: .meal)
-        foodName    = try c.decode(String.self, forKey: .foodName)
-        brand       = try c.decodeIfPresent(String.self, forKey: .brand)
-        barcode     = try c.decodeIfPresent(String.self, forKey: .barcode)
-        quantityG   = try c.decodeIfPresent(Double.self, forKey: .quantityG)
-        energyKcal  = try c.decodeIfPresent(Double.self, forKey: .energyKcal)
-        carbsG      = try c.decodeIfPresent(Double.self, forKey: .carbsG)
-        proteinG    = try c.decodeIfPresent(Double.self, forKey: .proteinG)
-        fatG        = try c.decodeIfPresent(Double.self, forKey: .fatG)
-        note        = try c.decodeIfPresent(String.self, forKey: .note)
-        done        = try c.decodeIfPresent(Bool.self, forKey: .done) ?? false
-        planId      = try c.decodeIfPresent(String.self, forKey: .planId)
+        id            = try c.decode(String.self, forKey: .id)
+        scheduledOn   = try c.decode(Date.self, forKey: .scheduledOn)
+        meal          = try c.decode(Meal.self, forKey: .meal)
+        foodName      = try c.decode(String.self, forKey: .foodName)
+        brand         = try c.decodeIfPresent(String.self, forKey: .brand)
+        barcode       = try c.decodeIfPresent(String.self, forKey: .barcode)
+        quantityG     = try c.decodeIfPresent(Double.self, forKey: .quantityG)
+        energyKcal    = try c.decodeIfPresent(Double.self, forKey: .energyKcal)
+        carbsG        = try c.decodeIfPresent(Double.self, forKey: .carbsG)
+        proteinG      = try c.decodeIfPresent(Double.self, forKey: .proteinG)
+        fatG          = try c.decodeIfPresent(Double.self, forKey: .fatG)
+        saturatedFatG = try c.decodeIfPresent(Double.self, forKey: .saturatedFatG)
+        sodiumMg      = try c.decodeIfPresent(Double.self, forKey: .sodiumMg)
+        source        = try c.decodeIfPresent(FoodSource.self, forKey: .source)
+        note          = try c.decodeIfPresent(String.self, forKey: .note)
+        done          = try c.decodeIfPresent(Bool.self, forKey: .done) ?? false
+        planId        = try c.decodeIfPresent(String.self, forKey: .planId)
     }
 
     /// Builds the diary payload for the "Log to diary" promotion (ADR-012). Reuses
@@ -119,9 +131,9 @@ public struct PlannedMeal: Codable, Identifiable, Sendable {
             carbsG: carbsG,
             proteinG: proteinG,
             fatG: fatG,
-            saturatedFatG: nil,
-            sodiumMg: nil,
-            source: nil,
+            saturatedFatG: saturatedFatG,
+            sodiumMg: sodiumMg,
+            source: source,
             note: note
         )
     }
@@ -140,6 +152,9 @@ public struct PlannedMealPayload: Encodable, Sendable {
     public let carbsG: Double?
     public let proteinG: Double?
     public let fatG: Double?
+    public let saturatedFatG: Double?
+    public let sodiumMg: Double?
+    public let source: FoodSource?
     public let note: String?
     public let planId: String?
 
@@ -154,18 +169,21 @@ public struct PlannedMealPayload: Encodable, Sendable {
         planId: String? = nil,
         note: String? = nil
     ) {
-        self.scheduledOn = scheduledOn
-        self.meal        = meal
-        self.foodName    = item.name
-        self.brand       = item.brand
-        self.barcode     = item.source.supportsBarcode ? item.code : nil
-        self.quantityG   = quantityG
-        self.energyKcal  = item.energyKcal(forGrams: quantityG)
-        self.carbsG      = item.carbsG(forGrams: quantityG)
-        self.proteinG    = item.proteinG(forGrams: quantityG)
-        self.fatG        = item.fatG(forGrams: quantityG)
-        self.note        = note
-        self.planId      = planId
+        self.scheduledOn  = scheduledOn
+        self.meal         = meal
+        self.foodName     = item.name
+        self.brand        = item.brand
+        self.barcode      = item.source.supportsBarcode ? item.code : nil
+        self.quantityG    = quantityG
+        self.energyKcal   = item.energyKcal(forGrams: quantityG)
+        self.carbsG       = item.carbsG(forGrams: quantityG)
+        self.proteinG     = item.proteinG(forGrams: quantityG)
+        self.fatG         = item.fatG(forGrams: quantityG)
+        self.saturatedFatG = item.saturatedFatG(forGrams: quantityG)
+        self.sodiumMg     = item.sodiumMg(forGrams: quantityG)
+        self.source       = item.source
+        self.note         = note
+        self.planId       = planId
     }
 
     /// Free-text planned meal (no product match) — e.g. "Ribeye + eggs".
@@ -179,21 +197,27 @@ public struct PlannedMealPayload: Encodable, Sendable {
         carbsG: Double? = nil,
         proteinG: Double? = nil,
         fatG: Double? = nil,
+        saturatedFatG: Double? = nil,
+        sodiumMg: Double? = nil,
+        source: FoodSource? = nil,
         planId: String? = nil,
         note: String? = nil
     ) {
-        self.scheduledOn = scheduledOn
-        self.meal        = meal
-        self.foodName    = foodName
-        self.brand       = brand
-        self.barcode     = nil
-        self.quantityG   = quantityG
-        self.energyKcal  = energyKcal
-        self.carbsG      = carbsG
-        self.proteinG    = proteinG
-        self.fatG        = fatG
-        self.note        = note
-        self.planId      = planId
+        self.scheduledOn  = scheduledOn
+        self.meal         = meal
+        self.foodName     = foodName
+        self.brand        = brand
+        self.barcode      = nil
+        self.quantityG    = quantityG
+        self.energyKcal   = energyKcal
+        self.carbsG       = carbsG
+        self.proteinG     = proteinG
+        self.fatG         = fatG
+        self.saturatedFatG = saturatedFatG
+        self.sodiumMg     = sodiumMg
+        self.source       = source
+        self.note         = note
+        self.planId       = planId
     }
 }
 

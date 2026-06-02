@@ -59,7 +59,8 @@ public final class MealPlansRepository {
                 foodName: meal.foodName, brand: meal.brand, barcode: meal.barcode,
                 quantityG: meal.quantityG, energyKcal: meal.energyKcal,
                 carbsG: meal.carbsG, proteinG: meal.proteinG, fatG: meal.fatG,
-                note: meal.note, done: meal.done, planId: nil
+                saturatedFatG: meal.saturatedFatG, sodiumMg: meal.sodiumMg,
+                source: meal.source, note: meal.note, done: meal.done, planId: nil
             )
         }
     }

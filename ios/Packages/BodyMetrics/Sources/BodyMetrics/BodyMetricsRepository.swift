@@ -13,7 +13,7 @@ public struct BodyMetric: Codable, Identifiable, Sendable {
     public let systolic: Int?
     public let diastolic: Int?
     public let note: String?
-    /// `manual` | `healthkit` | `withings` — added in Sprint 8 backend migration.
+    /// `manual` | `healthkit` | `withings`.
     public let source: Source
 
     public enum Source: String, Codable, Sendable {
@@ -40,6 +40,18 @@ public struct BodyMetric: Codable, Identifiable, Sendable {
         self.diastolic = diastolic
         self.note = note
         self.source = source
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id         = try c.decode(String.self, forKey: .id)
+        measuredOn = try c.decode(Date.self, forKey: .measuredOn)
+        weightKg   = try c.decodeIfPresent(Double.self, forKey: .weightKg)
+        waistCm    = try c.decodeIfPresent(Double.self, forKey: .waistCm)
+        systolic   = try c.decodeIfPresent(Int.self, forKey: .systolic)
+        diastolic  = try c.decodeIfPresent(Int.self, forKey: .diastolic)
+        note       = try c.decodeIfPresent(String.self, forKey: .note)
+        source     = try c.decodeIfPresent(Source.self, forKey: .source) ?? .manual
     }
 }
 
