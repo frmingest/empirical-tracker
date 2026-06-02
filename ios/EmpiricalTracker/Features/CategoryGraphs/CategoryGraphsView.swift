@@ -103,6 +103,7 @@ struct CategoryGraphsView: View {
     private func graphs(for group: BiomarkerGroup) -> some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 16) {
+                categorySummary(for: group.category)
                 ForEach(group.items) { item in
                     chartCard(item)
                 }
@@ -113,6 +114,25 @@ struct CategoryGraphsView: View {
             // Reset scroll to top when switching categories.
             .id(category)
         }
+    }
+
+    /// Plain-language intro for the active category, shown above the charts so
+    /// non-medical readers understand what these markers mean for their body.
+    private func categorySummary(for category: BiomarkerCategory) -> some View {
+        Label {
+            Text(category.summary)
+                .font(.bodySmall)
+                .foregroundStyle(Color.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        } icon: {
+            Image(systemName: "info.circle")
+                .foregroundStyle(Color.accent)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.bgElevated, in: RoundedRectangle(cornerRadius: 10))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("About \(category.displayName): \(category.summary)")
     }
 
     private func chartCard(_ item: BiomarkerWithSeries) -> some View {
