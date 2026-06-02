@@ -21,7 +21,7 @@ final class FoodDiaryViewModel {
     var addTargetMeal: Meal = .breakfast
 
     var searchQuery = ""
-    var selectedSource: FoodSearchSource = .mvt
+    var selectedSource: FoodSearchSource = .off
 
     // MARK: - Error surfacing
 

@@ -17,8 +17,8 @@ struct PlannedMealPickerSheet: View {
         NavigationStack {
             VStack(spacing: 0) {
                 targetHeader
-                sourceSelector
                 searchField
+                filterBar
                 resultsList
             }
             .background(Color.bgBase)
@@ -79,35 +79,29 @@ struct PlannedMealPickerSheet: View {
         .padding(.top, 12)
     }
 
-    // MARK: - Source selector
+    // MARK: - Filter bar (source chip + optional scan)
 
-    private var sourceSelector: some View {
-        VStack(spacing: 8) {
-            Picker(String(localized: "food.source.title"), selection: $viewModel.selectedSource) {
-                Text(String(localized: "food.source.mvt")).tag(FoodSearchSource.mvt)
-                Text(String(localized: "food.source.usda")).tag(FoodSearchSource.usda)
-                Text(String(localized: "food.source.off")).tag(FoodSearchSource.off)
-                Text(String(localized: "food.source.all")).tag(FoodSearchSource.all)
-            }
-            .pickerStyle(.segmented)
-            .onChange(of: viewModel.selectedSource) {
+    /// Secondary controls beneath the search field: the source filter chip on the
+    /// left, and — only for sources that carry barcodes — a compact scan button.
+    private var filterBar: some View {
+        HStack(spacing: 8) {
+            FoodSourceFilterMenu(selection: $viewModel.selectedSource) {
                 Task { await viewModel.searchNow() }
             }
-
+            Spacer(minLength: 0)
             if viewModel.selectedSource.supportsBarcode {
                 Button {
                     isScanning = true
                 } label: {
                     Label(String(localized: "food.scan.button"), systemImage: "barcode.viewfinder")
                         .font(.bodyMedium)
-                        .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
                 .tint(Color.accent)
             }
         }
         .padding(.horizontal, 16)
-        .padding(.top, 12)
         .padding(.bottom, 8)
     }
 
@@ -130,6 +124,7 @@ struct PlannedMealPickerSheet: View {
         .padding(10)
         .background(Color.bgElevated, in: RoundedRectangle(cornerRadius: 10))
         .padding(.horizontal, 16)
+        .padding(.top, 12)
         .padding(.bottom, 8)
     }
 

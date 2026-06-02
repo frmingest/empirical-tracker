@@ -309,3 +309,20 @@ in-memory to start, as proposed.
    deliberately (proposed), or schedule periodic re-ingest?
 4. **Cache substrate for USDA** — start in-memory (simplest) and only promote to a
    DB-backed cache if quota pressure shows up?
+
+## Update (2026-06): source selector UX
+
+The original UI shipped the source selector as an always-visible four-segment
+control defaulting to `mvt` (open question 1 above). In practice the segments
+truncated on iPhone ("Matvareta…", "Open Food…") and pushed four sources at the
+user before they had typed anything.
+
+Revised, the source is no longer a primary control:
+
+- **Search is the primary action**; the source moves below the field as a
+  compact **filter chip** (a `Menu` with an inline `Picker` — full names, icons,
+  checkmarks, no truncation), so most users never open it.
+- **Default is now Open Food Facts (`off`)**, matching the backend's documented
+  `source` default and the most common "scan/search a branded product" flow. The
+  whole-food tables (Matvaretabellen / USDA) and the `all` fan-out remain one tap
+  away in the menu. A per-user preference (open question 1) is still future work.

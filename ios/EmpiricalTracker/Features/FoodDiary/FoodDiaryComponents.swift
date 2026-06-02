@@ -28,6 +28,76 @@ extension FoodSource {
     }
 }
 
+// MARK: - Search source (selector) presentation
+
+extension FoodSearchSource {
+    /// Order shown in the filter menu. Leads with Open Food Facts (the default,
+    /// branded/barcode products), then the whole-food tables, then the fan-out.
+    static var menuOrder: [FoodSearchSource] { [.off, .mvt, .usda, .all] }
+
+    /// SF Symbol shown on the filter chip and menu rows.
+    var icon: String {
+        switch self {
+        case .off:  return "barcode"
+        case .mvt:  return "leaf"
+        case .usda: return "fork.knife"
+        case .all:  return "square.stack.3d.up"
+        }
+    }
+
+    /// Localised label for the chip and menu rows.
+    var menuTitle: String {
+        switch self {
+        case .off:  return String(localized: "food.source.off")
+        case .mvt:  return String(localized: "food.source.mvt")
+        case .usda: return String(localized: "food.source.usda")
+        case .all:  return String(localized: "food.source.all")
+        }
+    }
+}
+
+// MARK: - Source filter menu
+
+/// Compact source filter shared by the diary search and meal-plan picker sheets.
+///
+/// Replaces the old four-segment control (which truncated to "Matvareta…" /
+/// "Open Food…" and competed with the search field). Here search stays the primary
+/// action and the source is a secondary chip that expands to a labelled menu, so
+/// most users never have to leave the Open Food Facts default.
+struct FoodSourceFilterMenu: View {
+    @Binding var selection: FoodSearchSource
+    /// Run after the selection changes (re-runs the current query).
+    var onChange: () -> Void
+
+    var body: some View {
+        Menu {
+            Picker(String(localized: "food.source.title"), selection: $selection) {
+                ForEach(FoodSearchSource.menuOrder) { source in
+                    Label(source.menuTitle, systemImage: source.icon).tag(source)
+                }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: selection.icon)
+                Text(selection.menuTitle)
+                    .lineLimit(1)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2)
+                    .foregroundStyle(Color.textMuted)
+            }
+            .font(.bodyMedium)
+            .foregroundStyle(Color.textPrimary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color.bgElevated, in: Capsule())
+        }
+        .onChange(of: selection) { onChange() }
+        .accessibilityLabel(Text(String(localized: "food.source.title")))
+        .accessibilityValue(Text(selection.menuTitle))
+    }
+}
+
 // MARK: - Source badge
 
 /// Small capsule that tells the user where a food's numbers came from (ADR-018).
