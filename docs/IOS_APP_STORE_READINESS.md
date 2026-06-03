@@ -12,8 +12,9 @@ bundle id `com.FaizMalik.EmpiricalTracker`, branch `claude/ios-app-store-readine
 **NOT ready for App Store submission.**
 
 The codebase is well-architected and the feature set is mature, but there are
-**two hard blockers that guarantee rejection** (missing app icon, no in-app
-account deletion) plus **two high-risk compliance gaps** (missing privacy
+**two hard blockers that guarantee rejection** (missing app icon — now
+resolved ✅ — and no in-app account deletion) plus **two high-risk compliance
+gaps** (missing privacy
 manifest, no in-app privacy policy/consent) that App Review will catch on a
 health-data app. None are large; this is roughly **2–4 focused days** of work to
 become submittable, most of it product/compliance plumbing rather than
@@ -26,13 +27,17 @@ artifacts are largely absent.
 
 ## Blockers — must fix before you can submit
 
-### 1. No app icon 🛑
-`ios/EmpiricalTracker/Assets.xcassets/AppIcon.appiconset/` contains only a
+### 1. No app icon ✅ RESOLVED
+~~`ios/EmpiricalTracker/Assets.xcassets/AppIcon.appiconset/` contains only a
 placeholder `Contents.json` with a single `1024x1024` slot and **no image file**.
 `AccentColor.colorset` is likewise empty. An app cannot be archived for
-distribution or pass App Review without an app icon.
+distribution or pass App Review without an app icon.~~
 **Fix:** add the 1024×1024 marketing icon (single-size asset catalog is fine for
 modern Xcode) and define the accent color.
+**Done:** `AppIcon-1024.png` (1024×1024, opaque sRGB, no alpha channel — meets
+App Review requirements) added to `AppIcon.appiconset` and wired into
+`Contents.json`. `AccentColor.colorset` now defines the brand blue
+(sRGB `#1A82FF`) to match the icon.
 
 ### 2. No in-app account deletion or data export UI 🛑
 Apple **Guideline 5.1.1(v)** requires any app that supports account creation to
@@ -157,7 +162,7 @@ archive doesn't trip the production guard.
 ## Recommended path to submission
 
 **Phase 1 — Blockers (must do):**
-1. Add the app icon (1024×1024) and accent color.
+1. ~~Add the app icon (1024×1024) and accent color.~~ ✅ Done.
 2. Wire **Delete account** + **Export data** into `SettingsView` (repository
    methods already exist).
 3. Add `PrivacyInfo.xcprivacy` declaring health/email/identifier collection and
