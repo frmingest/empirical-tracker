@@ -118,13 +118,13 @@ struct FoodSearchSheet: View {
                 .buttonBorderShape(.capsule)
                 .tint(Color.accent)
             }
-            // Always-visible "add my food" shortcut.
+            // Always-visible "add my food" shortcut — goes straight to camera/OCR.
             Button {
                 parsedLabel = nil
                 missedBarcode = nil
-                isAddingCustom = true
+                isCapturingLabel = true
             } label: {
-                Image(systemName: "plus.circle")
+                Image(systemName: "camera")
                     .font(.bodyMedium)
             }
             .buttonStyle(.bordered)
