@@ -1,0 +1,73 @@
+# SwiftLint configuration for Empirical Tracker.
+#
+# Scope: the app target and the 8 local SwiftPM feature packages under Packages/.
+# Run locally with `swiftlint` from the `ios/` directory; CI runs it in the
+# `swiftlint` job of .github/workflows/ci.yml.
+#
+# This config is intentionally conservative so the lane starts clean. Tighten it
+# (and drop `continue-on-error` in CI) once the team is happy with the ruleset.
+
+included:
+  - EmpiricalTracker
+  - EmpiricalTrackerTests
+  - EmpiricalTrackerUITests
+  - Packages
+
+excluded:
+  - .build
+  - Packages/**/.build
+  - Packages/checkouts
+  - "**/.swiftpm"
+  - DerivedData
+
+# Rules that are off by default but worth enforcing.
+opt_in_rules:
+  - empty_count
+  - first_where
+  - contains_over_first_not_nil
+  - last_where
+  - sorted_first_last
+  - redundant_nil_coalescing
+  - toggle_bool
+  - unused_import
+  - explicit_init
+
+# Default rules that are too noisy for an initial pass; revisit per-rule later.
+disabled_rules:
+  - todo                 # codebase is already TODO/FIXME-free; keep it advisory
+  - trailing_comma       # multiline collection trailing commas are fine here
+  - opening_brace
+
+line_length:
+  warning: 120
+  error: 200
+  ignores_comments: true
+  ignores_urls: true
+
+type_body_length:
+  warning: 400
+  error: 600
+
+file_length:
+  warning: 600
+  error: 1000
+
+function_body_length:
+  warning: 80
+  error: 150
+
+# Allow short, conventional identifiers (id, db, x, y, to, vm, …).
+identifier_name:
+  min_length:
+    warning: 2
+    error: 1
+  excluded:
+    - id
+    - db
+    - x
+    - y
+    - to
+    - vm
+    - ok
+
+reporter: "xcode"

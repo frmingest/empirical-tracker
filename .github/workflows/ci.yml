@@ -77,3 +77,20 @@ jobs:
           name: ios-test-results
           path: ios/TestResults.xcresult
           if-no-files-found: ignore
+
+  swiftlint:
+    name: SwiftLint
+    runs-on: macos-15
+    # Non-blocking for now: surfaces violations as annotations without failing
+    # the build. Once the codebase is clean against ios/.swiftlint.yml, remove
+    # this line and add `--strict` below to make lint failures block merges.
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure SwiftLint is installed
+        run: swiftlint version || brew install swiftlint
+      - name: Lint
+        run: swiftlint lint --reporter github-actions-logging
