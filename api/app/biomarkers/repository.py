@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from datetime import date
 
-from app.db import get_supabase
 from fastapi import HTTPException
 from postgrest.exceptions import APIError as PostgrestAPIError
+
+from app.db import get_supabase
 
 
 def upsert_biomarkers(user_id: str, biomarkers: list[dict]) -> list[str]:
@@ -49,7 +50,10 @@ def create_panel(user_id: str, tested_at: date, source: str = "xlsx_import") -> 
         if exc.code == "23505":
             raise HTTPException(
                 status_code=409,
-                detail=f"A panel for {tested_at} already exists. Delete the existing records first, then re-import.",
+                detail=(
+                    f"A panel for {tested_at} already exists. "
+                    "Delete the existing records first, then re-import."
+                ),
             ) from exc
         raise
 

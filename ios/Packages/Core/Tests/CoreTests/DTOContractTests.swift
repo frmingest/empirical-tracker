@@ -54,7 +54,7 @@ struct DTOContractTests {
 
         let payload = ManualResultPayload(biomarkerId: "abc-123", value: 5.4, testedAt: testedAt)
         let data = try JSONEncoder.api.encode(payload)
-        let object = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        let object = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
 
         #expect(object["biomarker_id"] as? String == "abc-123")
         #expect(object["value"] as? Double == 5.4)

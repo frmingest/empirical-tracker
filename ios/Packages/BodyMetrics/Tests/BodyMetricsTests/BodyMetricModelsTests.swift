@@ -82,7 +82,7 @@ struct BodyMetricModelsTests {
         )
 
         let data = try JSONEncoder.api.encode(payload)
-        let object = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        let object = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
 
         #expect(object["weight_kg"] as? Double == 80.5)
         #expect(object["systolic"] as? Int == 120)
