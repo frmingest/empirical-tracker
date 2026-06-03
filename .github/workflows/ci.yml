@@ -22,3 +22,58 @@ jobs:
       - run: ruff check .
       - run: pytest -q
 
+  ios:
+    name: iOS build & test
+    # macOS runner is required for xcodebuild + the iOS Simulator.
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@v4
+
+      # Config.xcconfig is git-ignored (the developer's local copy with backend
+      # URLs) but is referenced as the project's base configuration, so recreate
+      # it from the committed template for a clean, warning-free build. Supabase
+      # credentials are read from Info.plist — not this file — so the template's
+      # placeholder values are enough to compile.
+      - name: Provide Config.xcconfig from template
+        run: cp Config.xcconfig.example Config.xcconfig
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      # Pick the first available iPhone simulator on the runner rather than
+      # hard-coding a device/OS name, so the lane survives Xcode/runtime drift.
+      - name: Resolve a simulator destination
+        id: sim
+        run: |
+          set -euo pipefail
+          UDID=$(xcrun simctl list devices available --json \
+            | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; ids=[x['udid'] for r in d.values() for x in r if x.get('isAvailable') and x['name'].startswith('iPhone')]; print(ids[0])")
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          echo "Using simulator $UDID"
+
+      # Compiles every local SwiftPM feature package (compile-regression guard)
+      # and runs the app unit-test target. UI tests are skipped: they need a
+      # booted, interactive simulator and are slow/flaky in CI — run them locally.
+      - name: Build & test
+        run: |
+          set -euo pipefail
+          xcodebuild test \
+            -project EmpiricalTracker.xcodeproj \
+            -scheme EmpiricalTracker \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -skip-testing:EmpiricalTrackerUITests \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-test-results
+          path: ios/TestResults.xcresult
+          if-no-files-found: ignore
