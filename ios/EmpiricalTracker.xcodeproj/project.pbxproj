@@ -41,7 +41,6 @@
 		B13404432FCE0D910012EB6E /* EmpiricalTrackerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EmpiricalTrackerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B134044D2FCE0D910012EB6E /* EmpiricalTrackerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EmpiricalTrackerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B13404792FCE0EE30012EB6E /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
-		B13405682FCE91100012EB6E /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -112,7 +111,6 @@
 		B134042D2FCE0D8E0012EB6E = {
 			isa = PBXGroup;
 			children = (
-				B13405682FCE91100012EB6E /* Config.xcconfig */,
 				B13404792FCE0EE30012EB6E /* Localizable.xcstrings */,
 				B13404382FCE0D8E0012EB6E /* EmpiricalTracker */,
 				B13404462FCE0D910012EB6E /* EmpiricalTrackerTests */,
@@ -463,7 +461,6 @@
 		};
 		B13404582FCE0D910012EB6E /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = B13405682FCE91100012EB6E /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -493,7 +490,6 @@
 		};
 		B13404592FCE0D910012EB6E /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = B13405682FCE91100012EB6E /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
