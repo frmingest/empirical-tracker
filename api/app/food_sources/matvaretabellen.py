@@ -60,6 +60,120 @@ def _load() -> list[FoodItem]:
     return items
 
 
+# Common English → Norwegian translations so that searching "potato" surfaces
+# "Potet" entries without requiring the user to know the Norwegian term.
+_EN_NO: dict[str, str] = {
+    "potato": "potet",
+    "potatoes": "potet",
+    "carrot": "gulrot",
+    "carrots": "gulrot",
+    "onion": "løk",
+    "onions": "løk",
+    "chicken": "kylling",
+    "beef": "biff",
+    "pork": "svinekjøtt",
+    "lamb": "lam",
+    "salmon": "laks",
+    "cod": "torsk",
+    "herring": "sild",
+    "shrimp": "reke",
+    "butter": "smør",
+    "milk": "melk",
+    "cheese": "ost",
+    "bread": "brød",
+    "rice": "ris",
+    "apple": "eple",
+    "apples": "eple",
+    "orange": "appelsin",
+    "strawberry": "jordbær",
+    "strawberries": "jordbær",
+    "blueberry": "blåbær",
+    "blueberries": "blåbær",
+    "cucumber": "agurk",
+    "cabbage": "kål",
+    "spinach": "spinat",
+    "mushroom": "sopp",
+    "mushrooms": "sopp",
+    "lentil": "linse",
+    "lentils": "linse",
+    "oat": "havre",
+    "oats": "havre",
+    "cream": "fløte",
+    "yogurt": "yoghurt",
+    "yoghurt": "yoghurt",
+    "liver": "lever",
+    "kidney": "nyre",
+    "heart": "hjerte",
+    "pea": "ert",
+    "peas": "ert",
+    "bean": "bønne",
+    "beans": "bønne",
+    "tomato": "tomat",
+    "tomatoes": "tomat",
+    "garlic": "hvitløk",
+    "pepper": "pepper",
+    "celery": "selleri",
+    "leek": "purre",
+    "cauliflower": "blomkål",
+    "zucchini": "squash",
+    "courgette": "squash",
+    "corn": "mais",
+    "walnut": "valnøtt",
+    "walnuts": "valnøtt",
+    "almond": "mandel",
+    "almonds": "mandel",
+    "hazelnut": "hasselnøtt",
+    "hazelnuts": "hasselnøtt",
+    "sunflower": "solsikke",
+    "pumpkin": "gresskar",
+    "avocado": "avokado",
+    "lemon": "sitron",
+    "grape": "drue",
+    "grapes": "drue",
+    "pear": "pære",
+    "plum": "plomme",
+    "plums": "plomme",
+    "cherry": "kirsebær",
+    "cherries": "kirsebær",
+    "peach": "fersken",
+    "melon": "melon",
+    "pineapple": "ananas",
+    "mango": "mango",
+    "kiwi": "kiwi",
+    "coconut": "kokos",
+    "raisin": "rosin",
+    "raisins": "rosin",
+    "honey": "honning",
+    "sugar": "sukker",
+    "flour": "mel",
+    "oatmeal": "havregrøt",
+    "porridge": "grøt",
+    "oil": "olje",
+    "vinegar": "eddik",
+    "salt": "salt",
+    "mustard": "sennep",
+    "mayonnaise": "majones",
+    "ketchup": "ketchup",
+    "tuna": "tunfisk",
+    "mackerel": "makrell",
+    "anchovy": "ansjos",
+    "trout": "ørret",
+    "turkey": "kalkun",
+    "duck": "and",
+    "sausage": "pølse",
+    "sausages": "pølse",
+    "ham": "skinke",
+    "bacon": "bacon",
+    "minced": "kjøttdeig",
+    "mince": "kjøttdeig",
+}
+
+
+def _translate_terms(terms: list[str]) -> list[str]:
+    """Replace any recognised English term with its Norwegian equivalent."""
+    return [_EN_NO.get(t, t) for t in terms]
+
+
 def _score(name: str, terms: list[str]) -> int:
     """Rank a match: every term must appear; whole-word and prefix hits rank up.
 
@@ -85,6 +199,7 @@ def search(query: str, page_size: int = 20) -> list[FoodItem]:
     terms = [t for t in query.lower().split() if t]
     if not terms:
         return []
+    terms = _translate_terms(terms)
     scored = [(item, _score(item["name"], terms)) for item in _load()]
     hits = [(item, s) for item, s in scored if s >= 0]
     hits.sort(key=lambda pair: (-pair[1], pair[0]["name"]))

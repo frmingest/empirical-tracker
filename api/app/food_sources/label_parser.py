@@ -82,6 +82,10 @@ def parse_label(ocr_text: str) -> FoodItem:
     )
 
     raw_json = message.content[0].text.strip()
+    # Strip markdown code fences if the model wraps the JSON despite instructions.
+    if raw_json.startswith("```"):
+        raw_json = raw_json.split("\n", 1)[-1]
+        raw_json = raw_json.rsplit("```", 1)[0].strip()
 
     try:
         parsed = json.loads(raw_json)

@@ -139,64 +139,81 @@ struct FoodSearchSheet: View {
     // MARK: - Search field
 
     private var searchField: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(Color.textMuted)
-            TextField(String(localized: "food.search.placeholder"), text: $viewModel.searchQuery)
-                .textFieldStyle(.plain)
-                .autocorrectionDisabled()
-                .submitLabel(.search)
-                .onChange(of: viewModel.searchQuery) { viewModel.scheduleSearch() }
-                .onSubmit { Task { await viewModel.searchNow() } }
+        VStack(spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(viewModel.isSearching ? Color.accent : Color.textMuted)
+                    .symbolEffect(.pulse, isActive: viewModel.isSearching)
+                TextField(String(localized: "food.search.placeholder"), text: $viewModel.searchQuery)
+                    .textFieldStyle(.plain)
+                    .autocorrectionDisabled()
+                    .submitLabel(.search)
+                    .onChange(of: viewModel.searchQuery) { viewModel.scheduleSearch() }
+                    .onSubmit { Task { await viewModel.searchNow() } }
+                if viewModel.isSearching {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(Color.accent)
+                }
+            }
+            .padding(10)
+            .background(Color.bgElevated, in: RoundedRectangle(cornerRadius: 10))
+
             if viewModel.isSearching {
-                ProgressView().controlSize(.small)
+                SearchingBanner()
+                    .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
-        .padding(10)
-        .background(Color.bgElevated, in: RoundedRectangle(cornerRadius: 10))
+        .animation(.easeInOut(duration: 0.2), value: viewModel.isSearching)
         .padding(.horizontal, 16)
         .padding(.top, 12)
-        .padding(.bottom, 8)
+        .padding(.bottom, viewModel.isSearching ? 4 : 8)
     }
 
     // MARK: - Results
 
     @ViewBuilder
     private var resultsList: some View {
-        List {
-            ForEach(viewModel.searchResults) { item in
-                Button {
-                    selectedItem = item
-                } label: {
-                    FoodResultRow(item: item)
+        if viewModel.isSearching && viewModel.searchResults.isEmpty {
+            SearchPlaceholderList()
+                .transition(.opacity)
+        } else {
+            List {
+                ForEach(viewModel.searchResults) { item in
+                    Button {
+                        selectedItem = item
+                    } label: {
+                        FoodResultRow(item: item)
+                    }
+                    .listRowBackground(Color.bgCard)
                 }
-                .listRowBackground(Color.bgCard)
-            }
 
-            if !trimmedQuery.isEmpty {
-                Button {
-                    isFreeText = true
-                } label: {
-                    Label(
-                        String(localized: "food.freetext.cta \(trimmedQuery)"),
-                        systemImage: "square.and.pencil"
-                    )
-                    .font(.bodyMedium)
-                    .foregroundStyle(Color.accent)
+                if !trimmedQuery.isEmpty {
+                    Button {
+                        isFreeText = true
+                    } label: {
+                        Label(
+                            String(localized: "food.freetext.cta \(trimmedQuery)"),
+                            systemImage: "square.and.pencil"
+                        )
+                        .font(.bodyMedium)
+                        .foregroundStyle(Color.accent)
+                    }
+                    .listRowBackground(Color.bgCard)
                 }
-                .listRowBackground(Color.bgCard)
             }
-        }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .overlay {
-            if viewModel.searchResults.isEmpty && trimmedQuery.isEmpty {
-                ContentUnavailableView(
-                    String(localized: "food.search.empty.title"),
-                    systemImage: "magnifyingglass",
-                    description: Text(String(localized: "food.search.empty.message"))
-                )
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .overlay {
+                if viewModel.searchResults.isEmpty && trimmedQuery.isEmpty {
+                    ContentUnavailableView(
+                        String(localized: "food.search.empty.title"),
+                        systemImage: "magnifyingglass",
+                        description: Text(String(localized: "food.search.empty.message"))
+                    )
+                }
             }
+            .transition(.opacity)
         }
     }
 
@@ -227,6 +244,81 @@ struct FoodSearchSheet: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Searching banner
+
+/// A slim pill that slides in just below the search field while a query is in flight.
+private struct SearchingBanner: View {
+    var body: some View {
+        HStack(spacing: 6) {
+            ProgressView()
+                .controlSize(.mini)
+                .tint(Color.accent)
+            Text(String(localized: "food.search.searching"))
+                .font(.labelMedium)
+                .foregroundStyle(Color.textSecondary)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(Color.bgElevated, in: Capsule())
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - Shimmer placeholder list
+
+/// Skeleton rows shown while isSearching and no results have arrived yet.
+private struct SearchPlaceholderList: View {
+    var body: some View {
+        List(0..<6, id: \.self) { _ in
+            ShimmerRow()
+                .listRowBackground(Color.bgCard)
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .allowsHitTesting(false)
+    }
+}
+
+private struct ShimmerRow: View {
+    @State private var phase: CGFloat = -1
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            RoundedRectangle(cornerRadius: 4)
+                .fill(shimmerGradient)
+                .frame(height: 14)
+                .frame(maxWidth: .infinity)
+            HStack {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(shimmerGradient)
+                    .frame(width: 80, height: 11)
+                Spacer()
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(shimmerGradient)
+                    .frame(width: 60, height: 11)
+            }
+        }
+        .padding(.vertical, 4)
+        .onAppear {
+            withAnimation(.linear(duration: 1.2).repeatForever(autoreverses: false)) {
+                phase = 1
+            }
+        }
+    }
+
+    private var shimmerGradient: LinearGradient {
+        LinearGradient(
+            stops: [
+                .init(color: Color.textMuted.opacity(0.15), location: max(0, phase - 0.3)),
+                .init(color: Color.textMuted.opacity(0.30), location: phase),
+                .init(color: Color.textMuted.opacity(0.15), location: min(1, phase + 0.3)),
+            ],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
     }
 }
 

@@ -102,6 +102,17 @@ final class ReportShareViewModel {
     func selectAll() { selectedIDs = Set(groups.flatMap(\.markers).map(\.id)) }
     func selectNone() { selectedIDs.removeAll() }
 
+    /// Selects all markers that have 3 or more measurements.
+    func selectMostTested() {
+        let topIDs = groups.flatMap(\.markers).filter { $0.series.count >= 3 }.map(\.id)
+        selectedIDs = Set(topIDs)
+    }
+
+    /// Number of markers with 3+ measurements, for the button visibility guard.
+    var mostTestedCount: Int {
+        groups.flatMap(\.markers).filter { $0.series.count >= 3 }.count
+    }
+
     // MARK: - Generation
 
     func generate() async {

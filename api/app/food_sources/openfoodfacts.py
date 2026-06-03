@@ -27,7 +27,7 @@ USER_AGENT = "EmpiricalTracker/1.0 (https://github.com/frmingest/empirical-track
 _SEARCH_URL = "https://world.openfoodfacts.org/cgi/search.pl"
 _PRODUCT_URL = "https://world.openfoodfacts.org/api/v2/product/{barcode}.json"
 _FIELDS = "code,product_name,brands,quantity,nutriments"
-_TIMEOUT = 20.0
+_TIMEOUT = 8.0
 
 
 def _num(value: object) -> float | None:
