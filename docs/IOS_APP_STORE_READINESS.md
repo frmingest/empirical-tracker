@@ -72,9 +72,14 @@ contact/email, identifiers) and any required-reason API categories; confirm
 > the first time — covering what health data is processed, EU storage, the
 > export/erasure rights, and a "not medical advice" disclaimer. Declining signs
 > the user back out; signing out clears local consent so the next user must
-> consent themselves. URLs live in `Config/Legal.swift` and still point at the
-> canonical `empirical.app` domain — **swap in the live policy/terms pages and
-> paste the privacy-policy URL into App Store Connect before submitting.**
+> consent themselves. URLs live in `Config/Legal.swift`.
+>
+> **Still open (tracked in `docs/legal/README.md`):** the policy and terms text
+> are now drafted in `docs/legal/`, but (1) a **hosting domain / public URL** has
+> not been chosen — the in-app links use placeholder `empirical.app` URLs — and
+> (2) the documents still have `[TBD: …]` fields (controller identity, contact,
+> dates, jurisdiction) pending a legal review. Resolve both, then paste the
+> privacy-policy URL into App Store Connect.
 
 A **privacy policy URL is mandatory in App Store Connect** and effectively
 required in-app for HealthKit apps. The iOS app has **no privacy-policy link, no
