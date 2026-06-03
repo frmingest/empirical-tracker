@@ -47,9 +47,9 @@ struct HealthSyncTests {
 
     @Test func healthKitPayloadCarriesSourceProvenance() throws {
         let payload = BodyMetricPayload(weightKg: 80.4, source: .healthkit)
-        let object = try JSONSerialization.jsonObject(
-            with: JSONEncoder.api.encode(payload)
-        ) as! [String: Any]
+        let object = try #require(
+            try JSONSerialization.jsonObject(with: JSONEncoder.api.encode(payload)) as? [String: Any]
+        )
 
         #expect(object["weight_kg"] as? Double == 80.4)
         #expect(object["source"] as? String == "healthkit")
@@ -58,9 +58,9 @@ struct HealthSyncTests {
     @Test func manualPayloadOmitsSourceSoBackendDefaults() throws {
         // No source → key absent (encodeIfPresent) → backend treats the row as manual.
         let payload = BodyMetricPayload(weightKg: 80.4)
-        let object = try JSONSerialization.jsonObject(
-            with: JSONEncoder.api.encode(payload)
-        ) as! [String: Any]
+        let object = try #require(
+            try JSONSerialization.jsonObject(with: JSONEncoder.api.encode(payload)) as? [String: Any]
+        )
 
         #expect(object["source"] == nil)
     }
@@ -94,6 +94,6 @@ struct HealthSyncTests {
         )
         // On a non-device platform `sync` reports `.unavailable`; construction and
         // the sink contract are what we assert here.
-        #expect(await sink.count == 0)
+        #expect(await sink.uploaded.isEmpty)
     }
 }
