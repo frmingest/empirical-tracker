@@ -70,11 +70,14 @@ covering health-data processing before first use.
 
 ## High-risk — likely review friction or material limitations
 
-### 5. Deployment target is iOS 26.4 ⚠️
-`IPHONEOS_DEPLOYMENT_TARGET = 26.4` restricts installation to devices on the
-**latest point release only**, drastically shrinking both your addressable
-audience and your TestFlight tester pool. Unless a hard API dependency forces it,
-lower this (e.g. iOS 17/18) to a sensible floor.
+### 5. Deployment target is iOS 26.4 — ✅ resolved
+`IPHONEOS_DEPLOYMENT_TARGET` was `26.4`, which restricted installation to devices
+on the **latest point release only**, drastically shrinking both the addressable
+audience and the TestFlight tester pool. It has been lowered to **iOS 18.0** — a
+sensible modern floor that covers all iOS 18-capable devices (iPhone XS and later,
+the same hardware range as iOS 17). The codebase contains no `@available` /
+`#available` guards and no hard iOS 26 API dependency, so the lower floor compiles
+and runs unchanged.
 
 ### 6. HealthKit background-delivery entitlement ⚠️
 `EmpiricalTracker.entitlements` enables
