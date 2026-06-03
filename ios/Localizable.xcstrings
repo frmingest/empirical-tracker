@@ -1,266 +1,15 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "settings.account.export" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Export My Data"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eksporter dataene mine"
-          }
-        }
-      }
-    },
-    "settings.account.export.hint" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Download all of your data as a JSON or CSV file."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Last ned alle dataene dine som en JSON- eller CSV-fil."
-          }
-        }
-      }
-    },
-    "settings.account.export.format" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose export format"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Velg eksportformat"
-          }
-        }
-      }
-    },
-    "settings.account.export.error.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Export Failed"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eksport mislyktes"
-          }
-        }
-      }
-    },
-    "settings.account.danger_zone" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Danger Zone"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Faresone"
-          }
-        }
-      }
-    },
-    "settings.account.delete" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete Account"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Slett konto"
-          }
-        }
-      }
-    },
-    "settings.account.delete.hint" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Permanently delete your account and all data."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Slett kontoen din og alle data permanent."
-          }
-        }
-      }
-    },
-    "settings.account.delete.footer" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Permanently delete your account and all associated data. This cannot be undone."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Slett kontoen din og alle tilknyttede data permanent. Dette kan ikke angres."
-          }
-        }
-      }
-    },
-    "settings.account.delete.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete Account"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Slett konto"
-          }
-        }
-      }
-    },
-    "settings.account.delete.warning" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deleting your account permanently erases all of your biomarkers, food logs, meal plans, and body metrics. This action is irreversible."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Når du sletter kontoen, fjernes alle biomarkører, matlogger, måltidsplaner og kroppsmål permanent. Denne handlingen kan ikke angres."
-          }
-        }
-      }
-    },
-    "settings.account.delete.prompt" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Type DELETE to confirm."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Skriv DELETE for å bekrefte."
-          }
-        }
-      }
-    },
-    "settings.account.delete.confirm" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete My Account"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Slett kontoen min"
-          }
-        }
-      }
-    },
-    "settings.account.delete.confirm.hint" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Permanently deletes your account and signs you out."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sletter kontoen din permanent og logger deg ut."
-          }
-        }
-      }
-    },
-    "settings.account.delete.field.a11y" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deletion confirmation field"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bekreftelsesfelt for sletting"
-          }
-        }
-      }
-    },
-    "settings.account.delete.error.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deletion Failed"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sletting mislyktes"
-          }
-        }
-      }
-    },
     "" : {
 
     },
     "—" : {
       "comment" : "A placeholder text used when there is no available data for a biomarker.",
+      "isCommentAutoGenerated" : true
+    },
+    "(continued)" : {
+      "comment" : "A text indicating that a list of items is split across multiple pages.",
       "isCommentAutoGenerated" : true
     },
     "%@ trend chart with %lld measurements." : {
@@ -271,6 +20,18 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ trend chart with %2$lld measurements."
+          }
+        }
+      }
+    },
+    "%@: %@" : {
+      "comment" : "A button that, when tapped, describes the region and its accessibility status. The argument is the string “no data”, the string “out of range”, the string “watch”, the string “in range” or the string “unknown”.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@"
           }
         }
       }
@@ -295,6 +56,18 @@
       "comment" : "A label describing the number of biomarkers that are out of range. The argument is the count of such biomarkers.",
       "isCommentAutoGenerated" : true
     },
+    "%lld result%@ selected" : {
+      "comment" : "A label showing the number of selected results. If no results are selected, it shows \"No results selected\".",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld result%2$@ selected"
+          }
+        }
+      }
+    },
     "%lld selected" : {
       "comment" : "A summary of the number of biomarkers that have been selected for display in Custom mode.",
       "isCommentAutoGenerated" : true
@@ -317,6 +90,10 @@
     },
     "Add result" : {
       "comment" : "A button that triggers the addition of a manual biomarker result.",
+      "isCommentAutoGenerated" : true
+    },
+    "All" : {
+      "comment" : "A button that selects all available biomarkers.",
       "isCommentAutoGenerated" : true
     },
     "All blood test panels and results have been removed." : {
@@ -495,6 +272,23 @@
         }
       }
     },
+    "auth.legal.preamble" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "By signing in you agree to our"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ved å logge inn godtar du våre"
+          }
+        }
+      }
+    },
     "auth.password" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -596,6 +390,10 @@
           }
         }
       }
+    },
+    "Biomarker Report" : {
+      "comment" : "The title of the report.",
+      "isCommentAutoGenerated" : true
     },
     "biomarker.category.cbc" : {
       "extractionState" : "manual",
@@ -757,6 +555,10 @@
     },
     "Blood Test History" : {
       "comment" : "The title of the view that lists a user's blood test results.",
+      "isCommentAutoGenerated" : true
+    },
+    "Body Map" : {
+      "comment" : "The title of the body map view.",
       "isCommentAutoGenerated" : true
     },
     "body.add" : {
@@ -1390,6 +1192,10 @@
       "comment" : "A button to clear all selections in the Custom markers sheet.",
       "isCommentAutoGenerated" : true
     },
+    "Close" : {
+      "comment" : "A button to close the current view.",
+      "isCommentAutoGenerated" : true
+    },
     "common.add" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1577,8 +1383,250 @@
         }
       }
     },
+    "consent.agree" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I agree"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeg samtykker"
+          }
+        }
+      }
+    },
+    "consent.agree.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agree to health-data processing and continue to the app"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Samtykk til behandling av helsedata og fortsett til appen"
+          }
+        }
+      }
+    },
+    "consent.decline" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not now — sign out"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ikke nå – logg ut"
+          }
+        }
+      }
+    },
+    "consent.decline.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Decline and sign out without using the app"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avslå og logg ut uten å bruke appen"
+          }
+        }
+      }
+    },
+    "consent.point.health.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blood biomarkers, weight, blood pressure, and diet logs are processed to chart how your diet shapes your results."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blodverdier, vekt, blodtrykk og kostholdslogger behandles for å vise hvordan kostholdet påvirker resultatene dine."
+          }
+        }
+      }
+    },
+    "consent.point.health.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health data you choose to add"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Helsedata du velger å legge inn"
+          }
+        }
+      }
+    },
+    "consent.point.notmedical.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Empirical Tracker is a decision-support tool that shows correlations, not causes. It isn't a substitute for professional medical care."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Empirical Tracker er et beslutningsstøtteverktøy som viser sammenhenger, ikke årsaker. Det erstatter ikke profesjonell medisinsk behandling."
+          }
+        }
+      }
+    },
+    "consent.point.notmedical.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not medical advice"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ikke medisinsk råd"
+          }
+        }
+      }
+    },
+    "consent.point.rights.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can export or permanently delete your data and account at any time from Settings."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du kan når som helst eksportere eller slette dataene og kontoen din permanent fra Innstillinger."
+          }
+        }
+      }
+    },
+    "consent.point.rights.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You stay in control"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du har kontrollen"
+          }
+        }
+      }
+    },
+    "consent.point.storage.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your data is stored in the EU (Frankfurt) and isolated to your account. We never sell it or use it for advertising."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dataene dine lagres i EU (Frankfurt) og er isolert til din konto. Vi selger dem aldri og bruker dem ikke til reklame."
+          }
+        }
+      }
+    },
+    "consent.point.storage.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stored securely in the EU"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lagret trygt i EU"
+          }
+        }
+      }
+    },
+    "consent.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Before you start: here's how Empirical Tracker handles your data — and what you're agreeing to."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Før du starter: slik behandler Empirical Tracker dataene dine – og hva du samtykker til."
+          }
+        }
+      }
+    },
+    "consent.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your health data"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Helsedataene dine"
+          }
+        }
+      }
+    },
     "Couldn't save" : {
       "comment" : "An alert title when an error occurs while saving a manual biomarker result.",
+      "isCommentAutoGenerated" : true
+    },
+    "Create PDF" : {
+      "comment" : "A button label that, when tapped, triggers the creation of a PDF report.",
       "isCommentAutoGenerated" : true
     },
     "Custom markers" : {
@@ -1659,6 +1707,10 @@
     },
     "Date" : {
 
+    },
+    "Decision-support, not medical advice." : {
+      "comment" : "A disclaimer displayed at the bottom of every report page.",
+      "isCommentAutoGenerated" : true
     },
     "Delete" : {
 
@@ -2305,8 +2357,16 @@
       "comment" : "The text on a button that confirms a user's action. In this case, it confirms that they've selected their custom biomarkers.",
       "isCommentAutoGenerated" : true
     },
+    "Empirical Tracker" : {
+      "comment" : "The name of the app.",
+      "isCommentAutoGenerated" : true
+    },
     "End" : {
       "comment" : "Label for the end of a diet event.",
+      "isCommentAutoGenerated" : true
+    },
+    "Error" : {
+      "comment" : "The title of an alert that shows when there is an error loading biomarkers.",
       "isCommentAutoGenerated" : true
     },
     "food.add" : {
@@ -2381,6 +2441,176 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Datakilder"
+          }
+        }
+      }
+    },
+    "food.custom.add_button_accessibility" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add my food"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til mitt produkt"
+          }
+        }
+      }
+    },
+    "food.custom.field.barcode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Barcode"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strekkode"
+          }
+        }
+      }
+    },
+    "food.custom.field.brand" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brand"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Merke"
+          }
+        }
+      }
+    },
+    "food.custom.field.name" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Navn"
+          }
+        }
+      }
+    },
+    "food.custom.nutrients.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All values are per 100 g. Leave blank if unknown."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle verdier er per 100 g. La stå blankt hvis ukjent."
+          }
+        }
+      }
+    },
+    "food.custom.ocr.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Values pre-filled from the label scan. Please verify before saving."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verdiene er forhåndsutfylt fra etikettskanningen. Vennligst kontroller før lagring."
+          }
+        }
+      }
+    },
+    "food.custom.save" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lagre"
+          }
+        }
+      }
+    },
+    "food.custom.section.identity" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Product"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Produkt"
+          }
+        }
+      }
+    },
+    "food.custom.section.nutrients" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutrition per 100 g"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Næring per 100 g"
+          }
+        }
+      }
+    },
+    "food.custom.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add My Food"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til mitt produkt"
           }
         }
       }
@@ -2548,6 +2778,176 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Søk etter «%@»"
+          }
+        }
+      }
+    },
+    "food.label.barcode.hint %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Barcode %@ was not found in any database. Scan the label to add it to your personal catalogue."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strekkode %@ ble ikke funnet i noen database. Skann etiketten for å legge den til i ditt personlige katalog."
+          }
+        }
+      }
+    },
+    "food.label.capture.button" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take Photo"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta bilde"
+          }
+        }
+      }
+    },
+    "food.label.error.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The nutrition label could not be read. Please try again with a clearer photo."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Næringsinnholdsetiketten kunne ikke leses. Prøv igjen med et tydeligere bilde."
+          }
+        }
+      }
+    },
+    "food.label.error.no_text" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No text was found in the photo. Make sure the nutrition label is clearly visible."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen tekst ble funnet i bildet. Sørg for at næringsinnholdsetiketten er tydelig synlig."
+          }
+        }
+      }
+    },
+    "food.label.error.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could Not Read Label"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunne ikke lese etiketten"
+          }
+        }
+      }
+    },
+    "food.label.idle.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take a clear photo of the nutrition facts panel on the back of the package. Hold the camera steady and make sure the text is in focus."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta et tydelig bilde av næringsinnholdstabellen på baksiden av pakken. Hold kameraet stødig og sørg for at teksten er i fokus."
+          }
+        }
+      }
+    },
+    "food.label.idle.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photograph the Nutrition Label"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fotografer næringsinnholdsetiketten"
+          }
+        }
+      }
+    },
+    "food.label.ocr.progress" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reading label…"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leser etikett…"
+          }
+        }
+      }
+    },
+    "food.label.parsing.progress" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Extracting nutrition facts…"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Henter næringsinnhold…"
+          }
+        }
+      }
+    },
+    "food.label.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scan Nutrition Label"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skann næringsinnholdsetikett"
           }
         }
       }
@@ -2962,6 +3362,23 @@
         }
       }
     },
+    "food.scan.add_product" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Product"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til produkt"
+          }
+        }
+      }
+    },
     "food.scan.button" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3106,363 +3523,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ikke støttet"
-          }
-        }
-      }
-    },
-    "food.scan.add_product" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add Product"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Legg til produkt"
-          }
-        }
-      }
-    },
-    "food.custom.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add My Food"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Legg til mitt produkt"
-          }
-        }
-      }
-    },
-    "food.custom.save" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Save"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lagre"
-          }
-        }
-      }
-    },
-    "food.custom.section.identity" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Product"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Produkt"
-          }
-        }
-      }
-    },
-    "food.custom.section.nutrients" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nutrition per 100 g"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Næring per 100 g"
-          }
-        }
-      }
-    },
-    "food.custom.nutrients.footer" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "All values are per 100 g. Leave blank if unknown."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Alle verdier er per 100 g. La stå blankt hvis ukjent."
-          }
-        }
-      }
-    },
-    "food.custom.field.name" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Name"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Navn"
-          }
-        }
-      }
-    },
-    "food.custom.field.brand" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Brand"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Merke"
-          }
-        }
-      }
-    },
-    "food.custom.field.barcode" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Barcode"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Strekkode"
-          }
-        }
-      }
-    },
-    "food.custom.ocr.hint" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Values pre-filled from the label scan. Please verify before saving."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verdiene er forhåndsutfylt fra etikettskanningen. Vennligst kontroller før lagring."
-          }
-        }
-      }
-    },
-    "food.custom.add_button_accessibility" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add my food"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Legg til mitt produkt"
-          }
-        }
-      }
-    },
-    "food.label.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Scan Nutrition Label"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Skann næringsinnholdsetikett"
-          }
-        }
-      }
-    },
-    "food.label.idle.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Photograph the Nutrition Label"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fotografer næringsinnholdsetiketten"
-          }
-        }
-      }
-    },
-    "food.label.idle.message" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Take a clear photo of the nutrition facts panel on the back of the package. Hold the camera steady and make sure the text is in focus."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ta et tydelig bilde av næringsinnholdstabellen på baksiden av pakken. Hold kameraet stødig og sørg for at teksten er i fokus."
-          }
-        }
-      }
-    },
-    "food.label.barcode.hint %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Barcode %@ was not found in any database. Scan the label to add it to your personal catalogue."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Strekkode %@ ble ikke funnet i noen database. Skann etiketten for å legge den til i ditt personlige katalog."
-          }
-        }
-      }
-    },
-    "food.label.capture.button" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Take Photo"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ta bilde"
-          }
-        }
-      }
-    },
-    "food.label.ocr.progress" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reading label…"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Leser etikett…"
-          }
-        }
-      }
-    },
-    "food.label.parsing.progress" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Extracting nutrition facts…"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Henter næringsinnhold…"
-          }
-        }
-      }
-    },
-    "food.label.error.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Could Not Read Label"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kunne ikke lese etiketten"
-          }
-        }
-      }
-    },
-    "food.label.error.message" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The nutrition label could not be read. Please try again with a clearer photo."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Næringsinnholdsetiketten kunne ikke leses. Prøv igjen med et tydeligere bilde."
-          }
-        }
-      }
-    },
-    "food.label.error.no_text" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No text was found in the photo. Make sure the nutrition label is clearly visible."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ingen tekst ble funnet i bildet. Sørg for at næringsinnholdsetiketten er tydelig synlig."
           }
         }
       }
@@ -3704,6 +3764,9 @@
         }
       }
     },
+    "Generating…" : {
+
+    },
     "Guideline" : {
       "comment" : "Label for a guideline line in the body metric chart.",
       "isCommentAutoGenerated" : true
@@ -3928,40 +3991,6 @@
         }
       }
     },
-    "healthsync.sync_now" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sync health data"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Synkroniser helsedata"
-          }
-        }
-      }
-    },
-    "healthsync.syncing" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Syncing…"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Synkroniserer…"
-          }
-        }
-      }
-    },
     "healthsync.privacy" : {
       "comment" : "A footer label that discloses Apple Health data privacy.",
       "extractionState" : "manual",
@@ -4034,6 +4063,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Importer vekt- og blodtrykksmålinger automatisk fra Apple Health."
+          }
+        }
+      }
+    },
+    "healthsync.sync_now" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sync health data"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synkroniser helsedata"
+          }
+        }
+      }
+    },
+    "healthsync.syncing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Syncing…"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synkroniserer…"
           }
         }
       }
@@ -4135,6 +4198,43 @@
     "Import new file" : {
       "comment" : "A button that lets the user import a new lab report file.",
       "isCommentAutoGenerated" : true
+    },
+    "Include" : {
+
+    },
+    "legal.privacy_policy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy Policy"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personvernerklæring"
+          }
+        }
+      }
+    },
+    "legal.terms" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terms of Service"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vilkår for bruk"
+          }
+        }
+      }
     },
     "Low" : {
       "comment" : "Visual representation of a reference range (e.g. \"Normal\" range) shown as a shaded band on a sparkline.",
@@ -4244,6 +4344,14 @@
       "comment" : "A message displayed when no biomarkers are selected in the custom marker picker sheet.",
       "isCommentAutoGenerated" : true
     },
+    "No results selected" : {
+      "comment" : "A message displayed when no markers are selected in the report share sheet.",
+      "isCommentAutoGenerated" : true
+    },
+    "None" : {
+      "comment" : "A button that deselects all markers in the report share sheet.",
+      "isCommentAutoGenerated" : true
+    },
     "OK" : {
       "comment" : "The text for an \"OK\" button.",
       "isCommentAutoGenerated" : true
@@ -4258,6 +4366,18 @@
     "Out of range only" : {
       "comment" : "A toggle label that filters out biomarkers that are not within the user's normal range.",
       "isCommentAutoGenerated" : true
+    },
+    "Page %lld of %lld" : {
+      "comment" : "A label displaying the current page number and the total number of pages.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        }
+      }
     },
     "placeholder.sprint" : {
       "extractionState" : "manual",
@@ -4716,6 +4836,10 @@
     "Reference: %@" : {
 
     },
+    "Report error" : {
+      "comment" : "The title of an alert that appears when there is an error generating the report.",
+      "isCommentAutoGenerated" : true
+    },
     "Result" : {
 
     },
@@ -4725,6 +4849,265 @@
     "Select the .xlsx file you received from your laboratory. Norwegian decimal commas and date formats are handled automatically." : {
       "comment" : "A description under the \"Import a lab report\" section, explaining how to import a lab report.",
       "isCommentAutoGenerated" : true
+    },
+    "Selected" : {
+      "comment" : "Label for the x-axis in the callout card that appears when a user taps on a data point in the biomarker trend chart.",
+      "isCommentAutoGenerated" : true
+    },
+    "settings.account.danger_zone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Danger Zone"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Faresone"
+          }
+        }
+      }
+    },
+    "settings.account.delete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete Account"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slett konto"
+          }
+        }
+      }
+    },
+    "settings.account.delete.confirm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete My Account"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slett kontoen min"
+          }
+        }
+      }
+    },
+    "settings.account.delete.confirm.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permanently deletes your account and signs you out."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sletter kontoen din permanent og logger deg ut."
+          }
+        }
+      }
+    },
+    "settings.account.delete.error.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deletion Failed"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sletting mislyktes"
+          }
+        }
+      }
+    },
+    "settings.account.delete.field.a11y" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deletion confirmation field"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bekreftelsesfelt for sletting"
+          }
+        }
+      }
+    },
+    "settings.account.delete.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permanently delete your account and all associated data. This cannot be undone."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slett kontoen din og alle tilknyttede data permanent. Dette kan ikke angres."
+          }
+        }
+      }
+    },
+    "settings.account.delete.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permanently delete your account and all data."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slett kontoen din og alle data permanent."
+          }
+        }
+      }
+    },
+    "settings.account.delete.prompt" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type DELETE to confirm."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skriv DELETE for å bekrefte."
+          }
+        }
+      }
+    },
+    "settings.account.delete.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete Account"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slett konto"
+          }
+        }
+      }
+    },
+    "settings.account.delete.warning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deleting your account permanently erases all of your biomarkers, food logs, meal plans, and body metrics. This action is irreversible."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Når du sletter kontoen, fjernes alle biomarkører, matlogger, måltidsplaner og kroppsmål permanent. Denne handlingen kan ikke angres."
+          }
+        }
+      }
+    },
+    "settings.account.export" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export My Data"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eksporter dataene mine"
+          }
+        }
+      }
+    },
+    "settings.account.export.error.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export Failed"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eksport mislyktes"
+          }
+        }
+      }
+    },
+    "settings.account.export.format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose export format"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Velg eksportformat"
+          }
+        }
+      }
+    },
+    "settings.account.export.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download all of your data as a JSON or CSV file."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last ned alle dataene dine som en JSON- eller CSV-fil."
+          }
+        }
+      }
     },
     "settings.account.signed_in" : {
       "extractionState" : "manual",
@@ -4915,6 +5298,23 @@
         }
       }
     },
+    "settings.section.legal" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legal"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Juridisk"
+          }
+        }
+      }
+    },
     "settings.sign_out" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5067,6 +5467,10 @@
           }
         }
       }
+    },
+    "Share report" : {
+      "comment" : "A button that triggers the sharing of a user's biomarker report.",
+      "isCommentAutoGenerated" : true
     },
     "Shows every graph in this group" : {
       "comment" : "A hint that appears when hovering over the \"Shows every graph in this group\" button in the `CategorySectionView`.",
@@ -5233,6 +5637,10 @@
         }
       }
     },
+    "Tap a point to see its exact value and date." : {
+      "comment" : "A label explaining how to interact with the trend chart.",
+      "isCommentAutoGenerated" : true
+    },
     "Target" : {
 
     },
@@ -5248,10 +5656,6 @@
     },
     "This will permanently remove the %@ panel and all its results. This cannot be undone." : {
       "comment" : "A confirmation dialog message that appears when the user attempts to delete a specific blood test panel. The argument is the date and time of the panel.",
-      "isCommentAutoGenerated" : true
-    },
-    "Top (%lld×)" : {
-      "comment" : "A button that selects the most-tested markers.",
       "isCommentAutoGenerated" : true
     },
     "Trend" : {
@@ -5276,6 +5680,10 @@
     },
     "Warnings" : {
 
+    },
+    "What to include" : {
+      "comment" : "A label displayed above the picker for choosing what to include in the report.",
+      "isCommentAutoGenerated" : true
     },
     "withings.about" : {
       "extractionState" : "manual",
@@ -5554,312 +5962,6 @@
     },
     "Your blood test has been added." : {
 
-    },
-    "auth.legal.preamble" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "By signing in you agree to our"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ved å logge inn godtar du våre"
-          }
-        }
-      }
-    },
-    "consent.agree" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "I agree"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jeg samtykker"
-          }
-        }
-      }
-    },
-    "consent.agree.hint" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Agree to health-data processing and continue to the app"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Samtykk til behandling av helsedata og fortsett til appen"
-          }
-        }
-      }
-    },
-    "consent.decline" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not now — sign out"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ikke nå – logg ut"
-          }
-        }
-      }
-    },
-    "consent.decline.hint" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Decline and sign out without using the app"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Avslå og logg ut uten å bruke appen"
-          }
-        }
-      }
-    },
-    "consent.point.health.body" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Blood biomarkers, weight, blood pressure, and diet logs are processed to chart how your diet shapes your results."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Blodverdier, vekt, blodtrykk og kostholdslogger behandles for å vise hvordan kostholdet påvirker resultatene dine."
-          }
-        }
-      }
-    },
-    "consent.point.health.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Health data you choose to add"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Helsedata du velger å legge inn"
-          }
-        }
-      }
-    },
-    "consent.point.notmedical.body" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Empirical Tracker is a decision-support tool that shows correlations, not causes. It isn't a substitute for professional medical care."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Empirical Tracker er et beslutningsstøtteverktøy som viser sammenhenger, ikke årsaker. Det erstatter ikke profesjonell medisinsk behandling."
-          }
-        }
-      }
-    },
-    "consent.point.notmedical.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not medical advice"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ikke medisinsk råd"
-          }
-        }
-      }
-    },
-    "consent.point.rights.body" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You can export or permanently delete your data and account at any time from Settings."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Du kan når som helst eksportere eller slette dataene og kontoen din permanent fra Innstillinger."
-          }
-        }
-      }
-    },
-    "consent.point.rights.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You stay in control"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Du har kontrollen"
-          }
-        }
-      }
-    },
-    "consent.point.storage.body" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your data is stored in the EU (Frankfurt) and isolated to your account. We never sell it or use it for advertising."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dataene dine lagres i EU (Frankfurt) og er isolert til din konto. Vi selger dem aldri og bruker dem ikke til reklame."
-          }
-        }
-      }
-    },
-    "consent.point.storage.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stored securely in the EU"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lagret trygt i EU"
-          }
-        }
-      }
-    },
-    "consent.subtitle" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Before you start: here's how Empirical Tracker handles your data — and what you're agreeing to."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Før du starter: slik behandler Empirical Tracker dataene dine – og hva du samtykker til."
-          }
-        }
-      }
-    },
-    "consent.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your health data"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Helsedataene dine"
-          }
-        }
-      }
-    },
-    "legal.privacy_policy" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Privacy Policy"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Personvernerklæring"
-          }
-        }
-      }
-    },
-    "legal.terms" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terms of Service"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vilkår for bruk"
-          }
-        }
-      }
-    },
-    "settings.section.legal" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Legal"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Juridisk"
-          }
-        }
-      }
     }
   },
   "version" : "1.1"
