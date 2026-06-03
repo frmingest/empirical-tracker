@@ -7,6 +7,21 @@
 
 ---
 
+> **iOS note:** this ADR was authored against the retired web client
+> (`web/src/lib/*`). The native client originally shipped without these markers —
+> `Packages/Biomarkers/Sources/Biomarkers/DietProfiles.swift` lacked `MarkerKey`
+> cases for triglycerides, ApoB, Lp(a), uric acid, **magnesium and phosphate**, so
+> the Fasting focus showed only sodium + potassium and silently dropped the
+> refeeding electrolytes the profile exists to watch. The Swift port now carries
+> all six (added to `MarkerKey`, `markerRules`, the diet-focus sets, the
+> `BiomarkerCategories` keyword rules, the demo `MockData`, and the
+> `DietModels.markerSets` mirror), with coverage in `DietProfileTests`. The
+> triglycerides clinical target was already present in `MarkerSignals` and is now
+> reachable under every diet's lipid view. Per the original decision (§2), **no
+> ApoB target is seeded** — a defensible ApoB target is risk-stratified.
+
+---
+
 ## Context
 
 The clinical review (see "Clinical-feedback roadmap" in `docs/SOLUTION.md`) found

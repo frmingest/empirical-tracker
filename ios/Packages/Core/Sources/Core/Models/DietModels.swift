@@ -106,7 +106,7 @@ public enum DietFocus: String, Codable, CaseIterable, Identifiable, Sendable {
     public static let markerSets: [DietFocus: Set<String>] = [
         .carnivore: [
             "Kolesterol", "HDL-kolesterol", "LDL-kolesterol", "Non-HDL kolesterol",
-            "Triglyserider", "HbA1c",
+            "Triglyserider", "ApoB", "Lp(a)", "HbA1c", "Urat",
             "ALT", "GGT",
             "Kreatinin", "eGFR",
             "Ferritin", "Jern", "Transferrin",
@@ -117,18 +117,20 @@ public enum DietFocus: String, Codable, CaseIterable, Identifiable, Sendable {
         ],
         .lowCarb: [
             "HbA1c",
-            "Kolesterol", "HDL-kolesterol", "LDL-kolesterol", "Non-HDL kolesterol", "Triglyserider",
+            "Kolesterol", "HDL-kolesterol", "LDL-kolesterol", "Non-HDL kolesterol",
+            "Triglyserider", "ApoB",
             "ALT", "GGT",
             "Natrium", "Kalium",
             "Ferritin", "Jern",
         ],
         .fasting: [
-            "Natrium", "Kalium",
-            "HbA1c",
+            "Natrium", "Kalium", "Magnesium", "Fosfat",
+            "HbA1c", "Urat",
             "ALT", "GGT",
             "Kreatinin", "eGFR",
-            "Hemoglobin", "Leukocytter",
-            "Kolesterol", "LDL-kolesterol", "Triglyserider",
+            "Hemoglobin", "Hematokrit",
+            "Kolesterol", "HDL-kolesterol", "LDL-kolesterol", "Non-HDL kolesterol",
+            "Triglyserider", "ApoB", "Lp(a)",
         ],
     ]
 }

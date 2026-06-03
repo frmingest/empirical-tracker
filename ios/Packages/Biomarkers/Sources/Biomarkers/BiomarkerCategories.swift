@@ -88,9 +88,10 @@ public enum BiomarkerCategory: String, CaseIterable, Identifiable, Sendable {
 // MARK: - Keyword classification (first match wins)
 
 private let categoryRules: [(BiomarkerCategory, [String])] = [
-    (.lipids,       ["hdl", "ldl", "kolesterol", "non-hdl", "triglyserid"]),
+    (.lipids,       ["hdl", "ldl", "kolesterol", "non-hdl", "triglyserid",
+                     "apolipoprotein", "apob", "apo-b", "lp(a)", "lipoprotein (a)"]),
     (.thyroid,      ["tsh", "t4", "tyroxin"]),
-    (.metabolic,    ["hba1c", "glukose"]),
+    (.metabolic,    ["hba1c", "glukose", "urat", "urinsyre", "uric"]),
     (.cbc,          ["hemoglobin", "erytrocytter", "leukocytter", "hematokritt", "mch", "mcv", "mchc", "trombocytter"]),
     (.renal,        ["kreatinin", "gfr", "nyre"]),
     (.liver,        ["alat", "asat", "p-gt", "ggt", "bilirubin", "alp"]),

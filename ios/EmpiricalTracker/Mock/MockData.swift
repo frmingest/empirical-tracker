@@ -38,12 +38,30 @@ public enum MockData {
             refLow: 0, refHigh: 1.7, refType: .lt,
             points: [(180, 1.2), (120, 0.9), (60, 0.7), (14, 0.65), (0, 0.6)]
         ),
+        .make(
+            // Atherogenic-particle count — the lean-mass hyper-responder marker.
+            id: "apob", nameNo: "ApoB", nameEn: "Apolipoprotein B", unit: "g/L",
+            refLow: 0, refHigh: 1.2, refType: .lt,
+            points: [(180, 0.95), (120, 1.05), (60, 1.15), (14, 1.20), (0, 1.25)]
+        ),
+        .make(
+            // Genetic risk modifier — measured once, largely stable.
+            id: "lpa", nameNo: "Lp(a)", nameEn: "Lipoprotein (a)", unit: "nmol/L",
+            refLow: 0, refHigh: 75, refType: .lt,
+            points: [(180, 42), (0, 44)]
+        ),
 
-        // Glycaemic
+        // Glycaemic / metabolic
         .make(
             id: "hba1c", nameNo: "HbA1c", nameEn: "HbA1c", unit: "mmol/mol",
             refLow: 0, refHigh: 48, refType: .lt,
             points: [(180, 38), (90, 36), (30, 34), (0, 33)]
+        ),
+        .make(
+            // Rises with the high purine load of an all-meat diet (gout / renal load).
+            id: "urat", nameNo: "Urat", nameEn: "Uric acid", unit: "µmol/L",
+            refLow: 200, refHigh: 420, refType: .bounded,
+            points: [(180, 330), (90, 360), (30, 390), (0, 410)]
         ),
 
         // Liver
@@ -80,6 +98,18 @@ public enum MockData {
             id: "vitd", nameNo: "Vitamin D", nameEn: "Vitamin D (25-OH)", unit: "nmol/L",
             refLow: 50, refHigh: 125, refType: .bounded,
             points: [(180, 42), (90, 65), (30, 78), (0, 82)]
+        ),
+
+        // Electrolytes (incl. the refeeding-syndrome pair watched when fasting)
+        .make(
+            id: "magnesium", nameNo: "Magnesium", nameEn: "Magnesium", unit: "mmol/L",
+            refLow: 0.71, refHigh: 0.94, refType: .bounded,
+            points: [(90, 0.84), (30, 0.82), (0, 0.81)]
+        ),
+        .make(
+            id: "fosfat", nameNo: "Fosfat", nameEn: "Phosphate", unit: "mmol/L",
+            refLow: 0.85, refHigh: 1.65, refType: .bounded,
+            points: [(90, 1.10), (30, 1.05), (0, 1.00)]
         ),
     ]
 
