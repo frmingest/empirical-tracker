@@ -36,10 +36,29 @@ struct MealPlanModelsTests {
         // `done` absent → defaults to false, not a decode failure.
         #expect(meal.done == false)
 
-        let comps = Calendar(identifier: .gregorian).dateComponents(
-            in: TimeZone(identifier: "UTC")!, from: meal.scheduledOn
+        // `scheduled_on` parses to local midnight (not a UTC instant) so it lines up
+        // with the local week days the Plan tab filters against.
+        let comps = Calendar.current.dateComponents(
+            [.year, .month, .day], from: meal.scheduledOn
         )
         #expect(comps.year == 2026 && comps.month == 6 && comps.day == 3)
+    }
+
+    /// Regression for the "nothing saved when I add a meal" bug: the picker hands the
+    /// payload a midnight-*local* date, which must serialise as that same calendar day
+    /// (`yyyy-MM-dd`), not as a UTC instant that truncates to the previous day server-side.
+    @Test func plannedPayloadEncodesScheduledOnAsLocalCalendarDate() throws {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = .current
+        let localMidnight = cal.startOfDay(
+            for: cal.date(from: DateComponents(year: 2026, month: 6, day: 3))!
+        )
+        let payload = PlannedMealPayload(
+            scheduledOn: localMidnight, meal: .breakfast, foodName: "Eggs"
+        )
+        let json = try JSONEncoder.api.encode(payload)
+        let obj = try JSONSerialization.jsonObject(with: json) as! [String: Any]
+        #expect(obj["scheduled_on"] as? String == "2026-06-03")
     }
 
     @Test func plannedMealDecodesDoneWhenPresent() throws {

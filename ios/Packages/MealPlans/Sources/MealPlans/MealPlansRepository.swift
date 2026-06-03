@@ -146,9 +146,14 @@ public final class MealPlansRepository {
 // MARK: - Date helper
 
 private extension ISO8601DateFormatter {
+    /// Formats the calendar window (`start` / `end`) in the *current* time zone so the
+    /// inclusive `[start, end]` bounds match the local dates `scheduled_on` is stored
+    /// under. A UTC formatter would shift a midnight-local week boundary to the
+    /// previous day, silently dropping that day's meals from the fetch (ADR-012).
     static let dateOnly: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withFullDate, .withDashSeparatorInDate]
+        f.timeZone = .current
         return f
     }()
 }
