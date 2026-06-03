@@ -16,6 +16,9 @@ struct DashboardView: View {
     @State private var importViewModel: ImportViewModel?
     @State private var isPanelTimelinePresented = false
 
+    // Sprint 6 — share biomarker report as PDF
+    @State private var isReportSharePresented = false
+
     // Sprint 3 — marker drill-down
     @State private var selectedMarker: BiomarkerWithSeries?
     // Category graph view — pushed when a category header is tapped.
@@ -69,6 +72,13 @@ struct DashboardView: View {
         // Present panel timeline
         .sheet(isPresented: $isPanelTimelinePresented) {
             PanelTimelineView()
+        }
+        // Present share-report sheet
+        .sheet(isPresented: $isReportSharePresented) {
+            ReportShareSheet(
+                results: env.biomarkers.results,
+                patientEmail: env.authStore.email
+            )
         }
         // Handle .xlsx files opened from Files / Mail / AirDrop
         .onOpenURL { url in
@@ -211,6 +221,17 @@ struct DashboardView: View {
                     .accessibilityLabel("Blood test history")
             }
             .foregroundStyle(Color.accent)
+        }
+        // Share-report button
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                isReportSharePresented = true
+            } label: {
+                Image(systemName: "square.and.arrow.up")
+                    .accessibilityLabel("Share report")
+            }
+            .foregroundStyle(Color.accent)
+            .disabled(viewModel?.hasData != true)
         }
         // Import button
         ToolbarItem(placement: .topBarTrailing) {
