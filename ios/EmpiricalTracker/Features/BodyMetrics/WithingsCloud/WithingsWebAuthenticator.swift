@@ -60,12 +60,15 @@ final class WithingsWebAuthenticator: NSObject, WithingsWebAuthenticating {
 
 extension WithingsWebAuthenticator: ASWebAuthenticationPresentationContextProviding {
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        let scene = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first { $0.activationState == .foregroundActive }
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        let scene = scenes.first { $0.activationState == .foregroundActive } ?? scenes.first
+        if let keyWindow = scene?.keyWindow {
+            return keyWindow
+        }
         if let scene {
             return ASPresentationAnchor(windowScene: scene)
         }
-        return ASPresentationAnchor()
+        // Unreachable in a running app — there is always at least one scene
+        preconditionFailure("No UIWindowScene available for OAuth presentation")
     }
 }

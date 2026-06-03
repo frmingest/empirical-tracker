@@ -9,6 +9,7 @@ import SwiftUI
 struct BodyMetricsView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var viewModel: BodyMetricsViewModel?
+    @State private var isBodyMapPresented = false
 
     var body: some View {
         NavigationStack {
@@ -22,6 +23,9 @@ struct BodyMetricsView: View {
             .navigationTitle(String(localized: "tab.body"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
+            .fullScreenCover(isPresented: $isBodyMapPresented) {
+                BodyMapView()
+            }
             .task {
                 if viewModel == nil {
                     viewModel = BodyMetricsViewModel(
@@ -61,6 +65,15 @@ struct BodyMetricsView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Button {
+                isBodyMapPresented = true
+            } label: {
+                Image(systemName: "figure.stand.line.dotted")
+                    .accessibilityLabel("Body Map")
+            }
+            .foregroundStyle(Color.accent)
+        }
         ToolbarItem(placement: .topBarTrailing) {
             Button {
                 viewModel?.beginAdd()
