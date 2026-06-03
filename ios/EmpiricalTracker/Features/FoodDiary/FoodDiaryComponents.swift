@@ -44,9 +44,9 @@ extension FoodSource {
 // MARK: - Search source (selector) presentation
 
 extension FoodSearchSource {
-    /// Order shown in the filter menu. Leads with Open Food Facts (the default,
-    /// branded/barcode products), then the whole-food tables, then the fan-out.
-    static var menuOrder: [FoodSearchSource] { [.off, .mvt, .usda, .all] }
+    /// Order shown in the filter menu. Leads with All (the default, merged
+    /// results), then the whole-food tables, then Open Food Facts on its own.
+    static var menuOrder: [FoodSearchSource] { [.all, .mvt, .usda, .off] }
 
     /// SF Symbol shown on the filter chip and menu rows.
     var icon: String {
@@ -76,7 +76,7 @@ extension FoodSearchSource {
 /// Replaces the old four-segment control (which truncated to "Matvareta…" /
 /// "Open Food…" and competed with the search field). Here search stays the primary
 /// action and the source is a secondary chip that expands to a labelled menu, so
-/// most users never have to leave the Open Food Facts default.
+/// most users never have to leave the All-sources default.
 struct FoodSourceFilterMenu: View {
     @Binding var selection: FoodSearchSource
     /// Run after the selection changes (re-runs the current query).

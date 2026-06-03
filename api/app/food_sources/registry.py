@@ -52,13 +52,15 @@ async def _search_one_safe(source: str, query: str, page_size: int) -> list[Food
         return []
 
 
-async def search(query: str, source: str = SOURCE_OFF, page_size: int = 20) -> list[FoodItem]:
-    """Search one source, or every source when ``source == "all"``.
+async def search(query: str, source: str = SOURCE_ALL, page_size: int = 20) -> list[FoodItem]:
+    """Search one source, or every source when ``source == "all"`` (the default).
 
-    A single named source propagates its errors (the router maps them to 502);
-    ``"all"`` is best-effort and returns whatever sources responded, ordered by
-    the source preference in :data:`~app.food_sources.base.SOURCES`
-    (whole foods first, branded last).
+    ``"all"`` is the default because any single source leaves gaps: OFF is blank
+    for whole foods, the whole-food tables have no branded packs. Merging them —
+    ordered by the source preference in :data:`~app.food_sources.base.SOURCES`
+    (whole foods first, branded last) — gives the user usable numbers for both.
+    It is best-effort and returns whatever sources responded; a single named
+    source still propagates its errors (the router maps them to 502).
     """
     if source == SOURCE_ALL:
         results = await asyncio.gather(

@@ -56,7 +56,7 @@ public final class FoodDiaryRepository {
 
     /// Full-text search against the selected source (Matvaretabellen / USDA / Open Food
     /// Facts / all). Mirrors `GET /food-diary/search?q=…&source=…` (ADR-018).
-    public func search(query: String, source: FoodSearchSource = .off) async {
+    public func search(query: String, source: FoodSearchSource = .all) async {
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {
             searchResults = []
             return

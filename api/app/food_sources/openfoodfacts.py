@@ -118,7 +118,13 @@ async def search_products(query: str, page_size: int = 20) -> list[dict]:
         data = resp.json()
     products = data.get("products") or []
     items = [_normalise(p) for p in products]
-    return [i for i in items if i is not None]
+    # OFF is crowd-sourced: many search hits carry a name but *no* nutriments at
+    # all, which would render as a useless all-"—" row in the diary. We drop
+    # those here so search results only show foods we can actually log. Energy is
+    # the gate — without it (after the kJ fallback) the entry has no usable
+    # numbers. Barcode lookup does NOT filter: a deliberately scanned product is
+    # shown as-is. This never invents data; it only hides empties (ADR-018).
+    return [i for i in items if i is not None and i["energy_kcal_100g"] is not None]
 
 
 async def lookup_barcode(barcode: str) -> dict | None:
