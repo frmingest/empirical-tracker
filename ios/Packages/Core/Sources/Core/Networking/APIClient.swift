@@ -69,6 +69,13 @@ public actor APIClient {
         try validate(response: response, data: data)
     }
 
+    /// Performs a request and returns the raw, undecoded response body.
+    /// Used for binary downloads such as the GDPR export (JSON document or CSV zip).
+    public func requestData(_ endpoint: Endpoint) async throws -> Data {
+        let req = try await buildRequest(for: endpoint)
+        return try await performData(req, retriesLeft: config.maxRetries)
+    }
+
     // MARK: - Private helpers
 
     private func buildRequest(for endpoint: Endpoint) async throws -> URLRequest {
@@ -114,6 +121,23 @@ public actor APIClient {
                 let delay = config.initialBackoffNs * UInt64(config.maxRetries - retriesLeft + 1)
                 try await Task.sleep(nanoseconds: delay)
                 return try await perform(req, decoding: type, retriesLeft: retriesLeft - 1)
+            }
+            throw error
+        } catch {
+            throw APIError.networkError(error)
+        }
+    }
+
+    private func performData(_ req: URLRequest, retriesLeft: Int) async throws -> Data {
+        do {
+            let (data, response) = try await session.data(for: req)
+            try validate(response: response, data: data)
+            return data
+        } catch let error as APIError {
+            if error.isRetryable && retriesLeft > 0 {
+                let delay = config.initialBackoffNs * UInt64(config.maxRetries - retriesLeft + 1)
+                try await Task.sleep(nanoseconds: delay)
+                return try await performData(req, retriesLeft: retriesLeft - 1)
             }
             throw error
         } catch {
