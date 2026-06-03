@@ -108,8 +108,9 @@ struct DeleteAccountView: View {
             do {
                 try await env.account.deleteAccount(confirmation: confirmationWord)
                 // Erasure succeeded — drop the local session so the app returns to
-                // the auth screen. signOut never throws and always clears locally.
-                await env.authStore.signOut()
+                // the auth screen. env.signOut never throws, always clears locally,
+                // and also resets the health-data consent flag for this device.
+                await env.signOut()
                 dismiss()
             } catch {
                 errorMessage = error.localizedDescription
