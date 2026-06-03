@@ -45,6 +45,7 @@ public enum MarkerSignals {
 
     public enum SignalKind: Sendable {
         case outOfRange
+        case aboveClinicalTarget
         case largeStep
         case notableChange
         case trendingTowardBound
@@ -102,6 +103,20 @@ public enum MarkerSignals {
                     ))
                 }
             }
+        }
+
+        // In the lab range, but at or above the optimal clinical target. This is
+        // the ADR-014 "in range hides above target" fix (e.g. LDL 4.1 mmol/L): the
+        // lab band says fine, the guideline target says worth a second look.
+        if latest.inRange == true,
+           let target = marker.biomarker.clinicalTarget,
+           latest.value >= target.value {
+            result.append(Signal(
+                kind: .aboveClinicalTarget,
+                title: "Above optimal target",
+                detail: "Inside the lab range, but at or above the optimal clinical target (\(target.label)).",
+                severity: .watch
+            ))
         }
 
         // Trending toward a reference bound while still in range.

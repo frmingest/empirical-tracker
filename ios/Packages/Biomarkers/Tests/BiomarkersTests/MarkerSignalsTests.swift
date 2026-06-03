@@ -103,6 +103,37 @@ struct MarkerSignalsTests {
         #expect(info.clinicalTarget?.value == 5.0)
     }
 
+    @Test func aboveClinicalTargetWhileInRangeIsWatch() {
+        // LDL 2.9 inside lab range [0, 3.5] but at/above the optimal target 2.6.
+        // No big step and not near a bound, so the target alone must drive Watch.
+        let info = BiomarkerInfo(
+            id: "ldl", nameNo: "LDL-kolesterol", nameEn: "LDL cholesterol",
+            unit: "mmol/L", refRangeRaw: "0 - 3.5", refLow: 0, refHigh: 3.5, refType: .bounded
+        )
+        let start = Date(timeIntervalSince1970: 1_600_000_000)
+        let series = [2.8, 2.9].enumerated().map { idx, v in
+            ResultPoint(testedAt: start.addingTimeInterval(Double(idx) * 86_400 * 30), value: v, inRange: true)
+        }
+        let marker = BiomarkerWithSeries(biomarker: info, series: series)
+        #expect(MarkerSignals.signals(for: marker).contains { $0.kind == .aboveClinicalTarget })
+        #expect(MarkerSignals.assessment(for: marker) == .watch)
+    }
+
+    @Test func belowClinicalTargetStaysInRange() {
+        // LDL 2.0 < optimal 2.6, steady and in range → plain green.
+        let info = BiomarkerInfo(
+            id: "ldl", nameNo: "LDL-kolesterol", nameEn: "LDL cholesterol",
+            unit: "mmol/L", refRangeRaw: "0 - 3.5", refLow: 0, refHigh: 3.5, refType: .bounded
+        )
+        let start = Date(timeIntervalSince1970: 1_600_000_000)
+        let series = [2.1, 2.0].enumerated().map { idx, v in
+            ResultPoint(testedAt: start.addingTimeInterval(Double(idx) * 86_400 * 30), value: v, inRange: true)
+        }
+        let marker = BiomarkerWithSeries(biomarker: info, series: series)
+        #expect(!MarkerSignals.signals(for: marker).contains { $0.kind == .aboveClinicalTarget })
+        #expect(MarkerSignals.assessment(for: marker) == .inRange)
+    }
+
     @Test func noTargetForUnmatchedMarker() {
         let info = BiomarkerInfo(
             id: "na", nameNo: "Natrium", unit: "mmol/L", refRangeRaw: "137 - 145",

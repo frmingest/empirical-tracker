@@ -6,11 +6,11 @@ import Foundation
 /// Stable canonical identifier for each biomarker in the panel.
 /// Mirrors `MarkerKey` in `web/src/lib/dietProfiles.ts`.
 public enum MarkerKey: String, CaseIterable, Sendable {
-    case hdl, ldl, totalChol, nonHdl
+    case hdl, ldl, totalChol, nonHdl, triglycerides, apoB, lpA
     case hemoglobin, rbc, wbc, hematocrit, mch, mchc, mcv
-    case hba1c, tsh, freeT4, creatinine, egfr, alt, ggt
+    case hba1c, uricAcid, tsh, freeT4, creatinine, egfr, alt, ggt
     case ferritin, folate, b12, activeB12, vitaminD, transferrin
-    case iron, homocysteine, mma, sodium, potassium
+    case iron, homocysteine, mma, sodium, potassium, magnesium, phosphate
 }
 
 // MARK: - Keyword rules (order matters — first match wins)
@@ -18,11 +18,17 @@ public enum MarkerKey: String, CaseIterable, Sendable {
 /// Matches Norwegian lab names to canonical keys with keyword rules.
 /// Ordered to resolve ambiguity:
 ///   hba1c before hemoglobin; non-hdl before hdl; mchc before mch; gfr before kreatinin.
+///   apoB/lpA use qualified keywords ("apolipoprotein b", "lp(a)") so neither steals
+///   the other (a bare "lipoprotein" would catch both).
 private let markerRules: [(MarkerKey, [String])] = [
     (.hba1c,        ["hba1c"]),
+    (.uricAcid,     ["urat", "urinsyre", "uric"]),
     (.nonHdl,       ["non-hdl"]),
     (.hdl,          ["hdl"]),
     (.ldl,          ["ldl"]),
+    (.apoB,         ["apolipoprotein b", "apob", "apo-b"]),
+    (.lpA,          ["lp(a)", "lipoprotein (a)", "lp-a"]),
+    (.triglycerides, ["triglyserid", "triglyceride"]),
     (.totalChol,    ["kolesterol", "cholesterol"]),
     (.mchc,         ["mchc"]),
     (.mch,          ["mch"]),
@@ -48,6 +54,8 @@ private let markerRules: [(MarkerKey, [String])] = [
     (.mma,          ["mma", "metylmalon"]),
     (.sodium,       ["natrium"]),
     (.potassium,    ["kalium"]),
+    (.magnesium,    ["magnesium"]),
+    (.phosphate,    ["fosfat", "phosphate"]),
 ]
 
 /// Resolve a Norwegian biomarker name to its canonical key, or nil if unrecognised.
@@ -62,8 +70,8 @@ public func markerKey(for nameNo: String) -> MarkerKey? {
 // MARK: - Diet marker sets
 
 private let carnivoreKeys: Set<MarkerKey> = [
-    .hdl, .ldl, .totalChol, .nonHdl,
-    .hba1c,
+    .hdl, .ldl, .totalChol, .nonHdl, .triglycerides, .apoB, .lpA,
+    .hba1c, .uricAcid,
     .alt, .ggt,
     .creatinine, .egfr,
     .ferritin, .iron, .transferrin,
@@ -75,19 +83,21 @@ private let carnivoreKeys: Set<MarkerKey> = [
 
 private let lowCarbKeys: Set<MarkerKey> = [
     .hba1c,
-    .hdl, .ldl, .totalChol, .nonHdl,
+    .hdl, .ldl, .totalChol, .nonHdl, .triglycerides, .apoB,
     .alt, .ggt,
     .sodium, .potassium,
     .ferritin,
 ]
 
 private let fastingKeys: Set<MarkerKey> = [
-    .sodium, .potassium,
-    .hba1c,
+    // Refeeding syndrome is defined by falling phosphate / magnesium / potassium,
+    // so all three (plus sodium) belong here — not potassium alone (ADR-015).
+    .sodium, .potassium, .magnesium, .phosphate,
+    .hba1c, .uricAcid,
     .alt, .ggt,
     .creatinine, .egfr,
     .hemoglobin, .hematocrit,
-    .hdl, .ldl, .totalChol, .nonHdl,
+    .hdl, .ldl, .totalChol, .nonHdl, .triglycerides, .apoB, .lpA,
 ]
 
 private let dietKeyMap: [DietFocus: Set<MarkerKey>] = [

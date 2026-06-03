@@ -7,6 +7,19 @@
 
 ---
 
+> **iOS note:** in the web client, `assessMarker()` folded the in/out-of-range
+> flag, the **clinical-target check**, and the trend signals into one status (§2).
+> The native port's `MarkerSignals.assessment()` initially dropped the target
+> check — it inspected only the range flag and trend signals — so an in-range
+> value sitting at or above its optimal target (the headline LDL-4.1 case this ADR
+> exists to fix) still rendered green. `MarkerSignals.signals()` now emits an
+> `aboveClinicalTarget` `watch` signal when an in-range latest value is at or above
+> its `clinicalTarget`, which flows through `assessment()` to the amber **"Watch"**
+> badge. Covered by `MarkerSignalsTests`. The amber target *line* on the chart was
+> already drawn; this restores the green→amber **downgrade** the line implies.
+
+---
+
 ## Context
 
 A clinical review of the app found one central problem: the app treats the lab
