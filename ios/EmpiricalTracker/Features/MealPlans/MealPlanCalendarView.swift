@@ -200,6 +200,7 @@ private struct DaySection: View {
                     PlannedMealRow(meal: meal) {
                         Task { await viewModel.toggleDone(meal) }
                     }
+                    .listRowBackground(meal.meal.tint.opacity(0.09))
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button(role: .destructive) {
                             Task { await viewModel.delete(meal) }
@@ -260,7 +261,13 @@ private struct PlannedMealRow: View {
     let onToggleDone: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
+            // Leading accent bar — colour-codes the meal slot, mirroring the diary's
+            // `FoodEntryRow` so the two timelines read as one visual language.
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(meal.meal.tint)
+                .frame(width: 3)
+
             Button(action: onToggleDone) {
                 Image(systemName: meal.done ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(meal.done ? Color.inRange : Color.textMuted)
@@ -282,9 +289,15 @@ private struct PlannedMealRow: View {
                         .foregroundStyle(Color.textPrimary)
                 }
                 HStack(spacing: 8) {
-                    Text(meal.meal.localizedName)
-                        .font(.labelSmall)
-                        .foregroundStyle(Color.textMuted)
+                    // Tinted meal icon + name, echoing the diary's meal-section header.
+                    Label {
+                        Text(meal.meal.localizedName)
+                    } icon: {
+                        Image(systemName: meal.meal.icon)
+                    }
+                    .labelStyle(.titleAndIcon)
+                    .font(.labelSmall)
+                    .foregroundStyle(meal.meal.tint)
                     if let q = meal.quantityG {
                         Text(NutritionFormat.grams(q))
                             .font(.bodySmall)
@@ -302,11 +315,9 @@ private struct PlannedMealRow: View {
         .accessibilityLabel(accessibilityText)
     }
 
+    /// Single-line macro summary in the diary's exact format ("C 8 · P 8 · F 17 g").
     private var macroSummary: String {
-        let c = NutritionFormat.grams(meal.carbsG)
-        let p = NutritionFormat.grams(meal.proteinG)
-        let f = NutritionFormat.grams(meal.fatG)
-        return "C \(c) · P \(p) · F \(f)"
+        NutritionFormat.macroSummary(carbs: meal.carbsG, protein: meal.proteinG, fat: meal.fatG)
     }
 
     private var accessibilityText: String {

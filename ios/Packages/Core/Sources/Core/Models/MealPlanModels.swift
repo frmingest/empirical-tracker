@@ -99,7 +99,18 @@ public struct PlannedMeal: Codable, Identifiable, Sendable {
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id            = try c.decode(String.self, forKey: .id)
-        scheduledOn   = try c.decode(Date.self, forKey: .scheduledOn)
+        // `scheduled_on` is a calendar date (`yyyy-MM-dd`). Parse it in the *current*
+        // time zone so it lands on local midnight — matching the local week days the
+        // Plan tab compares against in `MealPlanViewModel.meals(on:)`. Decoding it as
+        // a UTC instant would shift the meal onto the wrong day for any non-UTC user.
+        let scheduledRaw = try c.decode(String.self, forKey: .scheduledOn)
+        guard let scheduled = calendarDateFormatter.date(from: scheduledRaw) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .scheduledOn, in: c,
+                debugDescription: "Expected a yyyy-MM-dd date, got \"\(scheduledRaw)\""
+            )
+        }
+        scheduledOn   = scheduled
         meal          = try c.decode(Meal.self, forKey: .meal)
         foodName      = try c.decode(String.self, forKey: .foodName)
         brand         = try c.decodeIfPresent(String.self, forKey: .brand)
@@ -219,7 +230,52 @@ public struct PlannedMealPayload: Encodable, Sendable {
         self.note         = note
         self.planId       = planId
     }
+
+    enum CodingKeys: String, CodingKey {
+        case scheduledOn, meal, foodName, brand, barcode, quantityG, energyKcal
+        case carbsG, proteinG, fatG, saturatedFatG, sodiumMg, source, note, planId
+    }
+
+    /// `scheduled_on` is encoded as a calendar date (`yyyy-MM-dd`) rather than a full
+    /// ISO-8601 timestamp. The picker hands us a midnight-*local* `Date`; serialising
+    /// that as the shared encoder's UTC instant (e.g. `2026-06-03` 00:00 CEST →
+    /// `2026-06-02T22:00:00Z`) truncates to the *previous* day server-side, so the
+    /// meal never shows up on the day the user tapped. Mirrors `ManualResultPayload`
+    /// (ADR-007). The remaining keys are converted to snake_case by `JSONEncoder.api`.
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(calendarDateFormatter.string(from: scheduledOn), forKey: .scheduledOn)
+        try c.encode(meal, forKey: .meal)
+        try c.encode(foodName, forKey: .foodName)
+        try c.encodeIfPresent(brand, forKey: .brand)
+        try c.encodeIfPresent(barcode, forKey: .barcode)
+        try c.encodeIfPresent(quantityG, forKey: .quantityG)
+        try c.encodeIfPresent(energyKcal, forKey: .energyKcal)
+        try c.encodeIfPresent(carbsG, forKey: .carbsG)
+        try c.encodeIfPresent(proteinG, forKey: .proteinG)
+        try c.encodeIfPresent(fatG, forKey: .fatG)
+        try c.encodeIfPresent(saturatedFatG, forKey: .saturatedFatG)
+        try c.encodeIfPresent(sodiumMg, forKey: .sodiumMg)
+        try c.encodeIfPresent(source, forKey: .source)
+        try c.encodeIfPresent(note, forKey: .note)
+        try c.encodeIfPresent(planId, forKey: .planId)
+    }
 }
+
+// MARK: - Calendar-date helper
+
+/// Formats / parses `scheduled_on` as a calendar date (`yyyy-MM-dd`) in the current
+/// time zone, so a planned meal round-trips on the day the user actually picked
+/// regardless of UTC offset. Shared by `PlannedMealPayload` (encode) and
+/// `PlannedMeal` (decode); mirrors the fix already applied to `ManualResultPayload`.
+let calendarDateFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.calendar = Calendar(identifier: .gregorian)
+    f.locale = Locale(identifier: "en_US_POSIX")
+    f.timeZone = .current
+    f.dateFormat = "yyyy-MM-dd"
+    return f
+}()
 
 // MARK: - PlannedMealDonePayload (PATCH body)
 
