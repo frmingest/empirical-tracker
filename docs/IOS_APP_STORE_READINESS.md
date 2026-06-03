@@ -128,14 +128,14 @@ archive doesn't trip the production guard.
 
 ## Medium / housekeeping
 
-| # | Item | Notes |
-|---|------|-------|
-| 8 | **CI doesn't build/test iOS** | `.github/workflows/ci.yml` runs only Python API lint + pytest. There is no `xcodebuild`/test lane and no SwiftLint. Add an iOS build+test job so regressions are caught. |
-| 9 | **Config.xcconfig committed despite being git-ignored** | `ios/Config.xcconfig` is tracked (`git ls-files`) even though it's listed in `.gitignore:39`. It holds the Supabase URL + **anon key**, which are public-by-design (RLS-protected), so not a security breach — but it defeats the intended "secrets never land in git" pattern documented in `AppConfig.swift`. No service-role key is present anywhere in `ios/` (verified). Consider `git rm --cached`. |
-| 10 | **App Store metadata absent** | No screenshots, description, keywords, age rating, or support/marketing URLs in the repo. Health/decision-support app needs an accurate age rating and a visible "not medical advice" disclaimer (the feature ADRs carry this framing — surface it in-app and in the listing). |
-| 11 | **Empty `application-groups` entitlement** | `com.apple.security.application-groups` is an empty array — harmless, but remove if unused so the entitlement set matches the provisioning profile. |
-| 12 | **Signing / team** | `DEVELOPMENT_TEAM = QA6NUTFPU6`, automatic signing, personal-style bundle id `com.FaizMalik.*`. Confirm this is the intended distribution team and that the App Store Connect record, HealthKit capability, and `empiricaltracker://` URL scheme all match the distribution provisioning profile. |
-| 13 | **Custom URL scheme** | `empiricaltracker://` is registered for the Withings OAuth callback — fine; just ensure the redirect is validated server-side. |
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| 8 | **CI doesn't build/test iOS** | ✅ Resolved | `.github/workflows/ci.yml` now has an `ios` job (macOS runner) that recreates `Config.xcconfig` from the template, picks an available iPhone simulator, and runs `xcodebuild test` for the `EmpiricalTracker` scheme — compiling all 8 local SwiftPM packages and running the app unit-test target (UI tests skipped as flaky/slow in CI). ⚠️ Authored but **not yet executed on a macOS runner** from this Linux environment; the simulator/Xcode pin may need a first-run tweak. A `swiftlint` job also runs against `ios/.swiftlint.yml`, **non-blocking** for now (`continue-on-error: true`) so first-run style nits don't block merges — drop that line and add `--strict` to make it enforcing once the code is clean. Follow-up: the 58 package `@Test` cases live in package test targets that the app scheme does not include, so add them to the test run once verified on a runner. |
+| 9 | **Config.xcconfig committed despite being git-ignored** | ✅ Resolved | `git rm --cached ios/Config.xcconfig` — the file is now untracked (still present locally and recreated in CI from `Config.xcconfig.example`). It held only the public, RLS-protected anon key, so no secret was exposed; this restores the intended "secrets never land in git" pattern. |
+| 10 | **App Store metadata absent** | ◐ Drafted | Listing copy now lives in `docs/app-store/` (name, subtitle, promo text, full description with the "not medical advice" framing, keywords, what's-new, category, age-rating answers, App Privacy summary, and review notes). **Still external:** screenshots, the real public URLs (privacy/support — `empirical.app` is a placeholder), the reviewer demo account, and confirming the age-rating questionnaire — see `docs/app-store/README.md`. |
+| 11 | **Empty `application-groups` entitlement** | ✅ Resolved | Removed the empty `com.apple.security.application-groups` array from `EmpiricalTracker.entitlements`; only the two HealthKit keys remain, so the entitlement set now matches what the provisioning profile needs. |
+| 12 | **Signing / team** | ⚠️ Needs human confirmation | `DEVELOPMENT_TEAM = QA6NUTFPU6`, automatic signing, personal-style bundle id `com.FaizMalik.*`. Cannot be verified from the repo — requires App Store Connect access. Confirm this is the intended **distribution** team and that the ASC record, HealthKit capability, and `empiricaltracker://` URL scheme all match the distribution provisioning profile. |
+| 13 | **Custom URL scheme** | ⚠️ Backend follow-up | `empiricaltracker://` is the OAuth callback for **Withings Cloud (Path B)**. On iOS the callback is validated via `WithingsCloudService.isSuccessCallback(...)`, but the backend `/withings/*` endpoints that would own the server-side OAuth `state`/redirect validation **do not exist yet** (the feature self-hides until they ship — `WithingsCloudState`). Server-side redirect/state validation must be implemented when those endpoints are built. |
 
 ---
 
@@ -177,9 +177,14 @@ archive doesn't trip the production guard.
 7. Verify the Release/Archive scheme injects real credentials.
 
 **Phase 3 — Hardening (do soon after):**
-8. Add an iOS build+test (and SwiftLint) CI lane.
-9. Untrack `Config.xcconfig`; finalize signing/team; prepare listing metadata,
-   screenshots, age rating, and the in-app medical disclaimer.
+8. ~~Add an iOS build+test CI lane.~~ ✅ Done (SwiftLint still TODO). ~~Untrack
+   `Config.xcconfig`.~~ ✅ Done. ~~Remove the empty `application-groups`
+   entitlement.~~ ✅ Done. ~~Draft listing metadata + in-app medical disclaimer.~~
+   ◐ Drafted in `docs/app-store/`.
+9. **Remaining (need a human / external access):** capture screenshots, publish
+   the real privacy/support URLs, finalize signing & distribution team (#12),
+   complete the age-rating questionnaire, and add server-side validation for the
+   Withings OAuth redirect when those backend endpoints are built (#13).
 
 Once Phase 1 lands the app is *submittable*; Phase 2 makes it *likely to pass
 first review*.
