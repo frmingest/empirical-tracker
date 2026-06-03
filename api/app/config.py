@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     # "unavailable" rather than erroring (ADR-018).
     usda_fdc_api_key: str = ""
 
+    # Anthropic — used by the nutrition-label OCR parser (parse-label endpoint).
+    # When unset the endpoint returns a 503 rather than erroring unpredictably.
+    anthropic_api_key: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
