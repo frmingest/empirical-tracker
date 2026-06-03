@@ -52,8 +52,8 @@ struct SettingsView: View {
                 isPresented: $showExportFormatDialog,
                 titleVisibility: .visible
             ) {
-                Button(String(verbatim: "JSON")) { startExport(.json) }
-                Button(String(verbatim: "CSV (ZIP)")) { startExport(.csv) }
+                Button(String("JSON")) { startExport(.json) }
+                Button(String("CSV (ZIP)")) { startExport(.csv) }
                 Button(String(localized: "common.cancel"), role: .cancel) {}
             }
             .sheet(item: $shareItem) { item in
