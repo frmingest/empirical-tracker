@@ -15,14 +15,22 @@ where its numbers came from (ADR-018).
 | Source | Badge | What it covers | Provenance | Licence |
 |--------|-------|----------------|------------|---------|
 | **[Matvaretabellen](https://www.matvaretabellen.no)** | `NO` | Norwegian **whole foods** (egg, ribeye, butter, salmon) | Government, lab-analysed | NLOD 2.0 / CC BY 4.0 |
-| **[USDA FoodData Central](https://fdc.nal.usda.gov)** | `US` | American **whole foods** | Government, lab-analysed | Public domain (CC0) |
+| **[USDA FoodData Central](https://fdc.nal.usda.gov)** | `US` | American **whole foods** + **branded** packs | Government (whole foods) / manufacturer (branded) | Public domain (CC0) |
 | **[Open Food Facts](https://world.openfoodfacts.org)** | `OFF` | **Branded / packaged** products & barcodes | Crowd-sourced | ODbL |
 
-The whole-food tables (Matvaretabellen, USDA) are the right default for the
-diets this app targets — carnivore / low-carb eating is whole-food eating, and a
-"ribeye" or "egg" should come from a curated, lab-analysed entry rather than a
-crowd-sourced branded guess. Open Food Facts remains the source for branded
-products and is the **only** source with barcodes.
+By default the app searches **all sources at once** and merges the results,
+whole-food tables first. That way a "ribeye" or "egg" comes from a curated,
+lab-analysed entry, while branded packs still appear — and a search is never
+blank. You can narrow to a single source with the filter chip.
+
+Open Food Facts is crowd-sourced, so a large share of its entries carry a name
+but **no nutrition numbers at all**. Those would show as an all-"—" row you can't
+actually log, so the app **hides Open Food Facts results that have no energy
+value** from search (a barcode you deliberately scan is still shown as-is). USDA
+now also includes its **manufacturer-declared Branded** dataset, which is
+near-complete and public-domain — a more reliable source for the packaged
+products where Open Food Facts is often empty. Open Food Facts remains the
+**only** source with barcodes.
 
 We query these for:
 

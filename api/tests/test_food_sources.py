@@ -88,6 +88,22 @@ def test_usda_normalise_drops_nameless():
     assert usda._normalise({"fdcId": 1, "description": ""}) is None
 
 
+def test_usda_normalise_maps_branded_brand_and_package():
+    # A Branded hit carries a consumer brand name and a package weight (ADR-018).
+    branded = {
+        "fdcId": 999,
+        "description": "Grass-Fed Ribeye",
+        "brandName": "ButcherCo",
+        "brandOwner": "ButcherCo Holdings LLC",
+        "packageWeight": "340 g",
+        "foodNutrients": [{"nutrientNumber": "208", "value": 291}],
+    }
+    out = usda._normalise(branded)
+    assert out["brand"] == "ButcherCo"  # brandName preferred over brandOwner
+    assert out["quantity"] == "340 g"
+    assert out["energy_kcal_100g"] == 291.0
+
+
 def test_usda_search_returns_empty_without_key():
     with patch("app.food_sources.usda.get_settings") as mock_settings:
         mock_settings.return_value = MagicMock(usda_fdc_api_key="")
@@ -114,6 +130,9 @@ def test_usda_search_normalises_and_caches(mock_client_cls):
         again = asyncio.run(usda.search_products("egg whole"))
     assert again == out
     assert mock_client.post.call_count == 1
+    # Branded is queried alongside the analysed whole-food datasets (ADR-018).
+    posted = mock_client.post.call_args.kwargs["json"]
+    assert "Branded" in posted["dataType"]
 
 
 # ── registry ────────────────────────────────────────────────────────────────────

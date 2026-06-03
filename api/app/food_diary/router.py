@@ -7,7 +7,7 @@ from pydantic import BaseModel, field_validator
 from app.auth import current_user_id
 from app.food_diary import repository
 from app.food_sources import openfoodfacts, registry
-from app.food_sources.base import SOURCE_OFF, VALID_SOURCES
+from app.food_sources.base import VALID_SOURCES
 
 router = APIRouter(prefix="/food-diary", tags=["food-diary"])
 
@@ -60,7 +60,7 @@ class FoodEntryIn(BaseModel):
 @router.get("/search")
 async def search_foods(
     q: str = Query(min_length=1),
-    source: str = Query(default=SOURCE_OFF),
+    source: str = Query(default=registry.SOURCE_ALL),
     _user_id: str = Depends(current_user_id),
 ) -> list[dict]:
     if source not in registry.SELECTABLE_SOURCES:

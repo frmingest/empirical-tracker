@@ -177,6 +177,23 @@ def test_search_products_normalises(mock_client_cls):
 
 
 @patch("app.food_sources.openfoodfacts.httpx.AsyncClient")
+def test_search_products_drops_entries_without_nutriments(mock_client_cls):
+    # OFF often returns named products with empty nutriments; those are useless
+    # in the diary (all "—"), so search drops them. A named hit with no energy
+    # sits alongside the good ribeye and must not appear in the results.
+    empty = {"code": "2", "product_name": "Mystery snack", "nutriments": {}}
+    mock_client = AsyncMock()
+    mock_client.__aenter__.return_value = mock_client
+    resp = MagicMock()
+    resp.json.return_value = {"products": [_off_product(), empty]}
+    mock_client.get.return_value = resp
+    mock_client_cls.return_value = mock_client
+
+    out = asyncio.run(openfoodfacts.search_products("ribeye"))
+    assert [i["name"] for i in out] == ["Ribeye steak"]
+
+
+@patch("app.food_sources.openfoodfacts.httpx.AsyncClient")
 def test_lookup_barcode_returns_none_when_not_found(mock_client_cls):
     mock_client = AsyncMock()
     mock_client.__aenter__.return_value = mock_client
@@ -238,8 +255,9 @@ def test_search_endpoint(mock_search):
         res = client.get("/food-diary/search?q=ribeye")
         assert res.status_code == 200
         assert res.json()[0]["name"] == "Ribeye"
-        # Default source preserves the original Open Food Facts behaviour.
-        assert mock_search.call_args.args == ("ribeye", "off")
+        # Default source is now "all" — merge every source so results are never
+        # blank (ADR-018), rather than the old Open-Food-Facts-only default.
+        assert mock_search.call_args.args == ("ribeye", "all")
     finally:
         app.dependency_overrides.clear()
 

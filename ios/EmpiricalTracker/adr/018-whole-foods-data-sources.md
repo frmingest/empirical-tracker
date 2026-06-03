@@ -326,3 +326,42 @@ Revised, the source is no longer a primary control:
   `source` default and the most common "scan/search a branded product" flow. The
   whole-food tables (Matvaretabellen / USDA) and the `all` fan-out remain one tap
   away in the menu. A per-user preference (open question 1) is still future work.
+
+## Update (2026-06): closing the branded-nutrient gap
+
+**Problem reported:** with Open Food Facts as the default source, the food search
+returned products that showed **no nutrient data at all** — OFF is crowd-sourced
+and a large fraction of its entries carry a name but empty `nutriments`. The
+honesty contract ("never invent numbers", missing → "—") meant those rows were
+present but unloggable, which read as "the app has no nutrition data."
+
+Two changes close the gap without weakening that contract:
+
+1. **USDA Branded is now included** (`usda.py` `_DATA_TYPES` adds `"Branded"`).
+   This reverses the original §4 / "Alternatives considered" decision to keep
+   USDA whole-food-only because "OFF owns branded" (open question 2). The reason
+   it's now right: OFF's branded entries are *frequently blank*, whereas FDC
+   Branded is **manufacturer-declared, near-complete, public-domain (CC0), and
+   carries UPC barcodes** — a strictly better branded source where the two
+   overlap. Branded hits map their `brandName`/`brandOwner` and `packageWeight`
+   into `FoodItem`; nutrients are per-100 g as for the analysed sets.
+
+2. **The default search source moves from `off` to `all`** (backend
+   `registry.search` / the `/food-diary/search` query default, and the iOS
+   `selectedSource` / repository default; the filter menu now leads with *All*).
+   This supersedes the "Default is now Open Food Facts" note above. Any single
+   source leaves a gap (OFF blank for whole foods; the whole-food tables have no
+   branded packs); merging them — whole foods first — means a search is never
+   blank. Narrowing to one source stays one tap away.
+
+3. **Empty OFF search hits are dropped.** `openfoodfacts.search_products` now
+   filters out results with no energy value (after the existing kJ→kcal
+   fallback), so search only surfaces foods that can actually be logged. This is
+   *hiding empties, not inventing data* — a deliberately scanned **barcode** is
+   still returned as-is, however sparse, because the user explicitly chose it.
+
+**Unchanged:** the `FoodItem` contract, stored-consumed-amount durability
+(ADR-011), provenance badges, and graceful degradation (`all` still returns
+whatever sources responded). USDA still needs its key and degrades to empty
+without one. Open question 2 is now resolved (include Branded); open questions 1,
+3, 4 remain.

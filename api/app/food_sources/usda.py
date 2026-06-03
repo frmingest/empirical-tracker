@@ -11,9 +11,12 @@ server-side:
   * It needs a free ``api.data.gov`` key, rate-limited ~1 000 req/h **per key**
     (shared across all our users). The key is a server-only env var; if it's
     unset we degrade gracefully to "no USDA results", exactly like an OFF outage.
-  * We default to the analysed whole-food datasets (``Foundation`` + ``SR
-    Legacy``) and skip ``Branded`` (which overlaps OFF) so the source stays in
-    its lane.
+  * We query the analysed whole-food datasets (``Foundation`` + ``SR Legacy``)
+    **and** the manufacturer-supplied ``Branded`` dataset. Branded was originally
+    excluded ("OFF owns branded"), but OFF's crowd-sourced branded entries are
+    frequently missing nutriments, leaving the diary blank; FDC Branded is
+    manufacturer-declared, near-complete, public-domain (CC0), and carries UPC
+    barcodes — a strictly better branded source where it overlaps OFF.
   * Identical queries ("egg", "beef") are served from a small in-memory TTL cache
     so common searches don't burn the shared quota (ADR-018).
 
@@ -31,8 +34,9 @@ from app.config import get_settings
 from app.food_sources.base import SOURCE_USDA, FoodItem, make_food_item
 
 _SEARCH_URL = "https://api.nal.usda.gov/fdc/v1/foods/search"
-# Analysed whole-food datasets only by default; Branded overlaps OFF.
-_DATA_TYPES = ["Foundation", "SR Legacy"]
+# Analysed whole foods (Foundation, SR Legacy) plus manufacturer-declared
+# Branded — the latter fills the branded-nutrient gap OFF leaves blank (ADR-018).
+_DATA_TYPES = ["Foundation", "SR Legacy", "Branded"]
 _TIMEOUT = 20.0
 _CACHE_TTL_SECONDS = 3600.0  # common queries change rarely; an hour is plenty.
 
@@ -77,8 +81,10 @@ def _normalise(food: dict) -> FoodItem | None:
         source=SOURCE_USDA,
         code=str(food.get("fdcId") or ""),
         name=name,
-        # FDC whole foods are unbranded; a branded hit may carry a brand owner.
-        brand=(food.get("brandOwner") or "").strip() or None,
+        # Whole foods are unbranded; a Branded hit carries the consumer-facing
+        # brand name (falling back to the owning company) and a package size.
+        brand=(food.get("brandName") or food.get("brandOwner") or "").strip() or None,
+        quantity=(food.get("packageWeight") or "").strip() or None,
         energy_kcal_100g=nutrients.get("energy_kcal_100g"),
         carbs_100g=nutrients.get("carbs_100g"),
         protein_100g=nutrients.get("protein_100g"),
