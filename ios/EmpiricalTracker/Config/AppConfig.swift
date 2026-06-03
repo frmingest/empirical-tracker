@@ -6,22 +6,27 @@ import AppAuth
 ///
 /// ## Configuring credentials
 ///
-/// The recommended path is an **xcconfig** file so secrets never land in git.
-/// Copy `Config.xcconfig.example` → `Config.xcconfig`, fill in your values, and
-/// set it as the configuration file for the `EmpiricalTracker` target (Project ▸
-/// Info ▸ Configurations). `Config.xcconfig` is git-ignored. It must define:
-/// ```
-/// SUPABASE_URL      = https://YOUR_PROJECT.supabase.co
-/// SUPABASE_ANON_KEY = YOUR_ANON_KEY
-/// EMPIRICAL_API_URL = https://your-api.up.railway.app
-/// ```
-/// `Info.plist` already maps `SupabaseURL → $(SUPABASE_URL)` and
-/// `SupabaseAnonKey → $(SUPABASE_ANON_KEY)`, so these flow through at build time.
+/// `Info.plist` carries the Supabase coordinates directly under the `SupabaseURL`
+/// and `SupabaseAnonKey` keys, with **literal** production values committed to the
+/// repo. The anon key is a *public* client key (role `anon`), safe to ship in the
+/// binary — it is NOT the service-role/secret key, which must never appear here.
+/// Committing the literal values is deliberate: it makes Release/Archive builds
+/// self-contained, so an archive resolves real credentials at runtime and never
+/// trips the production guard below — even on a machine or CI runner that does not
+/// have the git-ignored `Config.xcconfig`.
+///
+/// To point a *local* build at a different Supabase project (e.g. staging), edit
+/// the `SupabaseURL` / `SupabaseAnonKey` values in `Info.plist`. (`Config.xcconfig`
+/// holds the same coordinates for reference and for `EMPIRICAL_API_URL`, but the
+/// Supabase keys are consumed from `Info.plist`, not substituted from xcconfig —
+/// so changing only the xcconfig has no effect on the resolved Supabase creds.)
 ///
 /// ## Demo / development mode
 ///
 /// Set `DEMO_MODE=1` in the Xcode scheme (Product > Scheme > Edit Scheme > Run >
-/// Arguments > Environment Variables) to bypass Supabase and use mock data.
+/// Arguments > Environment Variables) to bypass Supabase and use mock data. This is
+/// a Run-scheme environment variable only: it is absent from Archive builds, so a
+/// shipped/TestFlight build can never silently start in demo mode.
 enum AppConfig {
 
     private static let log = Logger(subsystem: "app.empirical.tracker", category: "AppConfig")

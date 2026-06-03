@@ -14,28 +14,74 @@
 ## How configuration flows
 
 ```
-Config.xcconfig  ──►  build settings  ──►  Info.plist ($(SUPABASE_URL) …)  ──►  AppConfig  ──►  SupabaseAuthService
-EMPIRICAL_API_URL (scheme env / Info.plist)  ──►  APIClient.Configuration.resolved()  ──►  all REST calls
+Info.plist (SupabaseURL / SupabaseAnonKey, literal values)  ──►  AppConfig  ──►  SupabaseAuthService
+EMPIRICAL_API_URL (Run-scheme env; absent in Archive)  ──►  APIClient.Configuration.resolved()  ──►  all REST calls
+                                                            └─ fallback ─►  https://api-production-42c5.up.railway.app
 ```
 
-- **Supabase** (auth): `Info.plist` keys `SupabaseURL` / `SupabaseAnonKey`, fed from
-  `SUPABASE_URL` / `SUPABASE_ANON_KEY` build settings.
+- **Supabase** (auth): `Info.plist` keys `SupabaseURL` / `SupabaseAnonKey` hold the
+  real project coordinates as **literal** values, committed to the repo. The anon
+  key is a public client key, safe to ship; the service-role key must never appear
+  in the app. Committing the literals keeps Release/Archive builds self-contained
+  (see [Release / Archive readiness](#release--archive-readiness) below). They are
+  *not* substituted from `Config.xcconfig` at build time — to retarget a build, edit
+  `Info.plist` directly.
 - **Railway API** (data): `APIClient` reads `EMPIRICAL_API_URL` from the process
-  environment, falling back to the hardcoded `https://api-empirical.up.railway.app`.
+  environment (set in the Run scheme for local dev), falling back to the hardcoded
+  production URL `https://api-production-42c5.up.railway.app`. An archived app has no
+  scheme environment, so it always uses this fallback — which is the production URL.
 
 ## Setup
 
-1. `cp Config.xcconfig.example Config.xcconfig`
-2. Fill in `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `EMPIRICAL_API_URL`.
-3. Xcode ▸ project ▸ **Info ▸ Configurations** ▸ set `Config.xcconfig` for the
-   `EmpiricalTracker` target (Debug **and** Release).
-4. For `EMPIRICAL_API_URL`: add it as an environment variable in the **Run scheme**
-   (Product ▸ Scheme ▸ Edit Scheme ▸ Run ▸ Arguments), since `APIClient` currently
-   reads it from the process environment rather than `Info.plist`.
-5. Clean build folder (⇧⌘K), rebuild on device.
+The committed defaults already point at the production Supabase project and Railway
+API, so a fresh checkout builds and runs against production out of the box. Override
+only when you need a different backend (e.g. staging, or a local API):
+
+1. **Supabase:** the production `SupabaseURL` / `SupabaseAnonKey` are committed in
+   `EmpiricalTracker/Info.plist`. To target a different project, edit those two keys
+   in `Info.plist` directly.
+2. **Railway API for local dev:** `cp Config.xcconfig.example Config.xcconfig`, fill
+   in `EMPIRICAL_API_URL`, and add it as an environment variable in the **Run scheme**
+   (Product ▸ Scheme ▸ Edit Scheme ▸ Run ▸ Arguments) — `APIClient` reads it from the
+   process environment. Without an override the app uses the hardcoded production URL.
+3. Clean build folder (⇧⌘K), rebuild on device.
 
 > `Config.xcconfig` is git-ignored. The Supabase **anon** key is a public client
 > key and is safe to ship; the **service-role** key must never appear in the app.
+
+---
+
+## Release / Archive readiness
+
+For TestFlight / App Store the build is **Release**, archived from the
+`EmpiricalTracker` scheme (`ArchiveAction` ▸ `buildConfiguration = Release`). In
+Release the demo/mock-auth fallback is compiled out (`#if DEBUG`), so a missing or
+unresolved Supabase credential triggers a hard `fatalError` at launch *by design*.
+The checklist below is what keeps an archive from tripping that guard — all of it is
+verified in the current project:
+
+- **Supabase creds resolve.** `Info.plist` carries literal `SupabaseURL` /
+  `SupabaseAnonKey` values (not `$(…)` placeholders), and the app target uses that
+  file for both Debug and Release (`INFOPLIST_FILE`, `GENERATE_INFOPLIST_FILE = NO`).
+  `AppConfig.resolvedSupabaseCredentials()` therefore returns non-nil and
+  `SupabaseAuthService` is used — the `#else fatalError` branch is never reached.
+  Because the values are literals, this holds even on a machine/CI runner without the
+  git-ignored `Config.xcconfig`. ⚠️ Do **not** rewrite these keys to `$(SUPABASE_URL)`
+  placeholders unless you also commit a build-time default — otherwise archives built
+  without `Config.xcconfig` will crash on launch.
+- **API URL resolves.** An archived app has no Run-scheme environment, so
+  `APIClient.Configuration.resolved()` falls back to the hardcoded production URL
+  `https://api-production-42c5.up.railway.app`.
+- **`DEMO_MODE` is unset.** It is read from the process environment only and is not
+  set in the scheme, the `.pbxproj`, or `Config.xcconfig`. An archive has no scheme
+  env, so the mock-auth shortcut is never taken.
+- **Demo affordances are DEBUG-only.** The demo-login button (`AuthView`) and the
+  mock-auth fallback (`AppConfig`) are both `#if DEBUG`, so they are absent from a
+  Release archive entirely.
+
+To re-verify after any config change: `grep -n SupabaseURL EmpiricalTracker/Info.plist`
+(expect literal values, no `$(`), and confirm no `DEMO_MODE` appears in the scheme or
+`Config.xcconfig`.
 
 ---
 
@@ -43,7 +89,8 @@ EMPIRICAL_API_URL (scheme env / Info.plist)  ──►  APIClient.Configuration.
 
 ### A. Supabase (auth / profile)
 1. In the Supabase dashboard ▸ Settings ▸ API, what is the **Project URL**? Does it
-   exactly match `SUPABASE_URL` in `Config.xcconfig` (including `https://` and `.supabase.co`)?
+   exactly match `SupabaseURL` in `EmpiricalTracker/Info.plist` (including `https://`
+   and `.supabase.co`)?
 2. Is the key in `SUPABASE_ANON_KEY` the **anon/public** key — not the service-role key?
 3. Is this the **same** Supabase project the web app uses? (After a port, people
    sometimes spin up a new project and the data lives in the old one.)
@@ -51,14 +98,17 @@ EMPIRICAL_API_URL (scheme env / Info.plist)  ──►  APIClient.Configuration.
    signing in on the web app pointed at the same project to confirm.
 5. After building with keys set, does the **Settings tab still show the orange
    "Demo mode — backend not configured" banner**? If yes, the keys aren't resolving
-   (check that `Config.xcconfig` is actually assigned to the target, then clean-build).
+   (check that `SupabaseURL` / `SupabaseAnonKey` in `Info.plist` are real values and
+   not `$(…)` placeholders, then clean-build). In a Release archive this same
+   condition is a hard `fatalError` rather than a banner — see
+   [Release / Archive readiness](#release--archive-readiness).
 6. Does Settings show **your** email after login, not `demo@empirical.app`?
 
 ### B. Railway (REST API / import + data)
 7. What is the **public Railway URL** of the FastAPI service, and is it currently
    deployed and healthy (open it in a browser — `/docs` or `/health` should respond)?
 8. Does `EMPIRICAL_API_URL` exactly match that URL? Is the default
-   `https://api-empirical.up.railway.app` even correct for your deployment?
+   `https://api-production-42c5.up.railway.app` even correct for your deployment?
 9. Do the FastAPI routes live at the **root** (`/biomarkers/import`) or under a
    **prefix** (e.g. `/api/biomarkers/import`)? A 404 on import almost always means a
    prefix mismatch. Confirm via the service's `/docs` (OpenAPI) page.
