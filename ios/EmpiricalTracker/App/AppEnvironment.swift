@@ -22,6 +22,10 @@ public final class AppEnvironment {
     public let authStore: AuthStore
     public let settings: SettingsStore
 
+    /// Records explicit consent to health-data processing. Gates the main app
+    /// until the user agrees (see `RootView`).
+    public let consent: ConsentStore
+
     // MARK: - Networking
 
     public let client: APIClient
@@ -62,6 +66,7 @@ public final class AppEnvironment {
         let store = AuthStore(service: authService)
         self.authStore = store
         self.settings = SettingsStore()
+        self.consent = ConsentStore()
 
         let tokenProvider = AuthTokenProvider(authStore: store)
         let config = APIClient.Configuration.resolved()
@@ -101,6 +106,13 @@ public final class AppEnvironment {
     }
 
     // MARK: - Convenience
+
+    /// Signs out and clears the local health-data consent flag so the next user
+    /// to sign in on this device must give their own consent.
+    public func signOut() async {
+        await authStore.signOut()
+        consent.reset()
+    }
 
     /// Called on every app foreground to refresh the primary read paths.
     public func refreshAll() async {

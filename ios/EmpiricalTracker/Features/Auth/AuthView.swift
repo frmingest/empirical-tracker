@@ -7,6 +7,7 @@ import AppAuth
 struct AuthView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var vm = SignInViewModel()
+    @State private var legalURL: URL?
     @FocusState private var focus: Field?
 
     private enum Field: Hashable { case email, password }
@@ -19,6 +20,7 @@ struct AuthView: View {
                 #if DEBUG
                 demoButton
                 #endif
+                legalFooter
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 40)
@@ -26,6 +28,10 @@ struct AuthView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.bgBase)
         .scrollDismissesKeyboard(.interactively)
+        .sheet(item: $legalURL) { url in
+            SafariSheet(url: url)
+                .ignoresSafeArea()
+        }
     }
 
     // MARK: - Header
@@ -150,6 +156,30 @@ struct AuthView: View {
         }
         .disabled(env.authStore.isLoading)
         .accessibilityLabel(String(localized: "auth.demo.a11y"))
+    }
+
+    // MARK: - Legal
+
+    /// Privacy policy + terms links. A privacy-policy link on the auth screen is
+    /// expected for a HealthKit app and reachable before the user signs in.
+    private var legalFooter: some View {
+        VStack(spacing: 6) {
+            Text(String(localized: "auth.legal.preamble"))
+                .font(.bodySmall)
+                .foregroundStyle(Color.textMuted)
+                .multilineTextAlignment(.center)
+            HStack(spacing: 16) {
+                Button(String(localized: "legal.privacy_policy")) {
+                    legalURL = Legal.privacyPolicyURL
+                }
+                Button(String(localized: "legal.terms")) {
+                    legalURL = Legal.termsOfServiceURL
+                }
+            }
+            .font(.bodySmall)
+            .tint(Color.accent)
+        }
+        .padding(.top, 8)
     }
 
     // MARK: - Actions

@@ -46,7 +46,15 @@ codebase grep finds **zero call sites** for `deleteAccount`/`exportData`.
 data" action to `SettingsView`, calling the existing repository methods. This is
 also the GDPR right-to-erasure / portability surface the README promises.
 
-### 3. Missing privacy manifest (`PrivacyInfo.xcprivacy`) 🛑/⚠️
+### 3. Missing privacy manifest (`PrivacyInfo.xcprivacy`) ✅ *Resolved*
+> **Update:** `ios/EmpiricalTracker/PrivacyInfo.xcprivacy` now declares the
+> collected data types (Health, Fitness, Email, User ID — all linked, none used
+> for tracking, all *App Functionality*) and the required-reason API usage
+> (`NSPrivacyAccessedAPICategoryUserDefaults`, reason `CA92.1`). `NSPrivacyTracking`
+> is `false`. The bundled `supabase-swift` (2.46.0) ships its own manifest, which
+> Xcode merges at build time. The file is in the folder-synced target root, so it
+> lands at the app bundle root automatically.
+
 No `*.xcprivacy` exists anywhere in `ios/`. Apple requires a **privacy manifest**
 for App Store submissions, declaring collected data types and *required-reason*
 API usage. This app collects **health data and email**, and bundles a
@@ -56,7 +64,23 @@ warnings and very likely a rejection on a health app.
 contact/email, identifiers) and any required-reason API categories; confirm
 `supabase-swift` ships its own manifest (or account for it).
 
-### 4. No privacy policy / consent surface in the app 🛑/⚠️
+### 4. No privacy policy / consent surface in the app ✅ *Resolved*
+> **Update:** Privacy-policy and terms links now appear on the **auth screen**
+> (footer) and in a new **Legal** section in **Settings**, opening in-app via
+> `SFSafariViewController`. A health-data **consent gate** (`ConsentView`, backed
+> by a versioned `ConsentStore`) is shown after sign-in and before the main app
+> the first time — covering what health data is processed, EU storage, the
+> export/erasure rights, and a "not medical advice" disclaimer. Declining signs
+> the user back out; signing out clears local consent so the next user must
+> consent themselves. URLs live in `Config/Legal.swift`.
+>
+> **Still open (tracked in `docs/legal/README.md`):** the policy and terms text
+> are now drafted in `docs/legal/`, but (1) a **hosting domain / public URL** has
+> not been chosen — the in-app links use placeholder `empirical.app` URLs — and
+> (2) the documents still have `[TBD: …]` fields (controller identity, contact,
+> dates, jurisdiction) pending a legal review. Resolve both, then paste the
+> privacy-policy URL into App Store Connect.
+
 A **privacy policy URL is mandatory in App Store Connect** and effectively
 required in-app for HealthKit apps. The iOS app has **no privacy-policy link, no
 terms, and no consent/onboarding screen.** The README states "explicit consent at

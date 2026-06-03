@@ -8,6 +8,7 @@ import AppAuth
 struct SettingsView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var showRestartNotice = false
+    @State private var legalURL: URL?
 
     var body: some View {
         @Bindable var settings = env.settings
@@ -18,9 +19,14 @@ struct SettingsView: View {
                 dataSection
                 devicesSection
                 accountSection
+                legalSection
             }
             .navigationTitle(String(localized: "settings.title"))
             .listStyle(.insetGrouped)
+            .sheet(item: $legalURL) { url in
+                SafariSheet(url: url)
+                    .ignoresSafeArea()
+            }
             // Resolve Withings Cloud availability so its row appears here even if the
             // Body tab hasn't been opened yet (Sprint 10).
             .task { await env.withingsCloudState.refreshStatus() }
@@ -168,7 +174,7 @@ struct SettingsView: View {
 
             // Sign out
             Button(role: .destructive) {
-                Task { await env.authStore.signOut() }
+                Task { await env.signOut() }
             } label: {
                 Label(
                     String(localized: "settings.sign_out"),
@@ -177,6 +183,26 @@ struct SettingsView: View {
             }
             .accessibilityLabel(String(localized: "settings.sign_out"))
             .accessibilityHint(String(localized: "settings.sign_out.hint"))
+        }
+    }
+
+    /// Privacy policy + terms. The privacy-policy link is required in-app for a
+    /// HealthKit app and must match the URL published in App Store Connect.
+    @ViewBuilder
+    private var legalSection: some View {
+        Section(String(localized: "settings.section.legal")) {
+            Button {
+                legalURL = Legal.privacyPolicyURL
+            } label: {
+                Label(String(localized: "legal.privacy_policy"), systemImage: "hand.raised")
+                    .foregroundStyle(Color.textPrimary)
+            }
+            Button {
+                legalURL = Legal.termsOfServiceURL
+            } label: {
+                Label(String(localized: "legal.terms"), systemImage: "doc.text")
+                    .foregroundStyle(Color.textPrimary)
+            }
         }
     }
 }
