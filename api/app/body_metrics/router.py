@@ -33,7 +33,7 @@ class BodyMetricIn(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def _coherent_measurement(self) -> "BodyMetricIn":
+    def _coherent_measurement(self) -> BodyMetricIn:
         # Blood pressure is a pair: both halves or neither.
         if (self.systolic is None) != (self.diastolic is None):
             raise ValueError("systolic and diastolic must be provided together")

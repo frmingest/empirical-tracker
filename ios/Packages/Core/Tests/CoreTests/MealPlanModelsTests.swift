@@ -57,7 +57,7 @@ struct MealPlanModelsTests {
             scheduledOn: localMidnight, meal: .breakfast, foodName: "Eggs"
         )
         let json = try JSONEncoder.api.encode(payload)
-        let obj = try JSONSerialization.jsonObject(with: json) as! [String: Any]
+        let obj = try #require(try JSONSerialization.jsonObject(with: json) as? [String: Any])
         #expect(obj["scheduled_on"] as? String == "2026-06-03")
     }
 

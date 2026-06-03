@@ -77,12 +77,36 @@ public final class FoodDiaryRepository {
     }
 
     /// Barcode lookup via backend proxy (`GET /food-diary/barcode/{code}`).
+    /// Returns nil when the barcode is not found in any source (404).
     public func lookup(barcode: String) async throws -> FoodItem? {
         do {
             return try await client.request(.get("/food-diary/barcode/\(barcode)"))
         } catch APIError.notFound {
             return nil
         }
+    }
+
+    // MARK: - Label parse (OCR → structured nutrients)
+
+    /// Sends raw OCR text to the backend for Claude Haiku to extract per-100g nutrients.
+    /// Returns a partial `FoodItem` (nil fields for values not found in the label).
+    public func parseLabel(ocrText: String) async throws -> ParsedLabel {
+        struct Body: Encodable { let ocrText: String }
+        return try await client.request(.post("/food-diary/parse-label", body: Body(ocrText: ocrText)))
+    }
+
+    // MARK: - Custom food catalogue
+
+    public func createCustomFood(_ payload: CustomFoodPayload) async throws -> CustomFoodRecord {
+        try await client.request(.post("/food-diary/custom", body: payload))
+    }
+
+    public func updateCustomFood(id: String, _ payload: CustomFoodPayload) async throws -> CustomFoodRecord {
+        try await client.request(.put("/food-diary/custom/\(id)", body: payload))
+    }
+
+    public func deleteCustomFood(id: String) async throws {
+        try await client.requestEmpty(.delete("/food-diary/custom/\(id)"))
     }
 
     // MARK: - Computed

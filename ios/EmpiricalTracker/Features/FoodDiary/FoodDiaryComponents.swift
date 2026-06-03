@@ -34,9 +34,10 @@ extension Meal {
 extension FoodSource {
     var uiColor: Color {
         switch self {
-        case .mvt:  return .inRange   // Norwegian lab-analysed whole foods
-        case .usda: return .accent    // US lab-analysed whole foods
-        case .off:  return .textMuted // crowd-sourced branded products
+        case .mvt:    return .inRange     // Norwegian lab-analysed whole foods
+        case .usda:   return .accent      // US lab-analysed whole foods
+        case .off:    return .textMuted   // crowd-sourced branded products
+        case .custom: return Color(red: 0.55, green: 0.35, blue: 0.85) // user-contributed
         }
     }
 }

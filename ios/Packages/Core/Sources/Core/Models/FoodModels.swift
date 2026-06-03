@@ -43,30 +43,33 @@ public enum FoodSource: String, Codable, CaseIterable, Identifiable, Sendable {
     case off
     case mvt
     case usda
+    /// User-contributed item from the custom_foods catalogue.
+    case custom
 
     public var id: String { rawValue }
 
     /// Short badge text shown on rows. Mirrors the badges in `docs/NUTRITION_DATA.md`.
     public var badge: String {
         switch self {
-        case .off:  return "OFF"
-        case .mvt:  return "NO"
-        case .usda: return "US"
+        case .off:    return "OFF"
+        case .mvt:    return "NO"
+        case .usda:   return "US"
+        case .custom: return "MY"
         }
     }
 
     /// Full attribution name.
     public var displayName: String {
         switch self {
-        case .off:  return "Open Food Facts"
-        case .mvt:  return "Matvaretabellen"
-        case .usda: return "USDA FoodData Central"
+        case .off:    return "Open Food Facts"
+        case .mvt:    return "Matvaretabellen"
+        case .usda:   return "USDA FoodData Central"
+        case .custom: return "My Foods"
         }
     }
 
-    /// Whether barcodes route to this source. Only Open Food Facts carries barcodes;
-    /// the whole-food composition tables do not (ADR-018).
-    public var supportsBarcode: Bool { self == .off }
+    /// Whether barcodes route to this source.
+    public var supportsBarcode: Bool { self == .off || self == .custom }
 }
 
 // MARK: - FoodSearchSource (selector)
@@ -261,7 +264,7 @@ public struct FoodEntryPayload: Encodable, Sendable {
         self.meal          = meal
         self.foodName      = item.name
         self.brand         = item.brand
-        self.barcode       = item.source.supportsBarcode ? item.code : nil
+        self.barcode       = (item.source.supportsBarcode && !item.code.isEmpty) ? item.code : nil
         self.quantityG     = quantityG
         self.energyKcal    = item.energyKcal(forGrams: quantityG)
         self.carbsG        = item.carbsG(forGrams: quantityG)
@@ -378,5 +381,167 @@ public struct DailyTotals: Sendable {
             saturatedFatG: entries.compactMap(\.saturatedFatG).reduce(0, +),
             sodiumMg:      entries.compactMap(\.sodiumMg).reduce(0, +)
         )
+    }
+}
+
+// MARK: - ParsedLabel (response from POST /food-diary/parse-label)
+
+/// Structured nutrients extracted from a nutrition-label OCR scan by Claude Haiku.
+/// All nutrient fields are per 100 g. Nil means the value was not found — never invented.
+public struct ParsedLabel: Decodable, Sendable {
+    public let foodName: String?
+    public let brand: String?
+    public let energyKcal100g: Double?
+    public let carbs100g: Double?
+    public let protein100g: Double?
+    public let fat100g: Double?
+    public let saturatedFat100g: Double?
+    public let sodiumMg100g: Double?
+    public let servingG: Double?
+    public let ingredients: String?
+    public let ocrRaw: [String: AnyCodable]?
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        foodName          = try c.decodeIfPresent(String.self, forKey: .name) // backend key is "name"
+        brand             = try c.decodeIfPresent(String.self, forKey: .brand)
+        energyKcal100g    = try c.decodeIfPresent(Double.self, forKey: .energyKcal100g)
+        carbs100g         = try c.decodeIfPresent(Double.self, forKey: .carbs100g)
+        protein100g       = try c.decodeIfPresent(Double.self, forKey: .protein100g)
+        fat100g           = try c.decodeIfPresent(Double.self, forKey: .fat100g)
+        saturatedFat100g  = try c.decodeIfPresent(Double.self, forKey: .saturatedFat100g)
+        sodiumMg100g      = try c.decodeIfPresent(Double.self, forKey: .sodiumMg100g)
+        servingG          = nil  // not in the FoodItem shape returned by backend
+        ingredients       = nil
+        ocrRaw            = nil
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case name, brand
+        case energyKcal100g  = "energy_kcal_100g"
+        case carbs100g       = "carbs_100g"
+        case protein100g     = "protein_100g"
+        case fat100g         = "fat_100g"
+        case saturatedFat100g = "saturated_fat_100g"
+        case sodiumMg100g    = "sodium_mg_100g"
+    }
+
+    /// Convert to a FoodItem so it integrates with the existing logging flow.
+    public func toFoodItem(name overrideName: String? = nil) -> FoodItem {
+        FoodItem(
+            code: "",
+            name: overrideName ?? foodName ?? "",
+            brand: brand,
+            source: .custom,
+            energyKcal100g: energyKcal100g,
+            carbs100g: carbs100g,
+            protein100g: protein100g,
+            fat100g: fat100g,
+            saturatedFat100g: saturatedFat100g,
+            sodium100g: sodiumMg100g
+        )
+    }
+}
+
+// MARK: - CustomFoodPayload (POST/PUT /food-diary/custom)
+
+public struct CustomFoodPayload: Encodable, Sendable {
+    public let foodName: String
+    public let brand: String?
+    public let barcode: String?
+    public let energyKcal: Double?
+    public let carbsG: Double?
+    public let proteinG: Double?
+    public let fatG: Double?
+    public let saturatedFatG: Double?
+    public let sodiumMg: Double?
+    public let servingG: Double?
+    public let ingredients: String?
+    public let ocrRaw: [String: String]?
+
+    public init(
+        foodName: String,
+        brand: String? = nil,
+        barcode: String? = nil,
+        energyKcal: Double? = nil,
+        carbsG: Double? = nil,
+        proteinG: Double? = nil,
+        fatG: Double? = nil,
+        saturatedFatG: Double? = nil,
+        sodiumMg: Double? = nil,
+        servingG: Double? = nil,
+        ingredients: String? = nil,
+        ocrRaw: [String: String]? = nil
+    ) {
+        self.foodName     = foodName
+        self.brand        = brand
+        self.barcode      = barcode
+        self.energyKcal   = energyKcal
+        self.carbsG       = carbsG
+        self.proteinG     = proteinG
+        self.fatG         = fatG
+        self.saturatedFatG = saturatedFatG
+        self.sodiumMg     = sodiumMg
+        self.servingG     = servingG
+        self.ingredients  = ingredients
+        self.ocrRaw       = ocrRaw
+    }
+}
+
+// MARK: - CustomFoodRecord (response from custom food CRUD)
+
+public struct CustomFoodRecord: Decodable, Identifiable, Sendable {
+    public let id: String
+    public let foodName: String
+    public let brand: String?
+    public let barcode: String?
+    public let energyKcal: Double?
+    public let carbsG: Double?
+    public let proteinG: Double?
+    public let fatG: Double?
+    public let saturatedFatG: Double?
+    public let sodiumMg: Double?
+    public let servingG: Double?
+    public let createdAt: Date?
+
+    public func toFoodItem() -> FoodItem {
+        FoodItem(
+            code: id,
+            name: foodName,
+            brand: brand,
+            source: .custom,
+            energyKcal100g: energyKcal,
+            carbs100g: carbsG,
+            protein100g: proteinG,
+            fat100g: fatG,
+            saturatedFat100g: saturatedFatG,
+            sodium100g: sodiumMg
+        )
+    }
+}
+
+// MARK: - AnyCodable shim (minimal — only used in ParsedLabel.ocrRaw)
+
+public struct AnyCodable: Codable, Sendable {
+    public let value: Any
+
+    public init(_ value: Any) { self.value = value }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        if let s = try? c.decode(String.self)  { value = s; return }
+        if let d = try? c.decode(Double.self)  { value = d; return }
+        if let b = try? c.decode(Bool.self)    { value = b; return }
+        value = NSNull()
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.singleValueContainer()
+        switch value {
+        case let s as String: try c.encode(s)
+        case let d as Double: try c.encode(d)
+        case let b as Bool:   try c.encode(b)
+        default:              try c.encodeNil()
+        }
     }
 }

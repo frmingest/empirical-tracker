@@ -29,7 +29,7 @@ final class FoodDiaryViewModel {
 
     // MARK: - Dependencies
 
-    private let repo: FoodDiaryRepository
+    let repo: FoodDiaryRepository
     private var searchTask: Task<Void, Never>?
 
     init(repo: FoodDiaryRepository) {
@@ -105,6 +105,18 @@ final class FoodDiaryViewModel {
 
     func lookup(barcode: String) async throws -> FoodItem? {
         try await repo.lookup(barcode: barcode)
+    }
+
+    // MARK: - Custom food catalogue
+
+    func createCustomFood(_ payload: CustomFoodPayload) async throws -> CustomFoodRecord {
+        try await repo.createCustomFood(payload)
+    }
+
+    // MARK: - Label parse
+
+    func parseLabel(ocrText: String) async throws -> ParsedLabel {
+        try await repo.parseLabel(ocrText: ocrText)
     }
 
     // MARK: - Persistence
