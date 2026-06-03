@@ -5,6 +5,12 @@
 **Author:** Faiz (solo developer)  
 **Sprint:** 10
 
+> **iOS note:** the SwiftUI realisation of this surface — the Body tab, the
+> `BodyMetricChart` described in §3, and the client-side mirror of the validation
+> below — ships as **iOS Sprint 8**, recorded in
+> [ADR-021](021-ios-body-metrics.md). This ADR (web Sprint 10) remains the source
+> of the schema, routes, and chart design.
+
 ---
 
 ## Context

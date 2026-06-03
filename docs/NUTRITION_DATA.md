@@ -73,7 +73,7 @@ changes or is removed.
 If a source doesn't have a value for a field, we store nothing for it and the UI
 shows **"—"** rather than a guess.
 
-**Two derivations (Sprint 9), only when the direct field is missing (Open Food
+**Two derivations (ADR-016), only when the direct field is missing (Open Food
 Facts):**
 
 - **Sodium.** We prefer OFF's measured sodium. When OFF publishes only **salt**,
@@ -99,7 +99,7 @@ These are fixed unit conversions — not estimates of missing data.
   cooking losses, water uptake, or preparation — log the form you actually ate
   where possible (e.g. "cooked").
 - **Macros plus sodium & saturated fat.** The diary tracks energy, carbohydrate,
-  protein, fat, **saturated fat, and sodium** (Sprint 9). It does not track other
+  protein, fat, **saturated fat, and sodium** (ADR-016). It does not track other
   micronutrients or fibre at this stage.
 - **No medical advice.** The diary is a logging and context tool. It does not
   interpret your intake, set targets, or make clinical recommendations.
@@ -108,7 +108,7 @@ These are fixed unit conversions — not estimates of missing data.
 
 ## Correlation overlay caveat
 
-Diet annotations (Sprint 3) can be drawn on biomarker charts to mark when you
+Diet annotations (ADR-010) can be drawn on biomarker charts to mark when you
 changed your regimen. These are a **visual aid only**:
 
 - Annotations are **snapped to the nearest blood draw**, so their position is

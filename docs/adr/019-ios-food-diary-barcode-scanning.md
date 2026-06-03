@@ -16,7 +16,7 @@ composition tables (ADR-018), with sodium and saturated fat on every entry
 a placeholder Diary tab — the Core DTOs still carried the original four macros
 and no provenance, and there was no UI.
 
-iOS Sprint 6 (see `EmpiricalTracker/IOS_MIGRATION_PLAN.md` §3) brings the diary to
+iOS Sprint 6 (see [`../IOS_MIGRATION_PLAN.md`](../IOS_MIGRATION_PLAN.md)) brings the diary to
 feature parity with the web client **and** adds the one thing a phone can do that
 the browser cannot: scan a barcode with the camera. No backend changes are
 required — this is a pure presentation + native-device sprint, consistent with

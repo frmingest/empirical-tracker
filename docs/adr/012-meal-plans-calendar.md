@@ -5,6 +5,10 @@
 **Author:** Faiz (solo developer)  
 **Sprint:** 5
 
+> **iOS note (2026-06-02):** the native client for this surface ships in iOS
+> Sprint 7 — see [ADR-020](020-ios-meal-plans-calendar.md). It consumes these
+> endpoints unchanged and reuses the Sprint 6 food pipeline for the picker.
+
 ---
 
 ## Context
