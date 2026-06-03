@@ -62,7 +62,7 @@ Rules:
 """
 
 
-def parse_label(ocr_text: str) -> FoodItem:
+async def parse_label(ocr_text: str) -> tuple[FoodItem, dict]:
     """Parse raw OCR text and return a FoodItem with per-100g nutrients.
 
     Raises ``ValueError`` if the Anthropic API key is not configured.
@@ -72,9 +72,9 @@ def parse_label(ocr_text: str) -> FoodItem:
     if not settings.anthropic_api_key:
         raise ValueError("ANTHROPIC_API_KEY is not configured")
 
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
-    message = client.messages.create(
+    message = await client.messages.create(
         model=_MODEL,
         max_tokens=512,
         system=_SYSTEM,

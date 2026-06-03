@@ -141,15 +141,18 @@ async def parse_label(
     text here. Claude Haiku extracts the structured fields. Numbers that cannot
     be confidently extracted are returned as ``null`` — never invented.
     """
+    import logging
     from app.food_sources.label_parser import parse_label as _parse
 
+    _log = logging.getLogger(__name__)
     try:
-        food_item, ocr_raw = _parse(body.ocr_text)
+        food_item, ocr_raw = await _parse(body.ocr_text)
     except ValueError as exc:
         if "not configured" in str(exc):
             raise HTTPException(status_code=503, detail="Label parser not available") from exc
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
+        _log.exception("parse-label failed: %s", exc)
         raise HTTPException(status_code=502, detail="Label parsing failed") from exc
 
     return {**food_item, "ocr_raw": ocr_raw}
