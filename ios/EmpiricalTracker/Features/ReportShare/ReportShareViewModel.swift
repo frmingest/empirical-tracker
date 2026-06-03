@@ -102,6 +102,21 @@ final class ReportShareViewModel {
     func selectAll() { selectedIDs = Set(groups.flatMap(\.markers).map(\.id)) }
     func selectNone() { selectedIDs.removeAll() }
 
+    /// Selects only the markers that have been tested the most times.
+    /// All markers sharing the global maximum series count are included so
+    /// the user gets the full "consistently tracked" set in one tap.
+    func selectMostTested() {
+        let allMarkers = groups.flatMap(\.markers)
+        guard let maxCount = allMarkers.map({ $0.series.count }).max(), maxCount > 0 else { return }
+        let topIDs = allMarkers.filter { $0.series.count == maxCount }.map(\.id)
+        selectedIDs = Set(topIDs)
+    }
+
+    /// The series count shared by the most-tested markers, for the button label.
+    var mostTestedCount: Int {
+        groups.flatMap(\.markers).map({ $0.series.count }).max() ?? 0
+    }
+
     // MARK: - Generation
 
     func generate() async {

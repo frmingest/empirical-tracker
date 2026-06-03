@@ -193,6 +193,11 @@ struct ReportShareSheet: View {
                     Button("None") { vm.selectNone() }
                         .font(.labelLarge)
                         .foregroundStyle(Color.accent)
+                    if vm.mostTestedCount > 1 {
+                        Button("Top (\(vm.mostTestedCount)×)") { vm.selectMostTested() }
+                            .font(.labelLarge)
+                            .foregroundStyle(Color.accent)
+                    }
                 }
             }
 
