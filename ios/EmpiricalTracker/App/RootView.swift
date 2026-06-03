@@ -10,13 +10,18 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if env.authStore.isAuthenticated {
-                MainTabView()
-            } else {
+            if !env.authStore.isAuthenticated {
                 AuthView()
+            } else if !env.consent.hasConsented {
+                // GDPR special-category (health) data requires explicit consent
+                // before the app starts processing it.
+                ConsentView()
+            } else {
+                MainTabView()
             }
         }
         .animation(.easeInOut(duration: 0.3), value: env.authStore.isAuthenticated)
+        .animation(.easeInOut(duration: 0.3), value: env.consent.hasConsented)
     }
 }
 
