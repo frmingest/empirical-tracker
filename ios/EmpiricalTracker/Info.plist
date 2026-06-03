@@ -27,7 +27,9 @@
 	<key>NSHealthShareUsageDescription</key>
 	<string>EmpiricalTracker reads your weight and blood pressure from Apple Health — including readings your Withings devices write there via Health Mate — so it can chart them alongside your blood biomarkers and diet events. It only reads the data types you enable, and never writes to Apple Health.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>EmpiricalTracker uses the camera to scan food barcodes so it can look up nutrition facts for your diary. The camera is never used for anything else, and images are not stored.</string>
+	<string>EmpiricalTracker uses the camera to scan food barcodes and photograph nutrition labels. Barcode data is looked up online; label photos are processed for text only and never stored on our servers.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>EmpiricalTracker can read a nutrition label photo from your library to extract nutrition facts for your diary. The photo is processed for text only and never stored.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

@@ -194,3 +194,28 @@ def test_registry_single_source_propagates_errors():
         except httpx.HTTPError:
             raised = True
     assert raised
+
+
+def test_registry_all_includes_custom_when_user_id_given():
+    custom_hit = [{"name": "My Granola", "source": "custom"}]
+    with (
+        patch.object(
+            matvaretabellen, "search_products",
+            new=_async_returning([]),
+        ),
+        patch.object(usda, "search_products", new=_async_returning([])),
+        patch("app.food_sources.openfoodfacts.search_products", new=_async_returning([])),
+        patch("app.food_sources.custom.search_with_user", new=AsyncMock(return_value=custom_hit)),
+    ):
+        out = asyncio.run(registry.search("granola", registry.SOURCE_ALL, user_id="u1"))
+    assert any(i["source"] == "custom" for i in out)
+
+
+def test_registry_all_omits_custom_when_no_user_id():
+    with (
+        patch.object(matvaretabellen, "search_products", new=_async_returning([])),
+        patch.object(usda, "search_products", new=_async_returning([])),
+        patch("app.food_sources.openfoodfacts.search_products", new=_async_returning([])),
+    ):
+        out = asyncio.run(registry.search("granola", registry.SOURCE_ALL))
+    assert out == []

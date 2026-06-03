@@ -11,6 +11,15 @@ struct FoodSearchSheet: View {
     @State private var isScanning = false
     @State private var scanMessage: String?
 
+    /// Barcode that was scanned but not found — triggers the label-scan prompt.
+    @State private var missedBarcode: String?
+    /// True when the label-capture sheet is open.
+    @State private var isCapturingLabel = false
+    /// Parsed label waiting to be reviewed in AddCustomFoodView.
+    @State private var parsedLabel: ParsedLabel?
+    /// True when AddCustomFoodView is open.
+    @State private var isAddingCustom = false
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -36,13 +45,36 @@ struct FoodSearchSheet: View {
             .sheet(isPresented: $isFreeText) {
                 LogFoodSheet(viewModel: viewModel, freeTextName: trimmedQuery)
             }
-            // Native barcode scanner (Open Food Facts only).
+            // Native barcode scanner.
             .fullScreenCover(isPresented: $isScanning) {
                 BarcodeScannerView { result in
                     isScanning = false
                     handleScan(result)
                 }
             }
+            // Nutrition label OCR capture (barcode-miss → label path).
+            .fullScreenCover(isPresented: $isCapturingLabel) {
+                NutritionLabelCaptureView(
+                    prefilledBarcode: missedBarcode,
+                    repo: viewModel.repo
+                ) { label, barcode in
+                    isCapturingLabel = false
+                    parsedLabel = label
+                    missedBarcode = barcode
+                    isAddingCustom = true
+                } onCancel: {
+                    isCapturingLabel = false
+                }
+            }
+            // Review + save custom food (OCR result or manual entry).
+            .sheet(isPresented: $isAddingCustom) {
+                AddCustomFoodView(
+                    viewModel: viewModel,
+                    parsedLabel: parsedLabel,
+                    prefilledBarcode: missedBarcode
+                )
+            }
+            // Barcode not found — offer label scan or dismiss.
             .alert(
                 String(localized: "food.scan.not_found.title"),
                 isPresented: Binding(
@@ -50,7 +82,14 @@ struct FoodSearchSheet: View {
                     set: { if !$0 { scanMessage = nil } }
                 )
             ) {
-                Button(String(localized: "common.ok"), role: .cancel) {}
+                Button(String(localized: "food.scan.add_product")) {
+                    scanMessage = nil
+                    isCapturingLabel = true
+                }
+                Button(String(localized: "common.cancel"), role: .cancel) {
+                    scanMessage = nil
+                    missedBarcode = nil
+                }
             } message: {
                 Text(scanMessage ?? "")
             }
@@ -60,7 +99,8 @@ struct FoodSearchSheet: View {
     // MARK: - Filter bar (source chip + optional scan)
 
     /// Secondary controls beneath the search field: the source filter chip on the
-    /// left, and — only for sources that carry barcodes — a compact scan button.
+    /// left, and — only for sources that carry barcodes — a compact scan button
+    /// plus an "add product" button for manual / OCR entry.
     private var filterBar: some View {
         HStack(spacing: 8) {
             FoodSourceFilterMenu(selection: $viewModel.selectedSource) {
@@ -78,6 +118,19 @@ struct FoodSearchSheet: View {
                 .buttonBorderShape(.capsule)
                 .tint(Color.accent)
             }
+            // Always-visible "add my food" shortcut.
+            Button {
+                parsedLabel = nil
+                missedBarcode = nil
+                isAddingCustom = true
+            } label: {
+                Image(systemName: "plus.circle")
+                    .font(.bodyMedium)
+            }
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.capsule)
+            .tint(Color.accent)
+            .accessibilityLabel(String(localized: "food.custom.add_button_accessibility"))
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 8)
@@ -165,6 +218,8 @@ struct FoodSearchSheet: View {
                     if let item = try await viewModel.lookup(barcode: barcode) {
                         selectedItem = item
                     } else {
+                        // Barcode miss — save it so the label-capture flow can pre-fill it.
+                        missedBarcode = barcode
                         scanMessage = String(localized: "food.scan.not_found.message \(barcode)")
                     }
                 } catch {

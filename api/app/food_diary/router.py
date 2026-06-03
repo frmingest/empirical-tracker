@@ -6,8 +6,9 @@ from pydantic import BaseModel, field_validator
 
 from app.auth import current_user_id
 from app.food_diary import repository
+from app.food_sources import custom as custom_source
 from app.food_sources import openfoodfacts, registry
-from app.food_sources.base import VALID_SOURCES
+from app.food_sources.base import SOURCE_CUSTOM, VALID_SOURCES
 
 router = APIRouter(prefix="/food-diary", tags=["food-diary"])
 
@@ -50,18 +51,47 @@ class FoodEntryIn(BaseModel):
         return v
 
 
+class CustomFoodIn(BaseModel):
+    food_name: str
+    brand: str | None = None
+    barcode: str | None = None
+    energy_kcal: float | None = None
+    carbs_g: float | None = None
+    protein_g: float | None = None
+    fat_g: float | None = None
+    saturated_fat_g: float | None = None
+    sodium_mg: float | None = None
+    serving_g: float | None = None
+    ingredients: str | None = None
+    ocr_raw: dict | None = None
+
+    @field_validator("food_name")
+    @classmethod
+    def _non_empty_name(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("food_name must not be empty")
+        return v.strip()
+
+
+class ParseLabelIn(BaseModel):
+    ocr_text: str
+
+    @field_validator("ocr_text")
+    @classmethod
+    def _non_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("ocr_text must not be empty")
+        return v.strip()
+
+
 # ── Food-source proxy ───────────────────────────────────────────────────────────
-# A thin, normalising proxy in front of the food sources (Open Food Facts,
-# Matvaretabellen, USDA — see ADR-018). These require auth so the lookup can't be
-# used as an open relay. Barcode lookup stays Open-Food-Facts-only: the
-# whole-food composition tables have no barcodes.
 
 
 @router.get("/search")
 async def search_foods(
     q: str = Query(min_length=1),
     source: str = Query(default=registry.SOURCE_ALL),
-    _user_id: str = Depends(current_user_id),
+    user_id: str = Depends(current_user_id),
 ) -> list[dict]:
     if source not in registry.SELECTABLE_SOURCES:
         raise HTTPException(
@@ -69,7 +99,7 @@ async def search_foods(
             detail=f"source must be one of {sorted(registry.SELECTABLE_SOURCES)}",
         )
     try:
-        return await registry.search(q, source)
+        return await registry.search(q, source, user_id=user_id)
     except httpx.HTTPError as exc:
         raise HTTPException(
             status_code=502, detail="The selected food source is unavailable"
@@ -79,8 +109,13 @@ async def search_foods(
 @router.get("/barcode/{barcode}")
 async def lookup_barcode(
     barcode: str,
-    _user_id: str = Depends(current_user_id),
+    user_id: str = Depends(current_user_id),
 ) -> dict:
+    # User's own custom foods take priority over Open Food Facts.
+    custom_hit = await custom_source.lookup_barcode_with_user(barcode, user_id)
+    if custom_hit is not None:
+        return custom_hit
+
     try:
         product = await openfoodfacts.lookup_barcode(barcode)
     except httpx.HTTPError as exc:
@@ -90,6 +125,66 @@ async def lookup_barcode(
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found")
     return product
+
+
+# ── Parse label (OCR → structured nutrients via Claude Haiku) ──────────────────
+
+
+@router.post("/parse-label")
+async def parse_label(
+    body: ParseLabelIn,
+    _user_id: str = Depends(current_user_id),
+) -> dict:
+    """Convert raw nutrition-label OCR text to per-100g structured nutrients.
+
+    The caller (iOS) runs on-device VisionKit OCR and sends the concatenated
+    text here. Claude Haiku extracts the structured fields. Numbers that cannot
+    be confidently extracted are returned as ``null`` — never invented.
+    """
+    from app.food_sources.label_parser import parse_label as _parse
+
+    try:
+        food_item, ocr_raw = _parse(body.ocr_text)
+    except ValueError as exc:
+        if "not configured" in str(exc):
+            raise HTTPException(status_code=503, detail="Label parser not available") from exc
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Label parsing failed") from exc
+
+    return {**food_item, "ocr_raw": ocr_raw}
+
+
+# ── Custom food catalogue CRUD ─────────────────────────────────────────────────
+
+
+@router.post("/custom", status_code=201)
+async def create_custom_food(
+    body: CustomFoodIn,
+    user_id: str = Depends(current_user_id),
+) -> dict:
+    return custom_source.create_custom_food(user_id, body.model_dump())
+
+
+@router.put("/custom/{food_id}")
+async def update_custom_food(
+    food_id: str,
+    body: CustomFoodIn,
+    user_id: str = Depends(current_user_id),
+) -> dict:
+    result = custom_source.update_custom_food(user_id, food_id, body.model_dump(exclude_none=True))
+    if not result:
+        raise HTTPException(status_code=404, detail="Custom food not found")
+    return result
+
+
+@router.delete("/custom/{food_id}")
+async def delete_custom_food(
+    food_id: str,
+    user_id: str = Depends(current_user_id),
+) -> dict:
+    custom_source.delete_custom_food(user_id, food_id)
+    return {"deleted": food_id}
 
 
 # ── Diary CRUD ────────────────────────────────────────────────────────────────

@@ -295,11 +295,30 @@ def test_search_endpoint_handles_source_outage(mock_search):
 
 
 @patch("app.food_diary.router.openfoodfacts.lookup_barcode")
-def test_barcode_endpoint_404_when_missing(mock_lookup):
-    mock_lookup.return_value = None
+@patch("app.food_diary.router.custom_source.lookup_barcode_with_user")
+def test_barcode_endpoint_404_when_missing(mock_custom_lookup, mock_off_lookup):
+    # Custom source returns nothing; OFF also returns nothing → 404.
+    mock_custom_lookup.return_value = None
+    mock_off_lookup.return_value = None
     app.dependency_overrides[current_user_id] = lambda: "u1"
     try:
         res = client.get("/food-diary/barcode/000")
         assert res.status_code == 404
+    finally:
+        app.dependency_overrides.clear()
+
+
+@patch("app.food_diary.router.openfoodfacts.lookup_barcode")
+@patch("app.food_diary.router.custom_source.lookup_barcode_with_user")
+def test_barcode_endpoint_returns_custom_food_when_found(mock_custom_lookup, mock_off_lookup):
+    # Custom source hit takes priority — OFF should not be called.
+    custom_item = {"code": "my-id", "name": "My Granola", "source": "custom"}
+    mock_custom_lookup.return_value = custom_item
+    app.dependency_overrides[current_user_id] = lambda: "u1"
+    try:
+        res = client.get("/food-diary/barcode/4011200296987")
+        assert res.status_code == 200
+        assert res.json()["source"] == "custom"
+        mock_off_lookup.assert_not_called()
     finally:
         app.dependency_overrides.clear()

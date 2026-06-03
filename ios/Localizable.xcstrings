@@ -3110,6 +3110,363 @@
         }
       }
     },
+    "food.scan.add_product" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Product"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til produkt"
+          }
+        }
+      }
+    },
+    "food.custom.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add My Food"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til mitt produkt"
+          }
+        }
+      }
+    },
+    "food.custom.save" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lagre"
+          }
+        }
+      }
+    },
+    "food.custom.section.identity" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Product"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Produkt"
+          }
+        }
+      }
+    },
+    "food.custom.section.nutrients" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutrition per 100 g"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Næring per 100 g"
+          }
+        }
+      }
+    },
+    "food.custom.nutrients.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All values are per 100 g. Leave blank if unknown."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle verdier er per 100 g. La stå blankt hvis ukjent."
+          }
+        }
+      }
+    },
+    "food.custom.field.name" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Navn"
+          }
+        }
+      }
+    },
+    "food.custom.field.brand" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brand"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Merke"
+          }
+        }
+      }
+    },
+    "food.custom.field.barcode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Barcode"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strekkode"
+          }
+        }
+      }
+    },
+    "food.custom.ocr.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Values pre-filled from the label scan. Please verify before saving."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verdiene er forhåndsutfylt fra etikettskanningen. Vennligst kontroller før lagring."
+          }
+        }
+      }
+    },
+    "food.custom.add_button_accessibility" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add my food"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til mitt produkt"
+          }
+        }
+      }
+    },
+    "food.label.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scan Nutrition Label"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skann næringsinnholdsetikett"
+          }
+        }
+      }
+    },
+    "food.label.idle.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photograph the Nutrition Label"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fotografer næringsinnholdsetiketten"
+          }
+        }
+      }
+    },
+    "food.label.idle.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take a clear photo of the nutrition facts panel on the back of the package. Hold the camera steady and make sure the text is in focus."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta et tydelig bilde av næringsinnholdstabellen på baksiden av pakken. Hold kameraet stødig og sørg for at teksten er i fokus."
+          }
+        }
+      }
+    },
+    "food.label.barcode.hint %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Barcode %@ was not found in any database. Scan the label to add it to your personal catalogue."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strekkode %@ ble ikke funnet i noen database. Skann etiketten for å legge den til i ditt personlige katalog."
+          }
+        }
+      }
+    },
+    "food.label.capture.button" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take Photo"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta bilde"
+          }
+        }
+      }
+    },
+    "food.label.ocr.progress" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reading label…"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leser etikett…"
+          }
+        }
+      }
+    },
+    "food.label.parsing.progress" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Extracting nutrition facts…"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Henter næringsinnhold…"
+          }
+        }
+      }
+    },
+    "food.label.error.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could Not Read Label"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunne ikke lese etiketten"
+          }
+        }
+      }
+    },
+    "food.label.error.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The nutrition label could not be read. Please try again with a clearer photo."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Næringsinnholdsetiketten kunne ikke leses. Prøv igjen med et tydeligere bilde."
+          }
+        }
+      }
+    },
+    "food.label.error.no_text" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No text was found in the photo. Make sure the nutrition label is clearly visible."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen tekst ble funnet i bildet. Sørg for at næringsinnholdsetiketten er tydelig synlig."
+          }
+        }
+      }
+    },
     "food.search.empty.message" : {
       "comment" : "A message displayed when the food search returns no results.",
       "extractionState" : "manual",
@@ -4891,6 +5248,10 @@
     },
     "This will permanently remove the %@ panel and all its results. This cannot be undone." : {
       "comment" : "A confirmation dialog message that appears when the user attempts to delete a specific blood test panel. The argument is the date and time of the panel.",
+      "isCommentAutoGenerated" : true
+    },
+    "Top (%lld×)" : {
+      "comment" : "A button that selects the most-tested markers.",
       "isCommentAutoGenerated" : true
     },
     "Trend" : {

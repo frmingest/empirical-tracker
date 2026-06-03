@@ -17,13 +17,14 @@ from typing import Protocol, TypedDict
 
 # ── Source codes ────────────────────────────────────────────────────────────────
 # Short, stable identifiers persisted on entries and surfaced as a UI badge.
-SOURCE_OFF = "off"  # Open Food Facts — branded / barcode
-SOURCE_MVT = "mvt"  # Matvaretabellen — Norwegian whole foods
-SOURCE_USDA = "usda"  # USDA FoodData Central — American whole foods
+SOURCE_OFF = "off"      # Open Food Facts — branded / barcode
+SOURCE_MVT = "mvt"      # Matvaretabellen — Norwegian whole foods
+SOURCE_USDA = "usda"    # USDA FoodData Central — American whole foods
+SOURCE_CUSTOM = "custom"  # User-contributed catalogue (custom_foods table)
 
-# Real database sources, in the order the "all" search and UI prefer them
-# (whole-food sources first, branded last — they're the staple for these diets).
-SOURCES = (SOURCE_MVT, SOURCE_USDA, SOURCE_OFF)
+# Real database sources, in the order the "all" search and UI prefer them.
+# Custom comes first so a user's own data always wins over external sources.
+SOURCES = (SOURCE_CUSTOM, SOURCE_MVT, SOURCE_USDA, SOURCE_OFF)
 VALID_SOURCES = frozenset(SOURCES)
 
 
