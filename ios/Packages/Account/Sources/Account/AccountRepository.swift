@@ -36,20 +36,25 @@ public final class AccountRepository {
         try await client.requestEmpty(.put("/settings", body: updated))
     }
 
-    // MARK: - GDPR export (Sprint 11)
+    // MARK: - GDPR export (GDPR Art. 20 — data portability)
 
-    /// Returns raw JSON/CSV data for the user to save via share sheet.
+    /// Downloads all of the user's data for them to save via the share sheet.
+    /// `GET /account/export?format=json|csv`. JSON returns a single document;
+    /// CSV returns a zip archive with one CSV per table plus `export_meta.json`.
     public func exportData(format: ExportFormat) async throws -> Data {
-        // Sprint 11: GET /account/export?format=json|csv
-        throw APIError.serverError(statusCode: 501, message: "GDPR export available in Sprint 11")
+        try await client.requestData(
+            .get("/account/export", query: [URLQueryItem(name: "format", value: format.rawValue)])
+        )
     }
 
-    // MARK: - Account deletion (Sprint 11)
+    // MARK: - Account deletion (GDPR Art. 17 — right to erasure)
 
+    /// Permanently erases the user's data and account. `DELETE /account`.
+    /// The caller must pass the literal string `"DELETE"`; any other value is a no-op,
+    /// guarding against an accidental call that isn't gated by the type-to-confirm UI.
     public func deleteAccount(confirmation: String) async throws {
         guard confirmation == "DELETE" else { return }
-        // Sprint 11: DELETE /account
-        throw APIError.serverError(statusCode: 501, message: "Account deletion available in Sprint 11")
+        try await client.requestEmpty(.delete("/account"))
     }
 
     public enum ExportFormat: String, Sendable { case json, csv }
