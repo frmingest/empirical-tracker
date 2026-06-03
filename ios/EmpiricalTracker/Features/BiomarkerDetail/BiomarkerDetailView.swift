@@ -112,9 +112,18 @@ struct BiomarkerDetailView: View {
                     )
                     .frame(height: 200)
                 } else {
-                    BiomarkerTrendChart(marker: marker, dietEvents: overlappingEvents)
-                        .frame(height: 260)
+                    BiomarkerTrendChart(
+                        marker: marker,
+                        dietEvents: overlappingEvents,
+                        isInteractive: true
+                    )
+                    .frame(height: 260)
                     legend
+                    if marker.series.count > 1 {
+                        Label("Tap a point to see its exact value and date.", systemImage: "hand.tap")
+                            .font(.labelMedium)
+                            .foregroundStyle(Color.textMuted)
+                    }
                 }
             }
         }
