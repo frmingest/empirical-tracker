@@ -468,7 +468,7 @@ The app understands the standard Norwegian blood panel Excel format:
 | 3 ✅ | Correlation overlay — draw a diet annotation on top of a biomarker chart |
 | 4 ✅ | Food diary — log what you eat each day, with Open Food Facts search |
 | 5 ✅ | Meal plans and calendar — plan the week ahead, log planned meals to the diary |
-| 6 | GDPR data export + account deletion ✅ and security headers ✅; doctor sharing (PDF report) — follow-up |
+| 6 | GDPR data export + account deletion ✅ and security headers ✅; doctor sharing (iOS PDF report) ✅ |
 | 7 ✅ | Reference range vs. clinical target + within-range trend signals |
 | 8 ◐ | **Panel expansion — high-yield markers, derived ratios, confounder tooltips** (high-yield markers, refeeding electrolytes, triglycerides target, confounder notes ✅; further Medium markers + derived ratios — follow-up) |
 | 9 ◐ | **Food diary depth — sodium & saturated fat ✅, kJ→kcal fallback ✅; better food source + daily targets — follow-up** |
@@ -488,17 +488,20 @@ priority for each item are captured in **Clinical-feedback roadmap (Sprints 7–
 The data-rights half of Sprint 6 has shipped: **GDPR data export, account deletion, and security
 headers** (ADR-013). Two items remain before Sprint 6 is closed:
 
-- **Doctor sharing — PDF / printable report** (the headline Sprint 6 item, still open). Rather than
-  granting a doctor live access (which would need multi-tenant read RLS and a doctor login), the
-  user exports a **formatted, printable report** to hand or email to their clinician. Scope:
-  - A read-only report covering the biomarker panel — latest value, reference range, in/out-of-range
-    state, and the trend per marker — plus any active diet-event annotations for context.
-  - Generated server-side as a new `GET /account/report` endpoint (or printed from a dedicated
-    `/account/report` print-CSS page), reusing the existing per-user data access.
-  - Must carry the same intellectual-honesty caveats as the rest of the app: "decision-support, not
-    medical advice," and no implied causation from the diet-event overlay.
-  - Decision to record in its own ADR: server-rendered PDF (new dependency, e.g. a PDF lib) vs. a
-    browser print-CSS page (no dependency). Lean toward print-CSS first to avoid a new dependency.
+- **Doctor sharing — PDF / printable report** ✅ (shipped on iOS). The user exports a **formatted,
+  printable PDF report** from the dashboard's share button and sends it to a clinician (Mail, AirDrop,
+  Files via the system share sheet) — no doctor login or multi-tenant RLS required. Implementation:
+  - The report is **selectable**: pick whole categories (lipids, CBC, …) and/or individual markers,
+    and choose **latest values**, **trend graphs**, or **both**.
+  - Latest-value tables show value, reference range, in/out-of-range status, and the test date per
+    marker; the graph pages reuse the in-app `BiomarkerTrendChart` (reference band, clinical target).
+  - Rendered **client-side** as a multi-page, vector A4 PDF via SwiftUI `ImageRenderer` → `CGContext`
+    (no new dependency — chosen over a server endpoint to keep it offline and reuse the chart code).
+    Lives in `ios/EmpiricalTracker/Features/ReportShare/`.
+  - Carries the same intellectual-honesty caveats: a cover disclaimer and a "decision-support, not
+    medical advice" footer on every page; no implied causation.
+  - Follow-up: overlaying active diet-event annotations on the report charts (kept off for a clean
+    clinical document for now), and an optional server-rendered `GET /account/report` for the web app.
 
 - **Export/erasure coverage is a maintenance contract** (carried from ADR-013). `USER_TABLES` and
   `DELETE_ORDER` in `api/app/account/repository.py` must be extended whenever a new user-owned

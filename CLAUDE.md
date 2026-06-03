@@ -21,8 +21,10 @@ This applies to all changes — code, docs, migrations, single-file edits.
 
 0 ✅ → 1 ✅ → 2 ✅ → 3 ✅ → 4 ✅ → 5 ✅ → 6 ◐ → 7 ✅ → 8 ◐ → 9 ◐ → 10 ✅
 
-(◐ = partially shipped: Sprint 6 doctor-PDF report, Sprint 8 Medium markers /
-derived ratios, and Sprint 9 daily targets remain — see `docs/SOLUTION.md`. The
+(◐ = partially shipped: the Sprint 6 doctor-PDF report shipped on iOS (selectable
+categories/markers, latest values and/or trend graphs, shared via the system sheet);
+Sprint 8 Medium markers / derived ratios, and Sprint 9 daily targets remain — see
+`docs/SOLUTION.md`. The
 Sprint 9 whole-foods source shipped (Matvaretabellen + USDA, macros — ADR-018);
 its micronutrient phase is deferred to a future ADR. Sprint 10 shipped
 weight/waist/BP tracking; the *optional* body-metric-on-biomarker-timeline
