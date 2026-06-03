@@ -2,7 +2,8 @@
 
 > The iOS app is a **pure client** of the existing FastAPI + Supabase backend.
 > Nothing works end-to-end until these coordinates are set. This doc is the
-> checklist to verify the app is wired to the right backend after the web→iOS port.
+> checklist to verify the app is wired to the right backend. (The original
+> Next.js web client has been retired — iOS is now the only client of this backend.)
 
 ## Why this matters (two symptoms it explains)
 
@@ -92,10 +93,11 @@ To re-verify after any config change: `grep -n SupabaseURL EmpiricalTracker/Info
    exactly match `SupabaseURL` in `EmpiricalTracker/Info.plist` (including `https://`
    and `.supabase.co`)?
 2. Is the key in `SUPABASE_ANON_KEY` the **anon/public** key — not the service-role key?
-3. Is this the **same** Supabase project the web app uses? (After a port, people
-   sometimes spin up a new project and the data lives in the old one.)
-4. Does your user account actually exist in **this** project's `auth.users`? Try
-   signing in on the web app pointed at the same project to confirm.
+3. Is this the **same** Supabase project the backend points at? (During a port or
+   environment split, people sometimes spin up a new project and the data lives in
+   the old one.)
+4. Does your user account actually exist in **this** project's `auth.users`? Check
+   in the Supabase dashboard (Authentication ▸ Users) to confirm.
 5. After building with keys set, does the **Settings tab still show the orange
    "Demo mode — backend not configured" banner**? If yes, the keys aren't resolving
    (check that `SupabaseURL` / `SupabaseAnonKey` in `Info.plist` are real values and

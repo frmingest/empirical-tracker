@@ -14,7 +14,7 @@ reusable plans plus a `planned_meals` calendar, all RLS self-scoped, with a
 "log to diary" promotion that reuses `POST /food-diary`. Until this sprint the
 iOS app had a **placeholder Plan tab** and no client for any of it.
 
-iOS Sprint 7 (`EmpiricalTracker/IOS_MIGRATION_PLAN.md` §3) brings the Plan tab to
+iOS Sprint 7 (see [`../IOS_MIGRATION_PLAN.md`](../IOS_MIGRATION_PLAN.md)) brings the Plan tab to
 feature parity with the web client: a week-at-a-glance calendar, multi-week
 navigation, per-day energy totals, named-plan CRUD + filtering, done toggles, and
 the planned-meal → diary promotion. As with the food diary (ADR-019) this is a

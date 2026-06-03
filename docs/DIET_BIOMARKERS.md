@@ -11,7 +11,9 @@
 > not tell anyone what their results mean. Always read it alongside a clinician.
 
 The canonical machine-readable version lives in
-`web/src/lib/dietProfiles.ts` (`DIET_MARKERS`). Keep the two in sync.
+`Packages/Biomarkers/Sources/Biomarkers/DietProfiles.swift` (`markerRules` /
+`dietKeyMap`, consumed by `DashboardViewModel` via `filterByDiet`). Keep the two
+in sync.
 
 ---
 
@@ -44,7 +46,8 @@ anything or claim your diet caused the change.
 A few markers are routinely *misread* on these diets because the diet itself
 moves the number for a reason unrelated to what the marker usually means. Since
 Sprint 8, those markers carry a per-marker **interpretation note** on their
-detail page (see `web/src/lib/markerNotes.ts`):
+detail page (see `confounderText` in
+`EmpiricalTracker/Features/BiomarkerDetail/BiomarkerDetailView.swift`):
 
 - **eGFR** — creatinine-based eGFR is depressed by a high meat intake and more
   muscle mass, so it can look low without any real loss of kidney function;

@@ -27,7 +27,7 @@ The clinical rationale for each diet's marker list is documented separately in
 
 - **Diet presets** (`all`, `carnivore`, `low_carb`, `fasting`, `custom`): A segmented
   `DietFilter` control on the dashboard. Each preset maps to a fixed set of biomarkers
-  (`DIET_MARKERS` in `web/src/lib/dietProfiles.ts`).
+  (`DIET_MARKERS` in `Packages/Biomarkers/Sources/Biomarkers/DietProfiles.swift`).
 
 - **Client-side filtering**: Marker classification happens in the browser. A `markerKey()`
   function resolves messy lab names to a stable canonical key using ordered keyword rules
@@ -39,7 +39,7 @@ The clinical rationale for each diet's marker list is documented separately in
 
 - **Persistence**: A new `user_settings` table (migration `003_user_settings.sql`), one row
   per user, RLS self-scoped like the rest of the schema. New `GET/PUT /settings` endpoints.
-  Signed-out demo view persists to `localStorage`.
+  Signed-out demo view persists to `UserDefaults`.
 
 - **Shared auth dependency**: Token-to-user-id resolution was extracted from the biomarkers
   router into `app/auth.py` (`current_user_id`) so the new settings router reuses it.
@@ -73,7 +73,7 @@ router made duplicated token handling a liability — one shared dependency keep
 - **Good:** Switching diets is instant — no network call, no re-fetch
 - **Good:** Custom selections are durable across re-imports because they key on name
 - **Good:** Settings persistence reuses the existing RLS isolation boundary; no new auth surface
-- **Good:** The demo (signed-out) view is fully functional via `localStorage`
+- **Good:** The demo (signed-out) view is fully functional via `UserDefaults`
 - **Trade-off:** Marker classification is keyword-based and must stay in sync with the panel's
   naming. New/renamed markers need a rule added in `dietProfiles.ts`
 - **Trade-off:** The clinical lists in `docs/DIET_BIOMARKERS.md` and the `DIET_MARKERS` sets in

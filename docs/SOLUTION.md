@@ -1,168 +1,161 @@
 # Empirical Tracker — Solution Documentation
 
-> Plain-language explanation of what this app is, how it works, and why it's built the way it is.
+> Plain-language explanation of what this app is, how it works, and why it's built
+> the way it is. For the engineering execution history see
+> [`IOS_MIGRATION_PLAN.md`](IOS_MIGRATION_PLAN.md); for individual decisions see
+> [`adr/`](adr/) (the canonical Architectural Decision Records).
 
 ---
 
-## What is this app?
+## What the app is
 
-Empirical Tracker is your personal health dashboard. You upload your blood test results from the
-lab, and the app shows you how your biomarkers have changed over time — with reference range
-highlighting so you can see at a glance what's in range and what isn't.
+Empirical Tracker is a **decision-support** tool for people running deliberate
+dietary regimens — carnivore, low-carb, fasting — who want to see how those
+regimens move their **blood biomarkers** and their **body's headline signals**
+over time. It is explicitly **not** medical advice: every marker, correlation,
+and diet note carries a clinician-review disclaimer, and the app never interprets
+a value or sets a clinical recommendation on the user's behalf.
 
-The long-term goal is to correlate your blood test results with your diet (specifically a
-carnivore/low-carb elimination diet), so you can see whether what you eat is actually moving
-your numbers in the right direction.
+When you get a blood panel back from the lab you get a PDF or Excel file with a
+column of numbers; to understand trends you have to manually compare this month's
+file to last year's. Empirical Tracker imports those files and builds the
+"here is your LDL over the last three years" view automatically — then correlates
+it with what you eat and how your body responds.
 
----
+The product has three data surfaces, all correlated on a shared timeline:
 
-## The problem it solves
+1. **Biomarkers** — imported from lab `.xlsx` files, categorized, and charted with
+   reference bands, clinical-target lines, and within-range trend signals.
+2. **Food diary** — daily logging from three nutrition databases, with macros,
+   sodium, and saturated fat; barcode scanning on device.
+3. **Body metrics** — weight, waist, and blood pressure, plus Withings data via
+   Apple HealthKit and (in progress) the Withings Cloud API.
 
-When you get a blood panel back from the lab, you get a PDF or Excel file with a column of
-numbers. To understand trends, you have to manually compare last month's file to last year's.
-There's no single view that shows "here is your LDL over the last 3 years."
-
-Empirical Tracker imports those files and builds that view automatically.
+**Diet events** annotate every chart so the user can see *visual correlation*
+(never claimed causation) between a regimen change and a marker's movement.
 
 ---
 
 ## What the system is made of
 
-The app has two main parts:
+### The backend (the "API")
 
-### The API (the "backend")
-This is a Python program that lives on a server. It:
-- Receives your blood test Excel files
-- Parses them (handling Norwegian number formats, reference ranges, etc.)
-- Saves the results to a database
-- Answers questions from the frontend (like "give me all my HDL readings")
+A platform-agnostic **Python + FastAPI** service that owns all the hard, clinical,
+well-tested work: Excel parsing (Norwegian number formats, reference ranges),
+biomarker categorization, the multi-source food-search proxy, clinical-target and
+trend logic, and GDPR export/erasure. It receives blood-test files, saves results,
+and answers questions from the client (like "give me all my HDL readings").
 
-**Technology:** Python + FastAPI. FastAPI is a modern, fast web framework — it handles HTTP
-requests and automatically validates data types.
+### The iOS app (the "client")
 
-### The Web App (the "frontend")
-This is the website you see in your browser. It:
-- Shows a dashboard of all your biomarkers grouped by category (Lipids, Thyroid, CBC, etc.)
-- Draws sparkline trend charts on each biomarker card
-- Shows a full chart when you click on a biomarker, with optional diet-event
-  annotations overlaid for visual correlation
-- Lets you keep a food diary, searching the Open Food Facts database to add items
-- Has an upload screen for importing new Excel files
-- Lets you focus the view on the biomarkers relevant to your diet (carnivore, low-carb,
-  fasting, or a custom hand-picked set)
-- Can switch between English and Norwegian, and shows plain-language tooltips explaining
-  each biomarker group
+A native **Swift / SwiftUI** app (Xcode 15+) that is the **only** client of the
+backend. It re-implements the presentation layer, navigation, and charts, and adds
+native-device features the backend can't provide: barcode scanning, on-device
+`.xlsx` import, and Apple HealthKit / Withings capture.
 
-**Technology:** Next.js (React). React is the most popular way to build interactive websites.
-Next.js adds server-side rendering on top of React, which makes pages load faster.
+- **Architecture:** MVVM with one **Swift Package per domain** behind a thin app
+  target — `Core` (networking, design system, models), `Auth`, `Biomarkers`,
+  `DietEvents`, `FoodDiary`, `MealPlans`, `BodyMetrics`, `HealthSync`, `Account`.
+- **Networking:** a typed actor-based `APIClient` (`async/await` `URLSession`) with
+  retry/backoff, `Codable` DTOs, and `Authorization: Bearer` injection on every call.
+- **Auth/session:** `supabase-swift` → the same Supabase JWT, stored in the
+  **Keychain**, with silent refresh.
+- **Charts:** **Swift Charts** throughout (sparklines, trend lines, reference bands,
+  target lines, diet-event overlays).
+- **Shared clinical logic** is **ported to Swift** (`MarkerSignals`, `DietProfiles`,
+  `BiomarkerCategories`) so the app renders identical Watch / in-range / out-of-range
+  assessments without a network round-trip.
 
-### The Database
-All your data is stored in a Postgres database (a standard relational database).
+> **Retired:** the original client was a **Next.js / React web app**. It has been
+> removed from the repository (`chore: retire Next.js web app — iOS + Railway/
+> Supabase only`). Decision records authored against it (ADR-008 through ADR-018)
+> remain as historical records and carry "iOS note" banners where the native client
+> re-sequences or re-implements that surface; ADR-019 onward are iOS-native.
 
-**Technology:** Supabase. Supabase is a managed service that hosts the database, handles
-user login, and enforces that you can only see your own data.
+### The database
+
+All data is stored in a **Supabase** (managed Postgres) database with row-level
+security, hosted in the **EU (Frankfurt)** region.
 
 ### Where it runs
-Both the API and the web app are deployed to Railway, a hosting platform. Railway watches
-the GitHub repository — when you push new code, it automatically redeploys.
+
+The API deploys to **Railway**, which watches the GitHub repository and
+auto-redeploys on push to `main`. The iOS app ships through **Xcode → TestFlight →
+App Store**. See [`SETUP.md`](SETUP.md) for one-time backend account setup and
+[`CONFIGURATION.md`](CONFIGURATION.md) for verifying the app is wired to the right
+backend.
 
 ---
 
-## How your blood test data flows through the system
+## How your blood-test data flows through the system
 
-1. **You get a blood panel** from the lab as an Excel file (`.xlsx`)
-2. **You upload it** via the import screen in the web app
-3. **The API receives it**, reads each row with Python's openpyxl library, and:
-   - Parses Norwegian decimal commas (`4,3` → `4.3`)
-   - Parses the reference range (`4,5 - 5,8` → low: 4.5, high: 5.8, type: bounded)
-   - Computes whether each value is in range or out of range
-4. **The data is saved** to three database tables:
-   - `biomarkers` — the catalog of what each test measures (name, reference range)
-   - `panels` — one row per test date (a "panel" = one blood draw session)
-   - `results` — one row per (biomarker × panel), with the measured value and in-range flag
-5. **When you view the dashboard**, the web app fetches your results from the API and draws the charts
+1. **You get a blood panel** from the lab as an Excel file (`.xlsx`).
+2. **You import it** in the app via a `UIDocumentPicker` (or the Files / share
+   sheet), which uploads the file to `POST /biomarkers/import` — there is **no
+   client-side parser**; the proven server parser does the work.
+3. **The API parses each row**, handling Norwegian decimal commas (`4,3` → `4.3`),
+   reference ranges (`4,5 - 5,8` → low 4.5, high 5.8, bounded; `<42` → less-than),
+   and computes whether each value is in range.
+4. **The data is saved** to the biomarker tables (below).
+5. **The dashboard refreshes**, fetching results from the API and drawing the
+   categorized grid and charts with Swift Charts.
 
 ---
 
 ## The database structure
 
-Four tables work together:
+The blood-test core is three tables, with user preferences and the later feature
+surfaces added alongside. **Every row in every table has a `user_id` column**, and
+row-level security enforces isolation in Postgres itself.
 
 ```
-biomarkers:    What is being measured
-               "P-HDL-kolesterol | ref: 0.9 - 2.0 | type: bounded"
-
-panels:        When a blood draw happened
-               "tested_at: 2026-05-22 | source: xlsx_import"
-
-results:       The actual measurement
-               "biomarker: HDL | panel: May 2026 | value: 1.3 | in_range: true"
-
-user_settings: Your dashboard preferences
-               "diet: carnivore | custom_markers: [...]"
+biomarkers     What is being measured       "P-HDL-kolesterol | ref 0.9–2.0 | bounded"
+panels         When a blood draw happened    "tested_at 2026-05-22 | source xlsx_import"
+results        The actual measurement        "HDL | May 2026 | 1.3 | in_range true"
+user_settings  Dashboard preferences         "diet carnivore | custom_markers [...]"
 ```
 
-The first three tables hold your blood-test data. `user_settings` holds one row per user with
-your dashboard preferences (which diet focus is active, and any custom marker selection).
-
-Two more tables were added in Sprints 3 and 4:
+Added by later sprints / ADRs:
 
 ```
-diet_events:   When you changed your regimen (correlation overlay annotations)
-               "label: Started carnivore | kind: diet | started_on: 2024-05-31"
-
-food_entries:  What you ate each day (food diary, sourced from Open Food Facts)
-               "logged_on: 2026-05-31 | meal: dinner | food: Ribeye | 728 kcal"
+diet_events    Regimen-change annotations    "Started carnivore | kind diet | 2024-05-31"   (ADR-010)
+food_entries   What you ate each day         "2026-05-31 | dinner | Ribeye | 728 kcal"       (ADR-011)
+meal_plans     A named, reusable plan        "Carnivore week | High-protein, zero-carb"      (ADR-012)
+planned_meals  A meal scheduled on a day      "2026-06-02 | dinner | Ribeye | done false"    (ADR-012)
+body_metrics   A body measurement on a day    "2026-05-22 | 83.1 kg | 90 cm | BP 122/79"     (ADR-017)
 ```
 
-Sprint 5 added two more tables for forward planning:
+Schema evolutions worth knowing (all in `api/supabase/migrations/`):
 
-```
-meal_plans:    A named, reusable plan (a label/grouping for planned meals)
-               "name: Carnivore week | description: High-protein, zero-carb"
-
-planned_meals: A meal scheduled on the calendar (optionally filed under a plan)
-               "scheduled_on: 2026-06-02 | meal: dinner | Ribeye | done: false"
-```
-
-Sprint 10 added one more table for body metrics:
-
-```
-body_metrics:  A body measurement on a given day (weight, waist, blood pressure)
-               "measured_on: 2026-05-22 | weight: 83.1 kg | waist: 90 cm | BP 122/79"
-```
-
-Every row in every table has a `user_id` column. This means your data and someone else's data
-are completely separate — the database itself enforces this (not just the application code).
+- **`007_sodium_saturated_fat.sql`** — sodium + saturated-fat columns on
+  `food_entries` *and* `planned_meals` (ADR-016).
+- **`009_food_source.sql`** — a `source` provenance column on food rows (ADR-018).
+- **`010_body_metrics_source.sql`** — a `source` provenance column on `body_metrics`
+  (`manual | healthkit | withings`) plus an external-id dedupe key, so HealthKit/
+  Withings syncs never double-insert (ADR-022).
 
 ---
 
 ## Security and privacy
 
-Your blood test data is health data under GDPR (EU privacy law). The app is designed with this
-in mind:
+Blood-test data is GDPR special-category health data; the app is designed around it:
 
-**Row-Level Security (RLS):** A database-level rule that says "a user can only read and write
-rows where `user_id` matches their own ID." Even if there were a bug in the application code,
-the database would refuse to show you another person's data.
-
-**EU data storage:** The Supabase database runs in Frankfurt, Germany. Your health data never
-leaves the EU.
-
-**Server-side API key:** The database has a powerful "service role" key that can bypass RLS.
-This key only exists on the server (as an environment variable on Railway). Your browser
-never sees it — your browser only gets a limited "anon key" that respects RLS.
-
-**JWT authentication:** Every request to the API includes a short-lived token (JWT) that proves
-who you are. The API verifies this token with Supabase before touching any data.
+- **Row-Level Security (RLS):** a database rule that a user can only read/write rows
+  where `user_id` matches their own ID — enforced even if the application code had a bug.
+- **EU data storage:** the Supabase database runs in Frankfurt; health data never
+  leaves the EU. HealthKit data stays **on device** unless the user explicitly enables
+  sync to the backend.
+- **Server-side service key:** the RLS-bypassing service-role key exists only on the
+  server (a Railway env var). The app only ever holds the limited, public **anon key**.
+- **Keychain + JWT:** the iOS app stores its short-lived Supabase JWT in the Keychain;
+  every API request carries it and the API verifies it before touching any data.
 
 ---
 
 ## The biomarker categories
 
-The biomarkers from your blood panel are grouped into 8 categories. A marker
-appears whenever your import (or the demo data) contains it; the lists below show
-what each category tracks, including the markers Sprint 8 added:
+Imported markers are grouped into eight categories (a marker appears whenever your
+import — or the demo data — contains it):
 
 | Category | What it tracks |
 |----------|---------------|
@@ -175,548 +168,222 @@ what each category tracks, including the markers Sprint 8 added:
 | **Nutrients** | Vitamins and minerals (Ferritin, B12, Active B12, Vitamin D, Folate, Iron, Transferrin, Homocysteine, MMA) |
 | **Electrolytes** | Sodium, Potassium, Magnesium, Phosphate |
 
+The categorization rules live in `ios/Packages/Biomarkers/Sources/Biomarkers/BiomarkerCategories.swift`.
+
 ---
 
 ## Diet focus
 
-The dashboard has a **Diet focus** control that hides biomarkers which aren't clinically
-informative for your chosen eating pattern, so you see a focused view instead of every marker
-at once:
+The dashboard's **Diet focus** control hides biomarkers that aren't clinically
+informative for the chosen eating pattern, so the user sees a focused view:
 
 | Focus | Shows |
 |-------|-------|
 | **All** | Every biomarker |
 | **Carnivore** | Lipids, iron studies, renal/liver load, electrolytes, B-vitamin/folate status, HbA1c, Hgb/Hct |
 | **Low carb** | HbA1c, full lipid panel, liver enzymes, electrolytes, ferritin |
-| **Fasting** | Electrolytes, glucose, kidney/liver, hydration-sensitive blood counts, lipids |
-| **Custom** | Any markers you hand-pick |
+| **Fasting** | Electrolytes (incl. refeeding Mg/phosphate), glucose, kidney/liver, hydration-sensitive blood counts, lipids |
+| **Custom** | Any markers hand-picked |
 
-The clinical reasoning behind each list is documented in `docs/DIET_BIOMARKERS.md`. Your choice
-is saved per user (in the `user_settings` table when signed in, or `localStorage` for the demo
-view). Custom selections are stored by biomarker name, so they survive re-imports and new panels.
-
----
-
-## Correlation overlay (Sprint 3)
-
-You can mark **diet events** — the day you started carnivore, a supplement, a
-medication, or a multi-day fast — and they are drawn on top of every biomarker
-trend chart. A single date shows as a dashed marker line; an event with an end
-date shows as a shaded period. This lets you see at a glance whether a regimen
-change lines up with a shift in your numbers.
-
-You manage these annotations from any biomarker's detail page ("Diet
-annotations"). They are account-wide: one set of events annotates all your
-charts, because a diet change affects the whole panel, not one marker.
-
-**Important honesty caveat:** annotations are *snapped to the nearest blood
-draw* (the chart has one slot per draw), so their position is approximate, and a
-marker moving near an annotation **does not prove cause and effect**. The UI says
-so. The full reasoning is in `docs/adr/010-correlation-overlay.md`.
-
-Diet events live in a new `diet_events` table (RLS self-scoped) and are served by
-`GET/POST/DELETE /diet-events`.
+The clinical reasoning is in [`DIET_BIOMARKERS.md`](DIET_BIOMARKERS.md); the rules
+live in `ios/Packages/Biomarkers/Sources/Biomarkers/DietProfiles.swift`. The choice
+is saved per user (in `user_settings` when signed in, or `UserDefaults` in the demo
+view). Custom selections are stored by biomarker **name**, so they survive re-imports.
 
 ---
 
-## Food diary (Sprint 4)
+## Feature surfaces
 
-The food diary lets you log what you eat each day. Instead of typing nutrition
-facts by hand, you search the **Open Food Facts** branded & barcode database (a
-free, open food database under the ODbL licence — no API key needed) or enter a
-barcode directly, then pick a quantity and meal.
+### Biomarker detail, clinical targets & trend signals (ADR-014)
 
-- The app stores the **amounts you actually consumed** (energy, carbs, protein,
-  fat, plus saturated fat and sodium since Sprint 9), computed as
-  `per-100g × grams / 100`, so your diary stays correct even if the upstream
-  product data later changes.
-- Nutrition is taken **as published by Open Food Facts** — never invented or
-  estimated. Missing values show as "—".
-- The `/food-diary` page has a date navigator, daily macro totals, and entries
-  grouped by meal.
+Each marker's detail page draws a full Swift Charts trend with the **reference-range
+band**, a distinct amber **clinical-target line** (for LDL, non-HDL, total cholesterol,
+triglycerides, HbA1c), and point markers. The lab reference range is a *population
+interval, not a verdict of "healthy"* — so a value can sit inside the lab range yet at
+or above its clinical target, in which case the marker reads **"Watch"** (amber) rather
+than green. The app also surfaces **within-range trend signals**: a large step between
+draws (≥ 50%, so any doubling trips it), a notable step (≥ 25%), and values near a
+reference bound. A single `assessMarker()` combines the range flag, target check, and
+trend signals into one status; the green flag never overrides a flagged trend.
 
-How it's sourced and the accuracy limits are documented in
-`docs/NUTRITION_DATA.md`; the design rationale is in
-`docs/adr/011-food-diary-openfoodfacts.md`.
+### Confounder notes (ADR-015)
 
-Food data lives in a new `food_entries` table (RLS self-scoped). Open Food Facts
-is reached through a small authenticated **backend proxy** (`GET
-/food-diary/search`, `GET /food-diary/barcode/{code}`) that attaches the required
-`User-Agent` and normalises OFF's nutriment fields. Diary CRUD is `GET/POST/DELETE
-/food-diary`.
+eGFR, HbA1c, and ferritin each carry a plain-language detail-page note explaining why
+the diet itself can move the number (creatinine-based eGFR depressed by meat/muscle;
+HbA1c read high from longer red-cell lifespan on keto; ferritin an acute-phase reactant).
 
----
+### Correlation overlay — diet events (ADR-010)
 
-## Meal plans and calendar (Sprint 5)
+Account-wide **diet events** (the day you started carnivore, a supplement, a
+medication, a multi-day fast) are drawn on top of every biomarker **and** body-metric
+chart — a dashed marker line for a single date, a shaded period for a range. The
+honesty caveat is built in: annotations are *snapped to the nearest blood draw*, so
+their position is approximate, and a marker moving near an annotation **does not prove
+cause and effect**. Served by `GET/POST/DELETE /diet-events`.
 
-Where the food diary records what you *did* eat, **meal plans** are the
-forward-looking half: planning what you *intend* to eat, laid out on a weekly
-calendar so you can prep a carnivore/low-carb week ahead of time.
+### Food diary + multi-source search + barcode scanning (ADR-011, 016, 018, 019)
 
-- The `/meal-plans` page shows a **week-at-a-glance calendar** (Monday→Sunday),
-  navigable across weeks, with per-day energy totals.
-- You schedule a meal into any day either by **searching Open Food Facts** for
-  real macros (reusing the same search as the food diary) or with a quick
-  **free-text** note for things that aren't barcoded products.
-- **Named plans** ("Carnivore week", "Low-carb reset") group scheduled meals and
-  let you filter the calendar. Deleting a plan keeps its meals on the calendar —
-  it only removes the label.
-- Each planned meal has a **"Log to diary"** action that copies it into the
-  Sprint 4 food diary for its scheduled date and marks it done — so the plan and
-  the actual record stay one click apart, with no re-entry.
+Daily food logging from **three** nutrition databases — **Matvaretabellen** (Norwegian
+whole foods), **USDA FoodData Central** (US whole + branded), and **Open Food Facts**
+(branded/barcode) — chosen via a source selector, each entry carrying a provenance
+badge. The diary stores the **amounts actually consumed** (`per-100 g × grams / 100`)
+for energy, carbs, protein, fat, **saturated fat (g)**, and **sodium (mg)**, so it stays
+correct even if upstream data later changes. Nutrition is taken **as published** — never
+invented; missing values show "—". Native **barcode scanning** (`VisionKit`) replaces the
+web's manual barcode field. Sourcing and accuracy limits: [`NUTRITION_DATA.md`](NUTRITION_DATA.md).
+All third-party data is reached through the authenticated **backend proxy** — never
+called directly from the device.
 
-Meal plans live in two new tables — `meal_plans` and `planned_meals` (both RLS
-self-scoped) — served by `GET/POST/DELETE /meal-plans` and
-`GET/POST/PATCH/DELETE /meal-plans/calendar`. The design rationale and scope cuts
-are in `docs/adr/012-meal-plans-calendar.md`.
+### Meal plans & calendar (ADR-012, 020)
 
----
+The forward-looking half of the diary: a Monday→Sunday **week calendar** with per-day
+energy totals, **named plans** that group scheduled meals, and a **"Log to diary"**
+action that copies a planned meal into the diary for its date. Deleting a plan keeps its
+meals; deleting a meal keeps the plan.
 
-## Data export and account deletion (Sprint 6)
+### Body metrics + Withings (ADR-017, 021, 022, 023)
 
-Your blood test data is GDPR special-category health data, so the app gives you
-the two rights that matter most over it, from a single **Account** page (linked in
-the header when you're signed in):
+A Body tab logs **weight (kg)**, **waist (cm)**, and **blood pressure (mmHg)** on any
+date (every metric optional; BP is a both-or-neither pair; a row needs at least one
+metric). Each gets a Swift Charts trend on the shared timeline, carrying the same
+diet-event overlay; the BP chart draws faint **guideline** lines at 120/80 (a neutral
+population reference, *not* a clinical-target line or personalised verdict).
 
-- **Export everything** (right to data portability) — download all your data as
-  one **JSON** file, or as a **CSV zip** with one spreadsheet per table. The export
-  covers every table you own: biomarkers, panels, results, settings, diet events,
-  food diary, and meal plans, plus a metadata header with per-table row counts.
-- **Delete your account** (right to erasure) — permanently erase all your data and
-  your login. The danger-zone action requires typing `DELETE` to confirm, then
-  signs you out. Deletion removes rows child-first (so foreign keys never block it)
-  and then removes the auth user itself.
+- **Apple HealthKit bridge (ADR-022):** with Withings Health Mate writing to Apple
+  Health, the app reads **weight and blood pressure**, tags them `source: healthkit`,
+  and dedupes by sample UUID via `HKObserverQuery` background delivery.
+- **Withings Cloud connect (ADR-023):** "Connect Withings account" opens the OAuth
+  consent page in `ASWebAuthenticationSession`. **No Withings tokens touch the device** —
+  the backend owns the token exchange and webhooks. The client **self-hides until the
+  backend exposes the `/withings/*` endpoints**, activating automatically when that work
+  deploys.
 
-Both are served by a new `GET /account/export` and `DELETE /account`. The API also
-now sends baseline **security headers** (CSP, `X-Frame-Options`, `nosniff`, HSTS,
-`Referrer-Policy`) on every response. The design and the GDPR mapping are in
-`docs/adr/013-data-export-account-deletion.md`.
+### Data export & account deletion (ADR-013)
 
-> Sprint 6 also includes **doctor sharing**, scoped as a PDF/printable report — a
-> follow-up to this slice, not yet shipped.
+The two GDPR rights that matter most over health data exist as backend endpoints:
+**export everything** (`GET /account/export`, JSON or a CSV-per-table zip) and
+**delete your account** (`DELETE /account`, child-first then auth user). The API also
+sends baseline **security headers** (CSP, `X-Frame-Options`, `nosniff`, HSTS,
+`Referrer-Policy`). Surfacing these in the iOS **Account/Settings** UI is the Sprint 11
+slice and is flagged as an App Store submission blocker in
+[`IOS_APP_STORE_READINESS.md`](IOS_APP_STORE_READINESS.md).
 
----
+### Doctor PDF report (Sprint 6 follow-up — shipped on iOS)
 
-## Reference range vs. clinical target + trend signals (Sprint 7)
-
-The lab **reference range** is a population interval, not a verdict of "healthy."
-Sprint 7 stops the app conflating the two, in two ways:
-
-- **Clinical targets** — for the markers where the gap matters first (LDL,
-  non-HDL, total cholesterol, HbA1c), the app knows a guideline *optimal* upper
-  bound that is tighter than the lab's reference. A value can sit inside the lab
-  range yet **at or above the clinical target** (e.g. LDL 4.1 with lab upper 4.7
-  but a low-risk target of 3.0). The chart draws the target as a distinct amber
-  dashed line, separate from the green reference band. These are **general
-  guideline values, not personalised** — and not per-user data, so they live as a
-  static reference map keyed off the same `markerKey()` the diet focus uses (no
-  database table).
-- **Within-range trend signals** — the app surfaces movement the green flag used
-  to hide: a large step between draws (≥ 50%, so any doubling trips it — e.g. ALT
-  25 → 55), a notable step (≥ 25%), and a value sitting near a reference bound.
-
-A single `assessMarker()` combines the in/out-of-range flag, the target check,
-and the trend signals into one status. An in-range marker with a flagged target
-or trend now reads as **"Watch"** (amber) — the green flag never overrides a
-flagged trend. The dashboard counts these "in range but worth a look" markers,
-and each marker's detail page lists the signals with their reasoning.
-
-Everything here is **decision-support, not medical advice**: targets are general
-guideline values, the trend signals are descriptive (no slopes, p-values, or
-causation on a handful of draws), and the UI says so. The design and the exact
-rules are in `docs/adr/014-clinical-targets-trend-signals.md`.
+A **selectable, printable A4 PDF report** for sharing with a clinician (Mail, AirDrop,
+Files via the system share sheet) — no doctor login or multi-tenant RLS required. The
+user picks whole categories and/or individual markers and chooses **latest values**,
+**trend graphs**, or both. Rendered **client-side** via SwiftUI `ImageRenderer` →
+`CGContext` (no new dependency, works offline, reuses the in-app chart). It carries the
+same disclaimers: a cover note and a "decision-support, not medical advice" footer on
+every page. Lives in `ios/EmpiricalTracker/Features/ReportShare/`.
 
 ---
 
-## Panel expansion + confounder notes (Sprint 8 — high-priority slice)
+## Clinical-feedback roadmap
 
-The clinical review flagged that, for these specific diets, some of the *most*
-informative markers were missing, two diet profiles promised markers they didn't
-carry, and a few markers we already track are confounded by the diet itself.
-This slice closes the **High-severity** gaps:
+A clinical review of the app (diet & nutrition lens) surfaced a cluster of findings: the
+product treated the lab **reference range** as if it meant **healthy**, omitted several
+of the *most* informative markers and nutrients for its target diets, and tracked some
+diet-confounded markers without that caveat. The findings were triaged by severity and
+addressed across a sequence of ADRs.
 
-- **New markers** the panel now recognises (they appear whenever your import or
-  the demo contains them): **triglycerides** (the signature low-carb response —
-  and it carries a clinical target of ≤ 1.7 mmol/L), **ApoB** and **Lp(a)** (the
-  gold-standard atherogenic-particle count and the genetic risk modifier),
-  **uric acid** (raised by high-purine meat intake and by fasting), and
-  **magnesium + phosphate**. The last two fix the **Fasting** profile, which
-  claimed to watch "refeeding-syndrome risk" but carried only potassium —
-  refeeding syndrome is defined by phosphate/magnesium/potassium together.
-- **Confounder notes** — eGFR, HbA1c, and ferritin each gain a plain-language note
-  on their detail page explaining *why the diet itself can move the number*:
-  creatinine-based eGFR is depressed by meat intake and muscle; HbA1c can read
-  paradoxically high from longer red-cell lifespan on keto; ferritin is an
-  acute-phase reactant, not only an iron store.
-- **Tooltip honesty pass** — group tooltips no longer promise markers the panel
-  can't show (glucose, calcium, ASAT were trimmed) and now name the markers that
-  *were* added.
+| # | Finding | Severity | Decision record | Status |
+|---|---------|----------|-----------------|--------|
+| 1 | "In range" hides "above clinical target" (e.g. LDL green at 4.1 mmol/L); "in range" also hides a sharp within-range trend (e.g. ALT 25→55 U/L). | High | [ADR-014](adr/014-clinical-targets-trend-signals.md) — clinical-target layer + trend signals | Shipped |
+| 2 | High-yield markers absent (refeeding electrolytes, ApoB, Lp(a), uric acid, triglycerides); two diet profiles list markers they don't carry; some tracked markers are diet-confounded yet shown without a caveat. | High | [ADR-015](adr/015-panel-expansion-confounder-notes.md) — panel expansion + confounder notes | Shipped (High slice); derived ratios deferred |
+| 3 | The diary omitted the two nutrients the biomarker side cares about most — **sodium** (electrolytes / blood pressure) and **saturated fat** (LDL response); energy showed "—" when only kJ was published. | High / Low | [ADR-016](adr/016-food-diary-sodium-saturated-fat.md) — sodium & saturated fat + kJ→kcal fallback | Shipped |
+| 4 | Open Food Facts is a branded/barcode database and is weakest on the **whole foods** these diets live on. | Medium | [ADR-018](adr/018-whole-foods-data-sources.md) — Matvaretabellen + USDA whole-food sources | Shipped (macros, Phases 1–2); micronutrients deferred |
+| 5 | For diet tracking, **weight, waist, and blood pressure** respond faster and often matter more than most labs, yet the app held no body metrics. | Medium | [ADR-017](adr/017-body-metrics.md) — body metrics + longitudinal context | Shipped |
 
-Everything here is **static client-side reference data** keyed off the same
-`markerKey()` the diet focus and clinical targets use — no database table and no
-migration, since these are universal marker facts, not per-user data. The full
-reasoning is in `docs/adr/015-panel-expansion-confounder-notes.md`.
+### Deferred follow-ups (tracked, not yet built)
 
-> **Deferred to the Sprint 8 follow-up:** the Medium-severity markers (fasting
-> insulin / C-peptide, fasting glucose, hs-CRP, AST/ASAT) and the **derived
-> ratios** (TG/HDL, AST:ALT), which will get a dedicated "Derived — calculated,
-> not measured" section.
+- **Derived ratios** — TG/HDL and AST:ALT in a dedicated "Derived — calculated, not
+  measured" section (ADR-015).
+- **Further markers** — fasting insulin / C-peptide, fasting glucose, hs-CRP, AST/ASAT
+  (ADR-015).
+- **Daily intake targets / needs**, including **protein in g/kg body weight** — unblocked
+  now that body weight is stored (ADR-016 / ADR-017).
+- **Whole-food micronutrients** — carry the `micronutrients` map through to storage and
+  intake totals, then wire selected micronutrients to their biomarker counterparts
+  (iron→ferritin, B12, vitamin D, magnesium). This closes the diet ⇄ biomarker loop and
+  is its own sprint (ADR-018, Phase 3).
+- **Richer Withings signals** — body-fat %, lean mass, resting HR via the deferred
+  `withings_measures` backend table (ADR-022 / ADR-023, migration plan §4.3–§4.4).
 
 ---
 
-## Food-diary depth — sodium & saturated fat (Sprint 9 — high-priority slice)
+## iOS delivery status
 
-The food diary tracked four macros (energy, carbs, protein, fat). The clinical
-review flagged that it omitted the two nutrients the **biomarker** side of the app
-cares about most for these diets. This slice closes that gap:
+The iOS client is built sprint-by-sprint against the migration plan. **Complete:** the
+read path / dashboard, biomarker detail with clinical signals, Excel import & panel
+timeline, diet events, the **food diary with barcode scanning (ADR-019)**, **meal plans
+& calendar (ADR-020)**, **body metrics (ADR-021)**, and the **Apple HealthKit Withings
+bridge (ADR-022)** — weight + BP, deduped by sample UUID. The **doctor PDF report** also
+shipped.
 
-- **Sodium** (stored in mg) — the labs emphasise electrolyte management, and
-  sodium ties directly to the blood-pressure tracking coming in Sprint 10.
-- **Saturated fat** (stored in g) — the dietary driver of the LDL response the
-  lipid panel and the Sprint 7 clinical targets track.
+**In progress:** the **Withings Cloud connection (ADR-023)** — the iOS connect/disconnect/
+"Sync now" flow is shipped and self-gates until the backend `/withings/*` endpoints (OAuth
+token exchange, history pull, `Notify` webhooks) and the `withings_measures` table ship
+(migration plan §4.2–§4.4).
 
-Both are stored as **amounts actually consumed** (per-100 g × grams / 100), like
-the existing macros, on `food_entries` *and* `planned_meals` — so a planned meal
-"logged to the diary" keeps these values rather than dropping them. The food diary
-shows them as two extra daily-total tiles and on each entry line.
+**Outstanding:** the **Account / GDPR surface and settings polish** (Sprint 11) and
+**release hardening** (Sprint 12) — see [`IOS_APP_STORE_READINESS.md`](IOS_APP_STORE_READINESS.md)
+for the submission-blocker list, and [`WISHLIST.md`](WISHLIST.md) for forward-looking
+native features (widgets, notifications, Watch, Siri/App Intents, offline cache).
 
-The Open Food Facts client now also: prefers OFF's measured **sodium**, deriving
-it from **salt** (`salt = sodium × 2.5`) only when sodium isn't published; and
-**falls back from kilojoules to kcal** (`kJ ÷ 4.184`) when the kcal field is
-missing, so energy stops showing "—" unnecessarily. Both are fixed unit
-conversions, never invented values. The columns ride the existing GDPR
-export/erasure (which selects `*`) with no contract change. See ADR-016.
-
-> **Deferred to the Sprint 9 follow-up:** a **whole-foods reference source** (USDA
-> FoodData Central / Norwegian *Matvaretabellen*) alongside Open Food Facts for
-> unbranded whole foods, and **daily targets / needs context** (per-day energy and
-> macro targets, including protein in g/kg body weight — which depends on the body
-> weight that arrives in Sprint 10).
-
----
-
-## Body metrics — weight, waist, blood pressure (Sprint 10)
-
-For diet tracking, **weight, waist, and blood pressure respond faster — and often
-matter more — than most labs**, and blood pressure ties directly to the app's
-sodium emphasis (Sprint 9). Until now the app tracked blood biomarkers and food,
-but not the body's own headline responses to a diet change. Sprint 10 adds them:
-
-- A `/body-metrics` page lets you log **weight (kg)**, **waist (cm)**, and **blood
-  pressure (mmHg)** on any date. Every metric is optional, so you can record just
-  your weight one day and just your blood pressure another — but a measurement must
-  carry at least one metric, and blood pressure is a pair (both halves or neither).
-- Each metric gets its own **trend chart on the same timeline** as your biomarkers,
-  carrying the **same diet-event correlation overlay** (Sprint 3) — so you can see
-  whether a regimen change lines up with a shift in weight or blood pressure, with
-  the same honesty caveat that this shows *timing, not cause and effect*.
-- The blood-pressure chart draws faint **guideline** lines at 120 / 80 — labelled
-  "guideline," deliberately styled as a neutral population reference, **not** the
-  Sprint 7 clinical-target line and **not** a personalised verdict. Weight and waist
-  carry no guideline line (a healthy weight is personal; a waist threshold depends
-  on sex/ethnicity the app doesn't collect).
-
-Body metrics live in a new `body_metrics` table (RLS self-scoped), served by
-`GET/POST/DELETE /body-metrics`. The table is wired into the GDPR export/erasure
-contract (`USER_TABLES` / `DELETE_ORDER`). Storing **weight** also unblocks the
-deferred Sprint 9 **protein g/kg** target, once that targets UI is built. The
-design and the scope cuts are in `docs/adr/017-body-metrics.md`.
-
-> **Deferred to the Sprint 10 follow-up:** overlaying body metrics *onto the
-> biomarker timeline itself* (e.g. weight behind LDL) — the data and the overlay
-> machinery are now in place, so this is a presentation follow-up, not new
-> infrastructure.
-
----
-
-## Where the "Add result" button lives
-
-Manual single-result entry now lives on each **biomarker detail page** (an "Add
-result" button in that page's header), pre-selecting the marker you're looking
-at, rather than as a global button on the dashboard. Adding a result where you're
-already looking at that marker's trend is the natural place for it.
-
----
-
-## Language and tooltips
-
-The UI can switch between **English and Norwegian** via a toggle in the header (your choice is
-remembered). Each biomarker group also has an "i" tooltip with a plain-language explanation of
-what those markers measure, in both languages.
-
----
-
-## The import format
-
-The app understands the standard Norwegian blood panel Excel format:
-
-- **Column A:** Biomarker name (in Norwegian, often with English translation in parentheses)
-- **Column B:** Reference range — can be `4,5 - 5,8` (bounded), `<42` (less than), or blank
-- **Columns C+:** One column per test date (format: `DD.MM.YYYY`)
-- **Cells:** The measured value, using Norwegian decimal commas (`4,3` not `4.3`)
-- **Empty cells:** Fine — not every biomarker is tested every time
-
----
-
-## The sprint roadmap
-
-| Sprint | What gets built |
-|--------|----------------|
-| 0 ✅ | Server setup, deployment pipeline, Supabase wired |
-| 1 ✅ | Biomarker import, dashboard UI, sparkline trend charts, auth wired |
-| 2 ✅ | Panel timeline, per-marker trend charts, in/out-of-range highlighting, manual entry |
-| 3 ✅ | Correlation overlay — draw a diet annotation on top of a biomarker chart |
-| 4 ✅ | Food diary — log what you eat each day, with Open Food Facts search |
-| 5 ✅ | Meal plans and calendar — plan the week ahead, log planned meals to the diary |
-| 6 | GDPR data export + account deletion ✅ and security headers ✅; doctor sharing (iOS PDF report) ✅ |
-| 7 ✅ | Reference range vs. clinical target + within-range trend signals |
-| 8 ◐ | **Panel expansion — high-yield markers, derived ratios, confounder tooltips** (high-yield markers, refeeding electrolytes, triglycerides target, confounder notes ✅; further Medium markers + derived ratios — follow-up) |
-| 9 ◐ | **Food diary depth — sodium & saturated fat ✅, kJ→kcal fallback ✅; better food source + daily targets — follow-up** |
-| 10 ✅ | **Body metrics & longitudinal context — weight, waist, blood pressure** (trend charts + diet-event overlay ✅; optional body-metric-on-biomarker-timeline overlay — follow-up) |
-
-Additional UX enhancements shipped alongside Sprint 2 (outside the original roadmap): diet-focus
-biomarker filtering (ADR-008) and English/Norwegian internationalization with category tooltips
-(ADR-009).
-
-Sprints 7–10 come from a clinical review of the app (diet & nutrition lens); the rationale and
-priority for each item are captured in **Clinical-feedback roadmap (Sprints 7–10)** below.
-
----
-
-## Sprint 6 — remaining work (follow-up)
-
-The data-rights half of Sprint 6 has shipped: **GDPR data export, account deletion, and security
-headers** (ADR-013). Two items remain before Sprint 6 is closed:
-
-- **Doctor sharing — PDF / printable report** ✅ (shipped on iOS). The user exports a **formatted,
-  printable PDF report** from the dashboard's share button and sends it to a clinician (Mail, AirDrop,
-  Files via the system share sheet) — no doctor login or multi-tenant RLS required. Implementation:
-  - The report is **selectable**: pick whole categories (lipids, CBC, …) and/or individual markers,
-    and choose **latest values**, **trend graphs**, or **both**.
-  - Latest-value tables show value, reference range, in/out-of-range status, and the test date per
-    marker; the graph pages reuse the in-app `BiomarkerTrendChart` (reference band, clinical target).
-  - Rendered **client-side** as a multi-page, vector A4 PDF via SwiftUI `ImageRenderer` → `CGContext`
-    (no new dependency — chosen over a server endpoint to keep it offline and reuse the chart code).
-    Lives in `ios/EmpiricalTracker/Features/ReportShare/`.
-  - Carries the same intellectual-honesty caveats: a cover disclaimer and a "decision-support, not
-    medical advice" footer on every page; no implied causation.
-  - Follow-up: overlaying active diet-event annotations on the report charts (kept off for a clean
-    clinical document for now), and an optional server-rendered `GET /account/report` for the web app.
-
-- **Export/erasure coverage is a maintenance contract** (carried from ADR-013). `USER_TABLES` and
-  `DELETE_ORDER` in `api/app/account/repository.py` must be extended whenever a new user-owned
-  **table** is added — e.g. **Sprint 10** (`body_metrics`). New **columns** on an already-listed
-  table need no change: collection uses `select("*")` and the CSV export derives its columns from the
-  rows, so **Sprint 9**'s sodium / saturated-fat columns flow into both export and erasure
-  automatically (verified in ADR-016). A *table* left out would silently drop from both — **Sprint 10**
-  added `body_metrics` to both `USER_TABLES` and `DELETE_ORDER` (ADR-017), keeping the contract intact.
-
----
-
-## Clinical-feedback roadmap (Sprints 7–10)
-
-These four sprints translate a clinical review of the app into work. The review's central
-finding was that the app is **honest and well-built, but treats the lab "reference range" as if
-it meant "healthy,"** and is missing several of the markers (and food fields) that matter most for
-the carnivore / low-carb / fasting users it targets. Sprints are ordered by clinical priority and
-dependency: ranges first (safety), then the panel, then the diary, then body metrics.
-
-Severity tags below mirror the review: **High** = change a decision a user could get wrong today;
-**Medium** = meaningful gap; **Low** = polish / consistency.
-
-### Sprint 7 — Reference range vs. clinical target + within-range trend signals ✅
-
-> **Delivered.** Implemented as a static, client-side clinical-target reference map
-> (`web/src/lib/clinicalTargets.ts`, keyed off `markerKey()`) rather than a DB table or
-> per-user biomarker columns — the targets are universal guideline values, not per-user PII.
-> Trend signals and the combined `assessMarker()` status live in `web/src/lib/markerSignals.ts`.
-> Triglycerides are seeded in Sprint 8 when the marker is added. See ADR-014.
-
-> **Why:** "in range" is being conflated with "healthy." A user on a high-saturated-fat diet can
-> see LDL 4.1 mmol/L flagged green (lab ref_high 4.7) when guideline targets for an at-risk person
-> are far lower; and a doubling of ALT (25 → 55 U/L) stays green because it's still under 70. The
-> binary flag actively hides the trends that matter.
-
-- **Clinical-target layer, separate from the lab reference range** (High). Add optional
-  `target_low` / `target_high` to the biomarker model (or a seeded `marker_targets` reference
-  table — guideline values, not per-user PII). Seed for lipids (LDL, non-HDL, total, and
-  triglycerides once added) and HbA1c. The UI distinguishes **"within lab reference"** from
-  **"at/above clinical target,"** with a distinct state/colour rather than reusing in/out-of-range.
-- **Within-range trend signals** (High). Surface "rising/falling fast," "trending toward a bound,"
-  and large relative jumps (e.g. a doubling) even when every point is technically in range. The
-  trend charts already make this visible to an attentive user; this makes the app say it.
-- Update `in_range` rendering so the green flag never overrides a flagged trend.
-- ADR documenting the reference-vs-target distinction and the trend-signal rules.
-
-### Sprint 8 — Panel expansion, derived ratios, confounder tooltips ◐
-
-> **Why:** for these specific diets, several of the *most* informative markers are simply absent,
-> and two markers we already track are confounded by the diet itself.
->
-> **Status:** the **High**-severity slice has shipped (ADR-015) — new high-yield markers, the
-> refeeding electrolytes, the triglycerides target, the confounder notes, and the tooltip-honesty
-> pass. The **Medium**-severity items below (further markers + derived ratios) are the follow-up.
-
-- **High-yield new markers** (High) ✅: **triglycerides** (the signature low-carb response; the Lipids
-  tooltip already promises it — and now carries a clinical target ≤ 1.7 mmol/L), **ApoB** ± **Lp(a)**
-  (gold-standard atherogenic burden — the marker to add for the lean-mass hyper-responder pattern),
-  **uric acid** (raised by both high-purine carnivore intake and fasting).
-- **Refeeding fix** (High, fasting) ✅: added **magnesium** and **phosphate**. The Fasting profile
-  claimed to watch "refeeding-syndrome risk," which is defined by phosphate/magnesium/potassium —
-  previously only potassium was present, so the stated purpose and the markers now match.
-- **Further markers** (Medium — follow-up): **fasting insulin / C-peptide** and **fasting glucose**
-  (HbA1c alone misses early insulin resistance), **hs-CRP** (inflammation is a headline claimed
-  benefit), **AST/ASAT** (normally paired with ALT).
-- **Derived markers** (Medium — follow-up): compute and chart **TG/HDL ratio** (insulin-resistance
-  surrogate) and **AST:ALT ratio**, in a dedicated "Derived — calculated, not measured" section.
-- Plumbing ✅: the new markers are wired through the category keyword rules (`biomarkerCategories.ts`),
-  the marker-key rules and diet focus lists (`dietProfiles.ts` + `DIET_BIOMARKERS.md`): TG/ApoB/Lp(a)
-  into every lipid view; uric acid into carnivore + fasting; Mg/phosphate into fasting.
-  (Insulin/glucose into low-carb arrives with the Medium follow-up.)
-- **Confounder tooltips** (Low–Medium) ✅: eGFR — creatinine-based eGFR is depressed by high meat
-  intake/muscle mass, suggest cystatin-C; HbA1c — can read paradoxically high on keto/carnivore from
-  altered RBC turnover; ferritin — an acute-phase reactant, rises with inflammation, not just iron.
-  Delivered as a per-marker note map (`web/src/lib/markerNotes.ts`) rendered on the detail page.
-- Trim or fulfil tooltips that promise markers not in the panel ✅: triglycerides is now fulfilled;
-  glucose, calcium, and ASAT were trimmed so the app never describes what it can't show.
-
-### Sprint 9 — Food diary depth & better food data ◐
-
-> **Why:** the diary's four macros omit the two things the biomarker side cares about most
-> (sodium and saturated fat), Open Food Facts is a branded-product database ill-suited to whole-food
-> carnivore eating, and energy frequently shows "—" unnecessarily.
->
-> **Status:** the **High**-severity item (sodium + saturated fat) and the **Low** quick win
-> (kJ→kcal fallback) have shipped (ADR-016). The **Medium** items below (whole-foods source +
-> daily targets) are the follow-up.
-
-- **Add sodium and saturated fat** to tracked nutrients (High) ✅: columns on `food_entries` *and*
-  `planned_meals`, consumed-amount scaling, daily-total + per-entry UI, and OFF field mapping
-  (`sodium_100g`/`salt_100g` → sodium mg, `saturated-fat_100g` → sat fat g). Closes the loop with the
-  labs, which emphasise electrolyte management and saturated-fat-driven LDL.
-- **kJ → kcal fallback** in the OFF client (Low, quick win) ✅: when `energy-kcal_100g` is absent, fall
-  back to `energy_100g` (kJ) ÷ 4.184 instead of storing nothing.
-- **Whole-foods reference source** (Medium — follow-up) ✅: added the Norwegian *Matvaretabellen* and
-  USDA FoodData Central alongside OFF via a source abstraction (`app/food_sources/`), prioritised for
-  unbranded whole foods (steak, eggs, mince) which OFF covers poorly. Matvaretabellen is vendored
-  (in-process, no key, regenerated by `scripts/ingest_matvaretabellen.py`) and fits the Norwegian-first
-  framing; USDA is a keyed, cached proxy that degrades gracefully when unconfigured. The search endpoint
-  takes a `source` (`off`/`mvt`/`usda`/`all`), each entry records its provenance (`009_food_source.sql`),
-  and the UI gains a source selector + per-row badge (ADR-018). **Phase 3** (micronutrients → biomarker
-  loop) remains, deferred to its own ADR.
-- **Daily targets / needs context** (Medium — follow-up): per-day energy and macro targets, including
-  **protein in g/kg body weight** (renal-load concern), with intake-vs-target shown. The g/kg target
-  depends on body weight from Sprint 10 — ship the targets UI here and enable the g/kg view once
-  weight tracking lands (or capture a single weight value as a prerequisite).
-
-### Sprint 10 — Body metrics & longitudinal context ✅
-
-> **Why:** for diet tracking, weight, waist, and blood pressure respond faster and matter more than
-> most labs, and BP ties directly to the app's sodium emphasis — yet there are no body metrics at all.
->
-> **Status:** delivered (ADR-017). The new table, the three trend charts, and the diet-event overlay
-> have shipped; the *optional* body-metric-on-biomarker-timeline overlay is a noted follow-up.
-
-- New `body_metrics` table (RLS self-scoped) ✅: **weight, waist, blood pressure**, with trend charts on
-  the same timeline and the same diet-event correlation overlay as biomarkers. Every metric is
-  optional; blood pressure is constrained to a both-or-neither pair; a row must carry at least one
-  metric. Served by `GET/POST/DELETE /body-metrics` and wired into the GDPR export/erasure contract.
-- Feed body weight into the Sprint 9 **protein g/kg** target — the weight is now captured and stored;
-  the g/kg consumer ships with the deferred Sprint 9 targets UI.
-- Optionally overlay body metrics against the biomarker timeline for at-a-glance context — **follow-up**
-  (the data and overlay machinery are in place; this is a presentation enhancement).
-
-> **Cross-cutting (all four sprints):** keep the review's intellectual honesty. Every new number is
-> "decision-support, not medical advice"; with only a handful of blood draws, the app must keep
-> declining to imply causation or statistical significance.
-
----
-
-## Local development
-
-**Run the API:**
-```bash
-cd api
-python -m venv .venv && .venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env   # fill in SUPABASE_URL and SUPABASE_SERVICE_KEY
-uvicorn app.main:app --reload --port 8000
-```
-
-**Run the web app:**
-```bash
-cd web
-npm install
-cp .env.example .env.local   # fill in NEXT_PUBLIC_API_URL and NEXT_PUBLIC_SUPABASE_*
-npm run dev   # opens http://localhost:3000
-```
-
-**Run the tests:**
-```bash
-cd api
-pytest -v   # 97 pass (+7 integration tests skipped without Supabase creds)
-```
+> **ADR sprint numbering:** ADRs 010–018 were authored against the **web** app and carry
+> its sprint numbers; the iOS work re-sequences the same surface per the migration plan
+> (e.g. the food diary is iOS Sprint 6). ADR-019 onward use iOS numbering — e.g. ADR-021
+> (iOS Sprint 8 body metrics) realises the chart design from the web-numbered ADR-017.
 
 ---
 
 ## Key files to know
 
+### Backend (`api/`)
+
 | File | What it does |
 |------|-------------|
-| `api/app/main.py` | Entry point — FastAPI app, CORS config, router registration |
-| `api/app/auth.py` | Shared `current_user_id` dependency — resolves the bearer token |
-| `api/app/biomarkers/parser.py` | Reads your Excel file and extracts the data |
-| `api/app/biomarkers/repository.py` | Saves and retrieves data from Supabase |
-| `api/app/biomarkers/router.py` | HTTP endpoints: import, delete, list, chart data |
-| `api/app/settings/router.py` | HTTP endpoints: read/write per-user dashboard settings |
-| `api/app/diet_events/` | Diet-event (correlation annotation) router + repository |
-| `api/app/food_diary/router.py` | Food-diary CRUD + Open Food Facts proxy endpoints |
-| `api/app/food_diary/openfoodfacts.py` | Open Food Facts client (search + barcode, normalised) |
-| `api/app/meal_plans/router.py` | Meal-plan + calendar (planned-meal) CRUD endpoints |
-| `api/app/meal_plans/repository.py` | Saves/retrieves meal plans and planned meals |
-| `api/app/account/router.py` | GDPR data export + account-deletion endpoints |
-| `api/app/account/repository.py` | Gathers / erases all of a user's data across tables |
-| `api/supabase/migrations/001_biomarkers.sql` | Creates the three blood-test tables |
-| `api/supabase/migrations/003_user_settings.sql` | Creates the `user_settings` table |
-| `api/supabase/migrations/004_diet_events.sql` | Creates the `diet_events` table |
-| `api/supabase/migrations/005_food_entries.sql` | Creates the `food_entries` table |
-| `api/supabase/migrations/006_meal_plans.sql` | Creates the `meal_plans` + `planned_meals` tables |
-| `api/supabase/migrations/007_sodium_saturated_fat.sql` | Adds sodium + saturated-fat columns to food/planned meals (Sprint 9) |
-| `api/supabase/migrations/008_body_metrics.sql` | Creates the `body_metrics` table — weight, waist, blood pressure (Sprint 10) |
-| `api/supabase/migrations/009_food_source.sql` | Adds the `source` provenance column to food/planned meals (ADR-018) |
-| `api/app/body_metrics/router.py` | Body-metrics CRUD endpoints (Sprint 10) |
-| `api/app/body_metrics/repository.py` | Saves/retrieves body metrics |
-| `api/app/food_sources/` | Multi-source food providers: OFF, Matvaretabellen, USDA + registry (ADR-018) |
-| `api/app/food_sources/data/matvaretabellen.*.json` | Vendored Norwegian whole-food dataset (per 100 g) |
-| `api/scripts/ingest_matvaretabellen.py` | Regenerates the vendored Matvaretabellen dataset from upstream open data |
-| `web/src/components/FoodSourceSelect.tsx` | Food-source selector + per-row provenance badge (ADR-018) |
-| `web/src/app/page.tsx` | The main dashboard page |
-| `web/src/app/biomarkers/[id]/page.tsx` | Biomarker detail — chart, annotations, Add result |
-| `web/src/app/food-diary/page.tsx` | The food diary page (Sprint 4) |
-| `web/src/app/meal-plans/page.tsx` | The meal-plan weekly calendar page (Sprint 5) |
-| `web/src/app/account/page.tsx` | Account page — data export + account deletion (Sprint 6) |
-| `web/src/app/body-metrics/page.tsx` | Body-metrics page — log + trend charts (Sprint 10) |
-| `web/src/components/BodyMetricChart.tsx` | Generic body-metric trend chart with diet overlay (Sprint 10) |
-| `web/src/components/PlannedMealPicker.tsx` | Add a planned meal (OFF search or free-text) |
-| `web/src/lib/useFoodSearch.ts` | Shared Open Food Facts search hook (diary + meal plans) |
-| `web/src/app/import/page.tsx` | The file upload page |
-| `web/src/lib/api.ts` | All the API calls from the frontend |
-| `web/src/lib/mockData.ts` | Realistic test data (biomarkers, diet events, food entries) |
-| `web/src/lib/dietProfiles.ts` | Diet → biomarker focus sets + name classifier |
-| `web/src/lib/clinicalTargets.ts` | Guideline clinical-target bounds, keyed by marker (Sprint 7; +triglycerides Sprint 8) |
-| `web/src/lib/markerSignals.ts` | Trend signals + combined marker assessment (Sprint 7) |
-| `web/src/components/MarkerSignals.tsx` | Detail-page target + trend signal panel (Sprint 7) |
-| `web/src/lib/markerNotes.ts` | Per-marker diet-confounder notes, keyed by marker (Sprint 8) |
-| `web/src/components/MarkerNote.tsx` | Detail-page confounder note panel, EN/NO (Sprint 8) |
-| `web/src/lib/chartAnnotations.ts` | Projects diet events onto the chart's x-axis |
-| `web/src/lib/i18n.ts` | English/Norwegian string dictionary |
-| `web/src/app/panels/page.tsx` | Panel timeline — list of all blood draw sessions |
-| `web/src/components/BiomarkerChart.tsx` | Trend chart with reference band + diet overlay |
-| `web/src/components/DietEventManager.tsx` | Add/list/delete diet annotations |
-| `web/src/components/FoodSearch.tsx` | Open Food Facts search + barcode add box |
-| `web/src/components/ManualEntryModal.tsx` | Manual entry form for adding individual results |
-| `web/src/components/DietFilter.tsx` | Diet-focus segmented control |
-| `web/src/components/LanguageProvider.tsx` | Language context + EN/NO toggle state |
-| `docs/DIET_BIOMARKERS.md` | Clinical rationale for each diet's biomarker focus list |
-| `docs/NUTRITION_DATA.md` | Food-data sources, accuracy caveats, correlation caveat |
-| `docs/adr/` | Architectural Decision Records — why we made the choices we made |
+| `api/app/main.py` | FastAPI app — CORS, security headers, router registration |
+| `api/app/auth.py` | Shared `current_user_id` dependency (resolves the bearer token) |
+| `api/app/biomarkers/parser.py` | Reads the Excel file and extracts the data |
+| `api/app/biomarkers/router.py` | Import, delete, list, chart-data endpoints |
+| `api/app/diet_events/`, `food_diary/`, `meal_plans/`, `body_metrics/` | Per-domain routers + repositories |
+| `api/app/food_sources/` | Multi-source food providers (OFF, Matvaretabellen, USDA) + registry (ADR-018) |
+| `api/app/account/repository.py` | Gathers / erases all of a user's data (GDPR) |
+| `api/supabase/migrations/` | Numbered SQL migrations (run manually in the Supabase SQL editor) |
+| `api/scripts/ingest_matvaretabellen.py` | Regenerates the vendored Matvaretabellen dataset |
+
+### iOS (`ios/`)
+
+| File | What it does |
+|------|-------------|
+| `ios/Packages/Core/Sources/Core/Networking/APIClient.swift` | Typed actor-based REST client (auth, retry/backoff) |
+| `ios/Packages/Core/Sources/Core/Models/` | `Codable` DTOs mirroring the API response shapes |
+| `ios/Packages/Biomarkers/Sources/Biomarkers/` | Ported clinical logic: categories, diet profiles, marker signals |
+| `ios/Packages/Auth/Sources/AppAuth/` | Supabase auth, Keychain session, mock auth for demo mode |
+| `ios/Packages/HealthSync/Sources/HealthSync/` | HealthKit sync + Withings Cloud service |
+| `ios/EmpiricalTracker/Features/Dashboard/` | The biomarker grid, diet filter, sparklines |
+| `ios/EmpiricalTracker/Features/BiomarkerDetail/` | Trend chart, clinical signals, confounder notes, manual entry |
+| `ios/EmpiricalTracker/Features/FoodDiary/` | Diary, multi-source search, barcode scanner |
+| `ios/EmpiricalTracker/Features/MealPlans/` | Weekly calendar + plan management |
+| `ios/EmpiricalTracker/Features/BodyMetrics/` | Log + charts, HealthSync + WithingsCloud sections |
+| `ios/EmpiricalTracker/Features/ReportShare/` | Client-side doctor PDF report |
+| `ios/EmpiricalTracker/Features/Consent/` | Health-data consent gate (versioned `ConsentStore`) |
+
+---
+
+## Pointers
+
+- [`IOS_MIGRATION_PLAN.md`](IOS_MIGRATION_PLAN.md) — the web→iOS migration strategy and
+  status (now largely historical).
+- [`IOS_APP_STORE_READINESS.md`](IOS_APP_STORE_READINESS.md) — submission-blocker
+  assessment.
+- [`CONFIGURATION.md`](CONFIGURATION.md) — verify the app points at the right backend.
+- [`SETUP.md`](SETUP.md) — one-time backend (Supabase + Railway) setup.
+- [`DIET_BIOMARKERS.md`](DIET_BIOMARKERS.md) — clinical rationale for each diet focus.
+- [`NUTRITION_DATA.md`](NUTRITION_DATA.md) — food-data sources, accuracy, caveats.
+- [`WISHLIST.md`](WISHLIST.md) — forward-looking native iOS feature proposals.
+- [`adr/`](adr/) — Architectural Decision Records (the why behind each choice).
+- [`legal/`](legal/) — privacy policy & terms drafts.
