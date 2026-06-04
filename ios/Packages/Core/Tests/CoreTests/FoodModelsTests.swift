@@ -98,6 +98,47 @@ struct FoodModelsTests {
         #expect(totals.sodiumMg == 300)
     }
 
+    // MARK: - Custom food record decoding (insert round-trip)
+
+    /// A freshly inserted custom_foods row comes back with a Postgres `timestamptz`
+    /// `created_at` carrying microsecond precision. The decoder must tolerate >3
+    /// fractional digits, otherwise a *successful* save would surface as an error.
+    @Test func customFoodRecordDecodesMicrosecondTimestamp() throws {
+        let json = """
+        {
+            "id": "7b3c1e9a-0000-4000-8000-000000000001",
+            "user_id": "11111111-1111-4111-8111-111111111111",
+            "food_name": "Scanned Granola",
+            "brand": "Acme",
+            "barcode": null,
+            "source": "custom",
+            "energy_kcal": 420.0,
+            "carbs_g": 60.0,
+            "protein_g": 8.0,
+            "fat_g": 14.0,
+            "saturated_fat_g": 3.0,
+            "sodium_mg": 120.0,
+            "serving_g": 45.0,
+            "ingredients": null,
+            "ocr_raw": null,
+            "is_public": false,
+            "verified": false,
+            "created_at": "2026-06-04T08:15:30.123456+00:00"
+        }
+        """.data(using: .utf8)!
+
+        let record = try JSONDecoder.api.decode(CustomFoodRecord.self, from: json)
+        #expect(record.id == "7b3c1e9a-0000-4000-8000-000000000001")
+        #expect(record.foodName == "Scanned Granola")
+        #expect(record.energyKcal == 420.0)
+        #expect(record.createdAt != nil)
+
+        // toFoodItem() must carry the new id and custom provenance for logging.
+        let item = record.toFoodItem()
+        #expect(item.code == record.id)
+        #expect(item.source == .custom)
+    }
+
     // MARK: - Search source contract
 
     @Test func searchSourceQueryValues() {

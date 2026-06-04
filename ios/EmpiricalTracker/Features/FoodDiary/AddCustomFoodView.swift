@@ -31,6 +31,9 @@ struct AddCustomFoodView: View {
 
     @State private var isSaving = false
     @State private var savedItem: FoodItem?
+    /// Surfaced as an alert so a failed save is never silent (e.g. a 5xx when the
+    /// custom_foods table/migration is missing, or a decode mismatch).
+    @State private var errorMessage: String?
 
     init(
         viewModel: FoodDiaryViewModel,
@@ -81,9 +84,20 @@ struct AddCustomFoodView: View {
                     }
                 }
             }
-            // Navigate into LogFoodSheet once the item is saved.
-            .sheet(item: $savedItem) { item in
+            // Navigate into LogFoodSheet once the item is saved. The whole capture
+            // flow is dismissed via `onSaved` only AFTER LogFoodSheet closes — calling
+            // it during `save()` would tear down this hierarchy before LogFoodSheet
+            // could present, so the diary entry (food_entries row) would never be written.
+            .sheet(item: $savedItem, onDismiss: { onSaved?() }) { item in
                 LogFoodSheet(viewModel: viewModel, item: item)
+            }
+            .alert(
+                String(localized: "food.label.error.title"),
+                isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })
+            ) {
+                Button(String(localized: "common.ok"), role: .cancel) {}
+            } message: {
+                Text(errorMessage ?? "")
             }
         }
         .presentationDetents([.large])
@@ -177,11 +191,12 @@ struct AddCustomFoodView: View {
 
         do {
             let record = try await viewModel.createCustomFood(payload)
+            // Present LogFoodSheet to capture quantity and write the diary row. The
+            // capture flow is dismissed from the sheet's onDismiss, not here.
             savedItem = record.toFoodItem()
-            onSaved?()
         } catch {
-            // Surface as a non-fatal alert via viewModel
-            viewModel.errorMessage = error.localizedDescription
+            // Surface the failure to the user instead of silently dropping it.
+            errorMessage = error.localizedDescription
         }
     }
 

@@ -175,16 +175,38 @@ extension JSONDecoder {
     public static let api: JSONDecoder = {
         let dec = JSONDecoder()
         dec.keyDecodingStrategy = .convertFromSnakeCase
-        // Backend sends dates as "YYYY-MM-DD"; use a flexible strategy.
-        let iso = ISO8601DateFormatter()
-        iso.formatOptions = [.withFullDate, .withDashSeparatorInDate]
-        let isoFull = ISO8601DateFormatter()
-        isoFull.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        // Backend dates arrive in three shapes:
+        //   • date only           — "2026-06-04"               (logged_on, created_on…)
+        //   • ISO datetime        — "2026-06-04T08:15:30+00:00" (no fractional seconds)
+        //   • ISO datetime + frac — "2026-06-04T08:15:30.123456Z"
+        // The last is what Postgres `timestamptz` returns through PostgREST: up to six
+        // fractional digits. ISO8601DateFormatter only reliably parses three, so a
+        // microsecond `created_at` (e.g. on a freshly inserted custom_foods row) would
+        // otherwise fail to decode and turn a *successful* write into a thrown error.
+        // We therefore strip an arbitrary-length fractional component as a final fallback.
+        let dateOnly = ISO8601DateFormatter()
+        dateOnly.formatOptions = [.withFullDate, .withDashSeparatorInDate]
+        let isoFractional = ISO8601DateFormatter()
+        isoFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let isoPlain = ISO8601DateFormatter()
+        isoPlain.formatOptions = [.withInternetDateTime]
         dec.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
             let str = try container.decode(String.self)
-            if let d = iso.date(from: str) ?? isoFull.date(from: str) { return d }
-            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unrecognised date: \(str)")
+            if let d = dateOnly.date(from: str)
+                ?? isoFractional.date(from: str)
+                ?? isoPlain.date(from: str) {
+                return d
+            }
+            // Strip fractional seconds of any length (".123456") and retry — sub-second
+            // precision is irrelevant for the dates this client decodes.
+            let stripped = str.replacingOccurrences(
+                of: #"\.\d+"#, with: "", options: .regularExpression
+            )
+            if let d = isoPlain.date(from: stripped) { return d }
+            throw DecodingError.dataCorruptedError(
+                in: container, debugDescription: "Unrecognised date: \(str)"
+            )
         }
         return dec
     }()
