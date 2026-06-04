@@ -28,6 +28,16 @@ struct BodyMapCanvas: View {
     /// Breathing room kept around the figure on every edge.
     private let edgeInset: CGFloat = 24
 
+    /// The BodySilhouette asset has transparent padding around the figure: the
+    /// *visible body* occupies only this sub-rect of the image (measured from the
+    /// asset's alpha channel). Region coordinates are authored body-relative
+    /// (0–1 across the body itself), so they must be mapped through this box to
+    /// land on the right anatomy instead of out in the empty padding.
+    private let bodyMinX: CGFloat = 0.248
+    private let bodyMaxX: CGFloat = 0.791
+    private let bodyMinY: CGFloat = 0.066
+    private let bodyMaxY: CGFloat = 0.934
+
     var body: some View {
         GeometryReader { geo in
             let availableWidth  = max(geo.size.width  - edgeInset * 2, 1)
@@ -40,8 +50,10 @@ struct BodyMapCanvas: View {
             let originX = (geo.size.width - figureWidth) / 2
             let originY = max((geo.size.height - bottomReserve - figureHeight) / 2, edgeInset)
 
-            // Pin metrics scale with the figure so proportions hold everywhere.
-            let pinDiameter = min(max(figureWidth * 0.13, 22), 46)
+            // Pin metrics scale with the *visible body* width (not the padded
+            // frame) so pins stay proportional to the figure on every device.
+            let bodyWidth   = figureWidth * (bodyMaxX - bodyMinX)
+            let pinDiameter = min(max(bodyWidth * 0.11, 11), 22)
 
             ZStack(alignment: .topLeading) {
                 Image("BodySilhouette")
@@ -56,12 +68,16 @@ struct BodyMapCanvas: View {
                     )
 
                 ForEach(regions) { region in
+                    // Map body-relative (0–1) coords into the figure's content box.
+                    let frameX = bodyMinX + region.relativeX * (bodyMaxX - bodyMinX)
+                    let frameY = bodyMinY + region.relativeY * (bodyMaxY - bodyMinY)
+
                     BodyMapHotspotPin(region: region, diameter: pinDiameter) {
                         onSelect(region)
                     }
                     .position(
-                        x: originX + figureWidth  * region.relativeX,
-                        y: originY + figureHeight * region.relativeY
+                        x: originX + figureWidth  * frameX,
+                        y: originY + figureHeight * frameY
                     )
                 }
             }
@@ -83,9 +99,17 @@ struct BodyMapHotspotPin: View {
 
     private var assessment: MarkerSignals.Assessment { region.worstAssessment }
 
+    /// Keep the tappable region comfortable (≥44pt, per Apple's HIG) even when
+    /// the visible pin is small.
+    private var hitSize: CGFloat { max(diameter * 1.45, 44) }
+
     var body: some View {
         Button(action: onTap) {
             ZStack {
+                // Invisible spacer that sizes the tap target to `hitSize`.
+                Color.clear
+                    .frame(width: hitSize, height: hitSize)
+
                 // Pulse ring — only for markers that need attention.
                 if assessment == .outOfRange || assessment == .watch {
                     Circle()
@@ -113,6 +137,7 @@ struct BodyMapHotspotPin: View {
                     .frame(width: diameter * 0.42, height: diameter * 0.42)
                     .foregroundStyle(.white)
             }
+            .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(region.label): \(accessibilityStatus)")
