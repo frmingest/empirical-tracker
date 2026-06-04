@@ -35,7 +35,7 @@ to close before scaling.
 | A3 | **Support URL is real & reachable** | 🔴 Open | `listing.md` placeholder `https://empirical.app/support`. A support URL is required in ASC. |
 | A4 | **Reviewer demo account provisioned** | 🔴 Open | `listing.md` review notes: `Email/Password: [TBD]`. App is behind a sign-in wall with no in-app signup flow — without working creds App Review cannot enter → automatic rejection. |
 | A5 | **Screenshots captured (per required display size)** | 🔴 Open | None in repo. Capture Dashboard, a biomarker trend, Food diary, Body metrics, doctor-PDF report. |
-| A6 | **Test suite green** | 🔴 Open | `pytest -q` is a gating CI job and currently fails `test_auth_jwt.py::test_es256_no_supabase_url_rejected` (180 passed / 1 failed / 7 skipped). Test expects `401`; `_verify_token_local` returns `None` to fall through to network. Resolve fail-closed-vs-fallback intent and align. |
+| A6 | **Test suite green** | ✅ Done | `pytest -q` now green (181 passed / 7 skipped). The failing `test_auth_jwt.py` case asserted a fail-closed `401` for an unverifiable ES256 token; the documented, internally-consistent design defers to the authoritative network check (mirrors the HS256 no-secret path). Test corrected to assert `is None` (renamed `test_es256_no_jwks_falls_back_to_network`) with the security rationale. |
 
 ---
 
@@ -43,8 +43,8 @@ to close before scaling.
 
 | # | Item | Status | Evidence / action |
 |---|------|--------|-------------------|
-| B1 | **Anthropic (US) disclosed as sub-processor** | ⚠️ Open | `app/food_sources/label_parser.py` sends label OCR **text** to Anthropic (US) — an Art. 44 transfer. Absent from the privacy-policy sub-processor table and `PrivacyInfo.xcprivacy`; policy currently asserts "personal data is not sent." Add Anthropic + DPA + SCCs, reconcile the wording. (ADR-026 F8) |
-| B2 | **Stop logging OCR text / parsed fields** | ⚠️ Open | `label_parser.py` `logger.info(... ocr_text ...)` and logs parsed values — contradicts the "no PII in logs" intent (ADR-026 F10). Redact/remove before production. |
+| B1 | **Anthropic (US) disclosed as sub-processor** | ◐ Drafted | `privacy-policy.md` §5 now lists Anthropic (US) and a label-scanner explainer, and §7 (International transfers) discloses the US transfer instead of asserting "None." **Still ⚠️:** execute the Anthropic DPA + confirm the SCC safeguard (`[TBD]` in policy + `docs/legal/README.md`). (ADR-026 F8) |
+| B2 | **Stop logging OCR text / parsed fields** | ✅ Done | `label_parser.py` no longer logs OCR text, the model response, or parsed values — only sizes/counts/outcomes (ADR-026 F10). |
 | B3 | **Signing & distribution team confirmed** | ⚠️ Human | `DEVELOPMENT_TEAM = QA6NUTFPU6`, automatic signing, personal-style bundle id. Confirm intended *distribution* team and that ASC record, HealthKit capability, and URL scheme match the distribution profile. Needs ASC access. |
 | B4 | **HealthKit background-delivery justified or dropped** | ⚠️ Decide | Entitlement enabled and used (`HKObserverQuery` + `enableBackgroundDelivery`). Keep + supply reviewer justification (drafted in `listing.md`) or drop to reduce friction. |
 | B5 | **Release/Archive scheme injects real creds, `DEMO_MODE` unset** | ⚠️ Human | Release `fatalError`s if Supabase creds missing and the demo login is `#if DEBUG`-gated (verified). Confirm the archive scheme has real Supabase + API credentials. |

@@ -75,6 +75,16 @@ data on our behalf and only as needed:
 | Railway | Backend API hosting | `[TBD: confirm region]` |
 | Apple (HealthKit) | On-device health data you choose to share | Your device |
 | Withings (optional) | Device measurements, only if you connect it | `[TBD: confirm]` |
+| Anthropic (optional) | Reads the **text** from a nutrition label you scan and returns the structured nutrition values | United States |
+
+**About the label scanner (optional).** If you use the "scan a nutrition label"
+feature, your device runs the photo through on-device text recognition and sends
+only the **resulting text** (the nutrition-facts and ingredients wording) to
+Anthropic via our backend to structure it. The **photo itself never leaves your
+device**, and we do not send your name, email, or account identifiers with it.
+This is the only flow that transfers any data outside the EU/EEA — see Section 7.
+We govern it under a data-processing agreement; `[TBD: confirm Anthropic DPA and
+the transfer safeguard, e.g. Standard Contractual Clauses]`.
 
 Reference nutrition data (e.g. Open Food Facts, the Norwegian Matvaretabellen,
 and USDA) is fetched through our backend; your personal data is **not** sent to
@@ -92,9 +102,15 @@ fraud prevention and legal compliance.
 
 ## 7. International transfers
 
-None. Your data stays within the EU/EEA. If this ever changes, we will update
-this policy and rely on an appropriate transfer mechanism (e.g. Standard
-Contractual Clauses) first.
+Your account, health, diet, and body data stay within the EU/EEA.
+
+The one exception is the **optional** nutrition-label scanner (Section 5): if you
+use it, the recognised label **text** is processed by Anthropic in the United
+States. We rely on an appropriate transfer mechanism for this
+(`[TBD: confirm — e.g. Standard Contractual Clauses under Anthropic's DPA]`). If
+you never use the scanner, no data leaves the EU/EEA. Should any other transfer
+become necessary, we will update this policy and put a valid safeguard in place
+first.
 
 ## 8. Your rights
 

@@ -166,15 +166,23 @@ def test_es256_wrong_key_rejected():
     assert exc.value.status_code == 401
 
 
-def test_es256_no_supabase_url_rejected():
-    """ES256 token with no supabase_url → cannot fetch JWKS → 401."""
+def test_es256_no_jwks_falls_back_to_network():
+    """ES256 token with no JWKS client (supabase_url unset) → cannot verify
+    locally → returns None so the caller defers to the authoritative Supabase
+    Auth network check.
+
+    This mirrors the HS256 "no secret configured" case
+    (``test_returns_none_when_no_secret_configured``): when local verification is
+    *impossible* we defer rather than 401. It is not a downgrade hole — a forged
+    token is still rejected by ``auth.get_user`` server-side. A 401 is reserved
+    for *determinably* invalid tokens (bad signature, expired, wrong audience),
+    which the other ES256 tests cover.
+    """
     private_key, _ = _make_ec_keypair()
     token = _make_es256_token(private_key)
 
     with patch("app.auth._get_jwks_client", return_value=None):
-        with pytest.raises(HTTPException) as exc:
-            _verify_token_local(token)
-    assert exc.value.status_code == 401
+        assert _verify_token_local(token) is None
 
 
 def test_es256_verified_token_is_cached():

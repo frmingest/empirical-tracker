@@ -72,7 +72,10 @@ def parse_label(ocr_text: str) -> FoodItem:
     if not settings.anthropic_api_key:
         raise ValueError("ANTHROPIC_API_KEY is not configured")
 
-    logger.info("label_parser: OCR input (%d chars):\n%s", len(ocr_text), ocr_text[:1000])
+    # Do not log the OCR text, the model response, or the parsed fields: they are
+    # user-submitted label content and must stay out of application logs
+    # (ADR-026 F10 — no PII in logs). Log sizes/outcomes only.
+    logger.info("label_parser: parsing OCR input (%d chars)", len(ocr_text))
 
     client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
 
@@ -84,7 +87,6 @@ def parse_label(ocr_text: str) -> FoodItem:
     )
 
     raw_json = message.content[0].text.strip()
-    logger.info("label_parser: Claude raw response: %s", raw_json[:500])
 
     # Strip markdown code fences if the model wraps the JSON despite instructions.
     if raw_json.startswith("```"):
@@ -94,10 +96,10 @@ def parse_label(ocr_text: str) -> FoodItem:
     try:
         parsed = json.loads(raw_json)
     except json.JSONDecodeError as exc:
-        logger.warning("label_parser: Claude returned non-JSON: %s", raw_json[:200])
+        logger.warning("label_parser: model returned non-JSON (%d chars)", len(raw_json))
         raise ValueError(f"Could not parse Claude response as JSON: {exc}") from exc
 
-    logger.info("label_parser: parsed fields: %s", parsed)
+    logger.info("label_parser: parsed %d fields", len(parsed))
 
     return make_food_item(
         source=SOURCE_CUSTOM,

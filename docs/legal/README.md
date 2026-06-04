@@ -38,5 +38,8 @@ publishing, and the text should get a legal review. Outstanding items:
 - Minimum age.
 - Governing-law jurisdiction (Terms).
 - Confirm sub-processor regions (Railway, Withings).
+- Execute the **Anthropic** DPA and confirm the US-transfer safeguard (SCCs) for
+  the optional label-scanner flow — now disclosed in `privacy-policy.md`
+  §5/§7 (ADR-026 F8).
 
 Until both items are closed, treat the in-app links as **placeholders**.
