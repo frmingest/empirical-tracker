@@ -13,6 +13,9 @@ struct AddCustomFoodView: View {
     let parsedLabel: ParsedLabel?
     /// Optional barcode pre-filled from the barcode-miss flow.
     let prefilledBarcode: String?
+    /// Called after the food is saved and logged — used by NutritionLabelCaptureView
+    /// to dismiss the entire fullScreenCover chain. Optional (manual entry path).
+    var onSaved: (() -> Void)? = nil
 
     // Form fields
     @State private var foodName: String
@@ -173,6 +176,7 @@ struct AddCustomFoodView: View {
         do {
             let record = try await viewModel.createCustomFood(payload)
             savedItem = record.toFoodItem()
+            onSaved?()
         } catch {
             // Surface as a non-fatal alert via viewModel
             viewModel.errorMessage = error.localizedDescription

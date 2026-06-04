@@ -388,7 +388,8 @@ public struct DailyTotals: Sendable {
 
 /// Structured nutrients extracted from a nutrition-label OCR scan by Claude Haiku.
 /// All nutrient fields are per 100 g. Nil means the value was not found — never invented.
-public struct ParsedLabel: Decodable, Sendable {
+public struct ParsedLabel: Decodable, Identifiable, Sendable {
+    public let id = UUID()
     public let foodName: String?
     public let brand: String?
     public let energyKcal100g: Double?
