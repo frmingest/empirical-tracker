@@ -419,13 +419,16 @@ public struct ParsedLabel: Decodable, Identifiable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case name, brand
-        case energyKcal100g
-        case carbs100g
-        case protein100g
-        case fat100g
-        case saturatedFat100g
-        case sodiumMg100g
-        case servingG
+        // convertFromSnakeCase calls .capitalized on each component after splitting on "_".
+        // "100g".capitalized = "100G" (ICU treats the letter after digits as a new word),
+        // so "energy_kcal_100g" → "energyKcal100G" — note the capital G.
+        case energyKcal100g   = "energyKcal100G"
+        case carbs100g        = "carbs100G"
+        case protein100g      = "protein100G"
+        case fat100g          = "fat100G"
+        case saturatedFat100g = "saturatedFat100G"
+        case sodiumMg100g     = "sodiumMg100G"
+        case servingG   // "serving_g" → "servingG" — plain letter, no digit prefix, works fine
         case ingredients
     }
 
