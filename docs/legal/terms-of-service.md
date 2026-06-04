@@ -1,13 +1,6 @@
-<!--
-  DRAFT — pending (1) legal review and (2) a hosting decision.
-  Placeholders are marked `[TBD: …]`. See docs/legal/README.md for the open
-  items (legal entity, governing law, contact address, hosting domain/URL) that
-  must be resolved before this is published or referenced from App Store Connect.
--->
-
 # Terms of Service — Empirical Tracker
 
-**Last updated:** `[TBD: effective date]`
+**Last updated:** 4 June 2026
 
 These Terms govern your use of the Empirical Tracker iOS app and its backend
 services ("the app"). By creating an account or using the app, you agree to
@@ -31,8 +24,8 @@ in an emergency.
 
 ## 3. Eligibility
 
-You must be at least `[TBD: minimum age, e.g. 16]` years old and able to form a
-binding agreement to use the app.
+You must be at least **16 years old** and able to form a binding agreement to
+use the app.
 
 ## 4. Your account
 
@@ -89,9 +82,8 @@ liability) will survive.
 
 ## 11. Governing law
 
-These Terms are governed by the laws of `[TBD: governing jurisdiction, e.g.
-Norway]`, without prejudice to any mandatory consumer-protection rights you have
-in your country of residence.
+These Terms are governed by the laws of Norway, without prejudice to any
+mandatory consumer-protection rights you have in your country of residence.
 
 ## 12. Changes to these Terms
 
@@ -101,4 +93,4 @@ after changes take effect means you accept the updated Terms.
 
 ## 13. Contact
 
-Questions about these Terms: `[TBD: contact email]`.
+Questions about these Terms: frmingest@gmail.com
