@@ -17,6 +17,8 @@ struct NutritionLabelCaptureView: View {
     @State private var phase: Phase = .idle
     @State private var isCapturing = false
     @State private var errorMessage: String?
+    /// Guard so onParsed fires exactly once even if the view re-renders.
+    @State private var didCallOnParsed = false
 
     private let repo: FoodDiaryRepository
 
@@ -80,10 +82,7 @@ struct NutritionLabelCaptureView: View {
             progressView(message: String(localized: "food.label.ocr.progress"))
         case .parsing:
             progressView(message: String(localized: "food.label.parsing.progress"))
-        case .done(let label):
-            // This case is handled by the parent via onParsed — we only reach it
-            // briefly before dismissal. Show a spinner in the meantime.
-            let _ = onParsed(label, prefilledBarcode)
+        case .done:
             progressView(message: String(localized: "food.label.parsing.progress"))
         }
     }
@@ -189,6 +188,9 @@ struct NutritionLabelCaptureView: View {
         do {
             let label = try await repo.parseLabel(ocrText: ocrText)
             phase = .done(label)
+            guard !didCallOnParsed else { return }
+            didCallOnParsed = true
+            onParsed(label, prefilledBarcode)
         } catch {
             errorMessage = String(localized: "food.label.error.message")
             phase = .idle
