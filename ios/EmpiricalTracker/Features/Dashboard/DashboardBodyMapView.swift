@@ -49,11 +49,9 @@ struct DashboardBodyMapView: View {
 
             ZStack(alignment: .topLeading) {
                 // Silhouette
-                Image(systemName: "figure.stand")
-                    .resizable()
-                    .scaledToFit()
+                HumanBodySilhouette()
+                    .fill(Color.textMuted.opacity(0.18))
                     .frame(width: figureWidth, height: figureHeight)
-                    .foregroundStyle(Color.textMuted.opacity(0.18))
                     .position(
                         x: originX + figureWidth  / 2,
                         y: originY + figureHeight / 2
