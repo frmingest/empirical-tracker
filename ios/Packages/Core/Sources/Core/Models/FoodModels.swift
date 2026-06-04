@@ -412,19 +412,21 @@ public struct ParsedLabel: Decodable, Identifiable, Sendable {
         fat100g           = try c.decodeIfPresent(Double.self, forKey: .fat100g)
         saturatedFat100g  = try c.decodeIfPresent(Double.self, forKey: .saturatedFat100g)
         sodiumMg100g      = try c.decodeIfPresent(Double.self, forKey: .sodiumMg100g)
-        servingG          = nil  // not in the FoodItem shape returned by backend
-        ingredients       = nil
+        servingG          = try c.decodeIfPresent(Double.self, forKey: .servingG)
+        ingredients       = try c.decodeIfPresent(String.self, forKey: .ingredients)
         ocrRaw            = nil
     }
 
     private enum CodingKeys: String, CodingKey {
         case name, brand
-        case energyKcal100g
-        case carbs100g
-        case protein100g
-        case fat100g
-        case saturatedFat100g
-        case sodiumMg100g
+        case energyKcal100g   = "energy_kcal_100g"
+        case carbs100g        = "carbs_100g"
+        case protein100g      = "protein_100g"
+        case fat100g          = "fat_100g"
+        case saturatedFat100g = "saturated_fat_100g"
+        case sodiumMg100g     = "sodium_mg_100g"
+        case servingG         = "serving_g"
+        case ingredients
     }
 
     /// Convert to a FoodItem so it integrates with the existing logging flow.
