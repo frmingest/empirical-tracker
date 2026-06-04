@@ -1302,6 +1302,23 @@
         }
       }
     },
+    "common.more" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "More"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mer"
+          }
+        }
+      }
+    },
     "common.noResults" : {
       "extractionState" : "manual",
       "localizations" : {

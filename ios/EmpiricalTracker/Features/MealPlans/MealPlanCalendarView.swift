@@ -2,12 +2,17 @@ import Core
 import MealPlans
 import SwiftUI
 
-/// The Plan tab (Sprint 7, ADR-012). A Monday→Sunday week of planned meals with
-/// multi-week navigation, per-day energy totals, named-plan filtering, and the
-/// "Log to diary" promotion that reuses the Sprint 6 food pipeline.
+/// The Plan tab (Sprint 7, ADR-012). Redesigned around a calendar-first layout: a
+/// rounded week strip sits above a "selected day" card that lists that day's
+/// planned meals. Multi-week navigation, per-day energy totals, named-plan
+/// filtering and the "Log to diary" promotion (reusing the Sprint 6 food pipeline)
+/// are all preserved; only the presentation changed.
 struct MealPlanCalendarView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var viewModel: MealPlanViewModel?
+    /// The day whose meals are shown in the detail card. Always a member of the
+    /// view model's currently-loaded week.
+    @State private var selectedDay = Calendar.current.startOfDay(for: .now)
 
     var body: some View {
         NavigationStack {
@@ -25,6 +30,7 @@ struct MealPlanCalendarView: View {
                 if viewModel == nil {
                     viewModel = MealPlanViewModel(repo: env.mealPlans)
                     await viewModel?.load()
+                    selectedDay = clamp(.now, into: viewModel?.week)
                 }
             }
             .sheet(isPresented: Binding(
@@ -61,23 +67,19 @@ struct MealPlanCalendarView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .principal) {
-            if let vm = viewModel {
-                WeekNavigator(viewModel: vm)
-            }
-        }
-        ToolbarItemGroup(placement: .topBarTrailing) {
-            if let vm = viewModel, !vm.isCurrentWeek {
-                Button {
-                    Task { await vm.goToThisWeek() }
-                } label: {
-                    Image(systemName: "arrow.uturn.backward")
-                        .accessibilityLabel(String(localized: "plan.week.jump_current"))
-                }
-            }
+        ToolbarItem(placement: .topBarLeading) {
             if let vm = viewModel {
                 PlanFilterMenu(viewModel: vm)
             }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                viewModel?.beginAdd(on: selectedDay, meal: .breakfast)
+            } label: {
+                Image(systemName: "plus")
+                    .accessibilityLabel(String(localized: "plan.day.add"))
+            }
+            .foregroundStyle(Color.accent)
         }
     }
 
@@ -88,65 +90,49 @@ struct MealPlanCalendarView: View {
         if vm.isLoading && vm.allMeals.isEmpty {
             LoadingView(message: String(localized: "plan.loading"))
         } else {
-            calendarList(vm)
-        }
-    }
-
-    private func calendarList(_ vm: MealPlanViewModel) -> some View {
-        List {
-            if vm.isWeekEmpty {
-                Section {
-                    EmptyStateView(
-                        icon: "calendar.badge.plus",
-                        title: String(localized: "plan.empty.title"),
-                        message: String(localized: "plan.empty.message")
+            ScrollView {
+                VStack(spacing: 16) {
+                    WeekCalendarCard(
+                        viewModel: vm,
+                        selectedDay: $selectedDay,
+                        onShift: { offset in await shiftWeek(by: offset, vm: vm) },
+                        onToday: { await goToToday(vm) }
                     )
-                    .listRowBackground(Color.clear)
+
+                    SelectedDayCard(viewModel: vm, day: selectedDay)
+
+                    DisclaimerFooter()
+                        .padding(.horizontal, 4)
                 }
+                .padding(16)
             }
-
-            ForEach(vm.week.days, id: \.self) { day in
-                DaySection(viewModel: vm, day: day)
-            }
-
-            Section {
-                DisclaimerFooter()
-                    .listRowBackground(Color.clear)
-            }
+            .background(Color.bgBase)
+            .refreshable { await vm.load() }
         }
-        .listStyle(.insetGrouped)
-        .refreshable { await vm.load() }
     }
-}
 
-// MARK: - Week navigator
+    // MARK: - Week navigation (keeps `selectedDay` inside the loaded week)
 
-private struct WeekNavigator: View {
-    @Bindable var viewModel: MealPlanViewModel
+    private func shiftWeek(by offset: Int, vm: MealPlanViewModel) async {
+        let weekday = Calendar.current.component(.weekday, from: selectedDay)
+        if offset < 0 { await vm.goToPreviousWeek() } else { await vm.goToNextWeek() }
+        selectedDay = vm.week.days.first {
+            Calendar.current.component(.weekday, from: $0) == weekday
+        } ?? vm.week.start
+    }
 
-    var body: some View {
-        HStack(spacing: 12) {
-            Button {
-                Task { await viewModel.goToPreviousWeek() }
-            } label: {
-                Image(systemName: "chevron.left")
-            }
-            .accessibilityLabel(String(localized: "plan.week.previous"))
+    private func goToToday(_ vm: MealPlanViewModel) async {
+        await vm.goToThisWeek()
+        selectedDay = clamp(.now, into: vm.week)
+    }
 
-            Text(viewModel.weekTitle)
-                .font(.headlineMedium)
-                .foregroundStyle(Color.textPrimary)
-                .frame(minWidth: 120)
-                .multilineTextAlignment(.center)
-
-            Button {
-                Task { await viewModel.goToNextWeek() }
-            } label: {
-                Image(systemName: "chevron.right")
-            }
-            .accessibilityLabel(String(localized: "plan.week.next"))
-        }
-        .tint(Color.accent)
+    /// Snaps `date` to the matching day inside `week` (falls back to the week start).
+    private func clamp(_ date: Date, into week: PlanWeek?) -> Date {
+        guard let week else { return Calendar.current.startOfDay(for: date) }
+        let weekday = Calendar.current.component(.weekday, from: date)
+        return week.days.first {
+            Calendar.current.component(.weekday, from: $0) == weekday
+        } ?? week.start
     }
 }
 
@@ -177,68 +163,160 @@ private struct PlanFilterMenu: View {
     }
 }
 
-// MARK: - Day section
+// MARK: - Week calendar card
 
-private struct DaySection: View {
-    @Bindable var viewModel: MealPlanViewModel
+private struct WeekCalendarCard: View {
+    let viewModel: MealPlanViewModel
+    @Binding var selectedDay: Date
+    let onShift: (Int) async -> Void
+    let onToday: () async -> Void
+
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
+
+    var body: some View {
+        SoftCard {
+            VStack(spacing: 16) {
+                header
+                weekdayLabels
+                LazyVGrid(columns: columns, spacing: 6) {
+                    ForEach(viewModel.week.days, id: \.self) { day in
+                        dayCell(day)
+                    }
+                }
+            }
+        }
+    }
+
+    private var header: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(monthTitle)
+                    .font(.headlineLarge)
+                    .foregroundStyle(Color.textPrimary)
+                Text(yearTitle)
+                    .font(.labelMedium)
+                    .foregroundStyle(Color.textMuted)
+            }
+
+            Spacer()
+
+            Button { Task { await onShift(-1) } } label: {
+                Image(systemName: "chevron.left").font(.headlineMedium)
+            }
+            .accessibilityLabel(String(localized: "plan.week.previous"))
+
+            Button { Task { await onShift(1) } } label: {
+                Image(systemName: "chevron.right").font(.headlineMedium)
+            }
+            .accessibilityLabel(String(localized: "plan.week.next"))
+
+            if !viewModel.isCurrentWeek {
+                Button(String(localized: "plan.week.jump_current")) {
+                    Task { await onToday() }
+                }
+                .font(.headlineSmall)
+            }
+        }
+        .tint(Color.accent)
+    }
+
+    private var weekdayLabels: some View {
+        HStack(spacing: 4) {
+            ForEach(viewModel.week.days, id: \.self) { day in
+                Text(day.formatted(.dateTime.weekday(.narrow)))
+                    .font(.labelSmall)
+                    .foregroundStyle(Color.textMuted)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    private func dayCell(_ day: Date) -> some View {
+        let isSelected = Calendar.current.isDate(day, inSameDayAs: selectedDay)
+        let isToday = Calendar.current.isDateInToday(day)
+        let hasMeals = !viewModel.meals(on: day).isEmpty
+
+        return Button {
+            withAnimation(.snappy(duration: 0.2)) { selectedDay = day }
+        } label: {
+            VStack(spacing: 4) {
+                Text(day.formatted(.dateTime.day()))
+                    .font(.headlineMedium)
+                    .foregroundStyle(dayColor(isSelected: isSelected, isToday: isToday))
+                Circle()
+                    .fill(hasMeals ? (isSelected ? Color.white : Color.accent) : Color.clear)
+                    .frame(width: 5, height: 5)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.accent)
+                } else if isToday {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(Color.accent.opacity(0.5), lineWidth: 1.5)
+                }
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(day.formatted(.dateTime.weekday(.wide).day().month(.wide)))
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+
+    private func dayColor(isSelected: Bool, isToday: Bool) -> Color {
+        if isSelected { return .white }
+        if isToday { return .accent }
+        return .textPrimary
+    }
+
+    private var monthTitle: String {
+        selectedDay.formatted(.dateTime.month(.wide))
+    }
+
+    private var yearTitle: String {
+        selectedDay.formatted(.dateTime.year())
+    }
+}
+
+// MARK: - Selected day card
+
+private struct SelectedDayCard: View {
+    let viewModel: MealPlanViewModel
     let day: Date
 
     private var meals: [PlannedMeal] { viewModel.meals(on: day) }
 
     var body: some View {
-        Section {
-            if meals.isEmpty {
-                Button {
-                    viewModel.beginAdd(on: day, meal: .breakfast)
-                } label: {
-                    Label(String(localized: "plan.day.add"), systemImage: "plus")
-                        .font(.bodySmall)
-                        .foregroundStyle(Color.accent)
-                }
-            } else {
-                ForEach(meals) { meal in
-                    PlannedMealRow(meal: meal) {
-                        Task { await viewModel.toggleDone(meal) }
-                    }
-                    .listRowBackground(meal.meal.tint.opacity(0.09))
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button(role: .destructive) {
-                            Task { await viewModel.delete(meal) }
-                        } label: {
-                            Label(String(localized: "common.delete"), systemImage: "trash")
+        SoftCard {
+            VStack(alignment: .leading, spacing: 14) {
+                header
+
+                if meals.isEmpty {
+                    emptyRow
+                } else {
+                    VStack(spacing: 10) {
+                        ForEach(meals) { meal in
+                            PlannedMealRow(
+                                meal: meal,
+                                onToggleDone: { Task { await viewModel.toggleDone(meal) } },
+                                onLogToDiary: { Task { await viewModel.logToDiary(meal) } },
+                                onDelete: { Task { await viewModel.delete(meal) } }
+                            )
                         }
-                        Button {
-                            Task { await viewModel.logToDiary(meal) }
-                        } label: {
-                            Label(String(localized: "plan.log_to_diary"), systemImage: "fork.knife")
-                        }
-                        .tint(Color.accent)
                     }
                 }
             }
-        } header: {
-            DayHeader(viewModel: viewModel, day: day, mealCount: meals.count)
         }
     }
-}
 
-private struct DayHeader: View {
-    let viewModel: MealPlanViewModel
-    let day: Date
-    let mealCount: Int
-
-    var body: some View {
+    private var header: some View {
         HStack(alignment: .firstTextBaseline) {
-            HStack(spacing: 6) {
-                Text(viewModel.dayTitle(day))
-                    .font(.headlineSmall)
-                    .foregroundStyle(viewModel.isToday(day) ? Color.accent : Color.textSecondary)
-                Text(viewModel.daySubtitle(day))
-                    .font(.labelSmall)
-                    .foregroundStyle(Color.textMuted)
-            }
+            Text(day.formatted(.dateTime.day().month(.wide).year()))
+                .font(.headlineLarge)
+                .foregroundStyle(Color.textPrimary)
             Spacer()
-            if mealCount > 0 {
+            if !meals.isEmpty {
                 Text(NutritionFormat.energy(viewModel.energyTotal(on: day)))
                     .font(.numericSmall)
                     .foregroundStyle(Color.textSecondary)
@@ -246,11 +324,28 @@ private struct DayHeader: View {
             Button {
                 viewModel.beginAdd(on: day, meal: .breakfast)
             } label: {
-                Image(systemName: "plus.circle")
+                Image(systemName: "plus.circle.fill")
+                    .font(.title3)
                     .foregroundStyle(Color.accent)
             }
-            .accessibilityLabel(Text(String(localized: "plan.day.add")))
+            .accessibilityLabel(String(localized: "plan.day.add"))
         }
+    }
+
+    private var emptyRow: some View {
+        Button {
+            viewModel.beginAdd(on: day, meal: .breakfast)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "plus.circle")
+                Text(String(localized: "plan.day.add"))
+                Spacer()
+            }
+            .font(.bodyMedium)
+            .foregroundStyle(Color.accent)
+            .padding(.vertical, 12)
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -259,15 +354,11 @@ private struct DayHeader: View {
 private struct PlannedMealRow: View {
     let meal: PlannedMeal
     let onToggleDone: () -> Void
+    let onLogToDiary: () -> Void
+    let onDelete: () -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
-            // Leading accent bar — colour-codes the meal slot, mirroring the diary's
-            // `FoodEntryRow` so the two timelines read as one visual language.
-            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .fill(meal.meal.tint)
-                .frame(width: 3)
-
+        HStack(spacing: 12) {
             Button(action: onToggleDone) {
                 Image(systemName: meal.done ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(meal.done ? Color.inRange : Color.textMuted)
@@ -289,7 +380,6 @@ private struct PlannedMealRow: View {
                         .foregroundStyle(Color.textPrimary)
                 }
                 HStack(spacing: 8) {
-                    // Tinted meal icon + name, echoing the diary's meal-section header.
                     Label {
                         Text(meal.meal.localizedName)
                     } icon: {
@@ -309,8 +399,37 @@ private struct PlannedMealRow: View {
                         .foregroundStyle(Color.textSecondary)
                 }
             }
+
+            Menu {
+                Button {
+                    onLogToDiary()
+                } label: {
+                    Label(String(localized: "plan.log_to_diary"), systemImage: "fork.knife")
+                }
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Label(String(localized: "common.delete"), systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.headlineSmall)
+                    .foregroundStyle(Color.textMuted)
+                    .frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel(String(localized: "common.more"))
         }
-        .padding(.vertical, 2)
+        // Leading accent bar — colour-codes the meal slot, mirroring the diary's
+        // `FoodEntryRow` so the two timelines read as one visual language.
+        .padding(.leading, 12)
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(meal.meal.tint)
+                .frame(width: 3)
+                .padding(.vertical, 2)
+        }
+        .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityText)
     }
