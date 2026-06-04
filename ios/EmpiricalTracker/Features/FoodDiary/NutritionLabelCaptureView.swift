@@ -5,40 +5,37 @@ import Vision
 
 /// Full-screen sheet that lets the user photograph a nutrition label.
 /// On capture it runs on-device OCR (Vision) then posts the text to the backend
-/// for Claude Haiku to extract structured nutrients. No image is stored.
+/// for Claude Haiku to extract structured nutrients. After parsing succeeds,
+/// AddCustomFoodView is presented inline so the entire flow stays in one
+/// view hierarchy — no cross-hierarchy state handoff.
 struct NutritionLabelCaptureView: View {
     /// Optional barcode that triggered this flow (barcode-miss path).
     let prefilledBarcode: String?
-    /// Called with the parsed label when the user accepts it.
-    let onParsed: (ParsedLabel, String?) -> Void
-    /// Called when the user cancels.
-    let onCancel: () -> Void
+    let viewModel: FoodDiaryViewModel
+    /// Called when the user cancels or completes the flow (use to dismiss the fullScreenCover).
+    let onDone: () -> Void
 
     @State private var phase: Phase = .idle
     @State private var isCapturing = false
     @State private var errorMessage: String?
-    /// Guard so onParsed fires exactly once even if the view re-renders.
-    @State private var didCallOnParsed = false
-
-    private let repo: FoodDiaryRepository
+    /// Set when parsing succeeds — triggers AddCustomFoodView sheet.
+    @State private var parsedLabel: ParsedLabel?
 
     init(
         prefilledBarcode: String? = nil,
-        repo: FoodDiaryRepository,
-        onParsed: @escaping (ParsedLabel, String?) -> Void,
-        onCancel: @escaping () -> Void
+        viewModel: FoodDiaryViewModel,
+        onDone: @escaping () -> Void
     ) {
         self.prefilledBarcode = prefilledBarcode
-        self.repo = repo
-        self.onParsed = onParsed
-        self.onCancel = onCancel
+        self.viewModel = viewModel
+        self.onDone = onDone
     }
 
     enum Phase {
         case idle
         case recognising
-        case parsing(ocrText: String)
-        case done(ParsedLabel)
+        case parsing
+        case done
     }
 
     var body: some View {
@@ -51,7 +48,7 @@ struct NutritionLabelCaptureView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(String(localized: "common.cancel")) { onCancel() }
+                    Button(String(localized: "common.cancel")) { onDone() }
                 }
             }
             .alert(
@@ -70,6 +67,15 @@ struct NutritionLabelCaptureView: View {
                     recognise(image: image)
                 }
             }
+        }
+        // Present AddCustomFoodView here, inside the same fullScreenCover hierarchy.
+        .sheet(item: $parsedLabel) { label in
+            AddCustomFoodView(
+                viewModel: viewModel,
+                parsedLabel: label,
+                prefilledBarcode: prefilledBarcode,
+                onSaved: { onDone() }
+            )
         }
     }
 
@@ -184,13 +190,11 @@ struct NutritionLabelCaptureView: View {
 
     @MainActor
     private func parse(ocrText: String) async {
-        phase = .parsing(ocrText: ocrText)
+        phase = .parsing
         do {
-            let label = try await repo.parseLabel(ocrText: ocrText)
-            phase = .done(label)
-            guard !didCallOnParsed else { return }
-            didCallOnParsed = true
-            onParsed(label, prefilledBarcode)
+            let label = try await viewModel.repo.parseLabel(ocrText: ocrText)
+            parsedLabel = label   // triggers .sheet(item:) — safe, same hierarchy
+            phase = .done
         } catch {
             errorMessage = String(localized: "food.label.error.message")
             phase = .idle

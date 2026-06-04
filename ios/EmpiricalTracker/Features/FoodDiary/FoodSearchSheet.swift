@@ -13,11 +13,9 @@ struct FoodSearchSheet: View {
 
     /// Barcode that was scanned but not found — triggers the label-scan prompt.
     @State private var missedBarcode: String?
-    /// True when the label-capture sheet is open.
+    /// True when the label-capture + review flow is open.
     @State private var isCapturingLabel = false
-    /// Parsed label waiting to be reviewed in AddCustomFoodView.
-    @State private var parsedLabel: ParsedLabel?
-    /// True when AddCustomFoodView is open.
+    /// True when AddCustomFoodView is open for manual entry (no OCR).
     @State private var isAddingCustom = false
 
     var body: some View {
@@ -52,31 +50,19 @@ struct FoodSearchSheet: View {
                     handleScan(result)
                 }
             }
-            // Nutrition label OCR capture (barcode-miss → label path).
+            // Nutrition label OCR capture → review → save (all in one hierarchy).
             .fullScreenCover(isPresented: $isCapturingLabel) {
                 NutritionLabelCaptureView(
                     prefilledBarcode: missedBarcode,
-                    repo: viewModel.repo
-                ) { label, barcode in
-                    // Store the label BEFORE dismissing the fullScreenCover, then
-                    // wait for the dismiss animation (~0.35s) before presenting the
-                    // sheet — otherwise AddCustomFoodView.init captures a nil label.
-                    parsedLabel = label
-                    missedBarcode = barcode
-                    isCapturingLabel = false
-                    Task { @MainActor in
-                        try? await Task.sleep(for: .milliseconds(400))
-                        isAddingCustom = true
-                    }
-                } onCancel: {
-                    isCapturingLabel = false
-                }
+                    viewModel: viewModel,
+                    onDone: { isCapturingLabel = false }
+                )
             }
-            // Review + save custom food (OCR result or manual entry).
+            // Manual custom food entry (+ button, no OCR).
             .sheet(isPresented: $isAddingCustom) {
                 AddCustomFoodView(
                     viewModel: viewModel,
-                    parsedLabel: parsedLabel,
+                    parsedLabel: nil,
                     prefilledBarcode: missedBarcode
                 )
             }
@@ -127,7 +113,6 @@ struct FoodSearchSheet: View {
             // Dedicated camera button to scan a nutrition label directly.
             Button {
                 missedBarcode = nil
-                parsedLabel = nil
                 isCapturingLabel = true
             } label: {
                 Image(systemName: "camera")
@@ -137,9 +122,8 @@ struct FoodSearchSheet: View {
             .buttonBorderShape(.capsule)
             .tint(Color.accent)
             .accessibilityLabel(String(localized: "food.label.capture.button"))
-            // Always-visible "add my food" shortcut.
+            // Always-visible "add my food" shortcut (manual, no OCR).
             Button {
-                parsedLabel = nil
                 missedBarcode = nil
                 isAddingCustom = true
             } label: {
