@@ -99,9 +99,17 @@ struct BodyMapHotspotPin: View {
 
     private var assessment: MarkerSignals.Assessment { region.worstAssessment }
 
+    /// Keep the tappable region comfortable (≥44pt, per Apple's HIG) even when
+    /// the visible pin is small.
+    private var hitSize: CGFloat { max(diameter * 1.45, 44) }
+
     var body: some View {
         Button(action: onTap) {
             ZStack {
+                // Invisible spacer that sizes the tap target to `hitSize`.
+                Color.clear
+                    .frame(width: hitSize, height: hitSize)
+
                 // Pulse ring — only for markers that need attention.
                 if assessment == .outOfRange || assessment == .watch {
                     Circle()
@@ -129,6 +137,7 @@ struct BodyMapHotspotPin: View {
                     .frame(width: diameter * 0.42, height: diameter * 0.42)
                     .foregroundStyle(.white)
             }
+            .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(region.label): \(accessibilityStatus)")
