@@ -84,9 +84,9 @@ see how they trend together, and share a PDF summary with your doctor.
 
 | Field | Value | Status |
 |-------|-------|--------|
-| **Support URL** *(required)* | `https://empirical.app/support` | ⚠️ placeholder |
-| **Marketing URL** *(optional)* | `https://empirical.app` | ⚠️ placeholder |
-| **Privacy Policy URL** *(required)* | `https://empirical.app/privacy` | ⚠️ placeholder — must match `ios/.../Config/Legal.swift` |
+| **Support URL** *(required)* | `https://frmingest.github.io/empirical-tracker/support` | ✅ GitHub Pages |
+| **Marketing URL** *(optional)* | `https://frmingest.github.io/empirical-tracker/` | ✅ GitHub Pages |
+| **Privacy Policy URL** *(required)* | `https://frmingest.github.io/empirical-tracker/privacy` | ✅ matches `Legal.swift` — enable GitHub Pages first |
 
 ## Age rating (questionnaire — confirm against the live form)
 

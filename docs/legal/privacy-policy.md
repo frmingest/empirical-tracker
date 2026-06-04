@@ -1,13 +1,6 @@
-<!--
-  DRAFT — pending (1) legal review and (2) a hosting decision.
-  Placeholders are marked `[TBD: …]`. See docs/legal/README.md for the open
-  items (data-controller identity, contact address, hosting domain/URL) that
-  must be resolved before this is published or referenced from App Store Connect.
--->
-
 # Privacy Policy — Empirical Tracker
 
-**Last updated:** `[TBD: effective date]`
+**Last updated:** 4 June 2026
 **Applies to:** the Empirical Tracker iOS app and its backend services.
 
 Empirical Tracker ("the app", "we", "us") helps you track how your diet relates
@@ -20,9 +13,9 @@ it, and the rights you have over it.
 
 The data controller for the purposes of the GDPR is:
 
-> `[TBD: legal name of the data controller / developer or company]`
-> `[TBD: postal address]`
-> Contact: `[TBD: privacy contact email, e.g. privacy@your-domain]`
+> Faiz Malik
+> `[TBD: postal address — required for GDPR; add before publishing]`
+> Contact: frmingest@gmail.com
 
 If we ever appoint a Data Protection Officer or EU representative, their details
 will be added here.
@@ -53,8 +46,8 @@ We do **not** use third-party advertising or analytics SDKs on your health data.
 
 ## 4. How your data is stored and protected
 
-- **EU data residency.** All data is stored in the EU (Supabase, Frankfurt /
-  `eu-central-1`). It is not transferred outside the EU/EEA.
+- **EU data residency.** Your personal health and account data is stored in the
+  EU (Supabase, Frankfurt / `eu-central-1`).
 - **Isolation by design.** Every record is scoped to your account with
   PostgreSQL Row-Level Security, enforced by the database itself, so one user can
   never read another's data.
@@ -69,12 +62,18 @@ We do **not** use third-party advertising or analytics SDKs on your health data.
 We use a small number of service providers strictly to run the app. They process
 data on our behalf and only as needed:
 
-| Provider | Purpose | Location |
-|---|---|---|
-| Supabase | Database, authentication, storage | EU (Frankfurt) |
-| Railway | Backend API hosting | `[TBD: confirm region]` |
-| Apple (HealthKit) | On-device health data you choose to share | Your device |
-| Withings (optional) | Device measurements, only if you connect it | `[TBD: confirm]` |
+| Provider | Purpose | Location | Transfer mechanism |
+|---|---|---|---|
+| Supabase | Database, authentication, storage | EU (Frankfurt) | Within EEA — no transfer |
+| Railway | Backend API hosting | US (East) | Standard Contractual Clauses |
+| Anthropic | Nutrition-label OCR parsing (food diary feature) | US | Standard Contractual Clauses |
+| Apple (HealthKit) | On-device health data you choose to share | Your device | Within EEA — on-device only |
+| Withings (optional) | Device measurements, only if you connect it | EU (France) | Within EEA — no transfer |
+
+**Anthropic note:** when you use the barcode/label scanner, the OCR text from the
+nutrition-facts panel is sent to Anthropic's API to extract structured nutrient
+values. No other personal data is sent. We have a Data Processing Agreement and
+rely on Standard Contractual Clauses for this transfer.
 
 Reference nutrition data (e.g. Open Food Facts, the Norwegian Matvaretabellen,
 and USDA) is fetched through our backend; your personal data is **not** sent to
@@ -92,9 +91,9 @@ fraud prevention and legal compliance.
 
 ## 7. International transfers
 
-None. Your data stays within the EU/EEA. If this ever changes, we will update
-this policy and rely on an appropriate transfer mechanism (e.g. Standard
-Contractual Clauses) first.
+Where data is transferred outside the EU/EEA (to Railway for API processing and
+to Anthropic for label parsing), we rely on Standard Contractual Clauses (SCCs)
+as the transfer mechanism. Your stored health data remains in the EU at all times.
 
 ## 8. Your rights
 
@@ -112,13 +111,12 @@ Under the GDPR you can, at any time:
   Norwegian Data Protection Authority (Datatilsynet); in other EU/EEA countries,
   your national authority.
 
-To exercise rights that aren't self-service, contact us at
-`[TBD: privacy contact email]`.
+To exercise rights that aren't self-service, contact us at frmingest@gmail.com.
 
 ## 9. Children
 
-Empirical Tracker is not intended for children. You must be at least
-`[TBD: minimum age, e.g. 16]` years old to use it.
+Empirical Tracker is not intended for children. You must be at least **16 years
+old** to use it.
 
 ## 10. Not medical advice
 
@@ -134,5 +132,4 @@ updated" date above and, where appropriate, surfaced in the app.
 
 ## 12. Contact
 
-Questions about this policy or your data:
-`[TBD: privacy contact email]`.
+Questions about this policy or your data: frmingest@gmail.com

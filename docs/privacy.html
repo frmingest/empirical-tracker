@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — Empirical Tracker</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 760px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; line-height: 1.6; }
+    h1 { font-size: 1.8rem; }
+    h2 { font-size: 1.2rem; margin-top: 2rem; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { text-align: left; padding: 8px 12px; border: 1px solid #ddd; }
+    th { background: #f5f5f5; }
+    a { color: #0066cc; }
+    .meta { color: #555; font-size: 0.9rem; margin-bottom: 2rem; }
+  </style>
+</head>
+<body>
+  <h1>Privacy Policy — Empirical Tracker</h1>
+  <p class="meta"><strong>Last updated:</strong> 4 June 2026<br>
+  <strong>Applies to:</strong> the Empirical Tracker iOS app and its backend services.</p>
+
+  <p>Empirical Tracker ("the app", "we", "us") helps you track how your diet relates to your blood biomarkers and body metrics. Because the app processes <strong>health data</strong>, which is special-category data under the GDPR, we treat your privacy as a first-class concern. This policy explains what we collect, why, how we protect it, and the rights you have over it.</p>
+
+  <h2>1. Who is responsible for your data</h2>
+  <p>The data controller for the purposes of the GDPR is:</p>
+  <blockquote>
+    Faiz Malik<br>
+    Contact: <a href="mailto:frmingest@gmail.com">frmingest@gmail.com</a>
+  </blockquote>
+
+  <h2>2. What data we collect</h2>
+  <p>We only collect what the app needs to work. We do <strong>not</strong> sell your data, and we do <strong>not</strong> use it for advertising.</p>
+  <table>
+    <tr><th>Category</th><th>Examples</th><th>Why we hold it</th></tr>
+    <tr><td><strong>Account</strong></td><td>Email address, authentication identifiers (Supabase user id)</td><td>To create and secure your account</td></tr>
+    <tr><td><strong>Health &amp; body data</strong></td><td>Blood biomarkers you import or enter, weight, waist, blood pressure</td><td>The core function: charting your results over time</td></tr>
+    <tr><td><strong>Diet data</strong></td><td>Food diary entries, meal plans, diet events</td><td>To correlate diet with your biomarkers</td></tr>
+    <tr><td><strong>Apple Health (optional)</strong></td><td>Weight and blood-pressure readings you choose to share</td><td>To chart them alongside your biomarkers — read-only, we never write to Apple Health</td></tr>
+    <tr><td><strong>Connected devices (optional)</strong></td><td>Withings measurements, if you connect Withings Cloud</td><td>To import body metrics automatically</td></tr>
+    <tr><td><strong>Technical</strong></td><td>Minimal logs needed to operate and secure the service</td><td>Security, debugging, and abuse prevention</td></tr>
+  </table>
+  <p>We do <strong>not</strong> use third-party advertising or analytics SDKs on your health data.</p>
+
+  <h2>3. Legal basis for processing</h2>
+  <ul>
+    <li><strong>Health and body data (special category):</strong> your <strong>explicit consent</strong> under GDPR Article 9(2)(a), captured in the app before processing begins. You can withdraw it at any time (see Section 8).</li>
+    <li><strong>Account and technical data:</strong> performance of our agreement with you and our legitimate interest in operating a secure service (Article 6(1)(b) and (f)).</li>
+  </ul>
+
+  <h2>4. How your data is stored and protected</h2>
+  <ul>
+    <li><strong>EU data residency.</strong> Your personal health and account data is stored in the EU (Supabase, Frankfurt / eu-central-1).</li>
+    <li><strong>Isolation by design.</strong> Every record is scoped to your account with PostgreSQL Row-Level Security, so one user can never read another's data.</li>
+    <li><strong>Authenticated access.</strong> Every API request is validated against a live authentication token before any data is touched.</li>
+    <li><strong>Encryption in transit.</strong> All traffic uses HTTPS/TLS.</li>
+    <li><strong>Apple Health stays on-device</strong> under iOS's HealthKit protections; we only read the specific types you enable.</li>
+  </ul>
+
+  <h2>5. Who we share data with (sub-processors)</h2>
+  <table>
+    <tr><th>Provider</th><th>Purpose</th><th>Location</th><th>Transfer mechanism</th></tr>
+    <tr><td>Supabase</td><td>Database, authentication, storage</td><td>EU (Frankfurt)</td><td>Within EEA — no transfer</td></tr>
+    <tr><td>Railway</td><td>Backend API hosting</td><td>US (East)</td><td>Standard Contractual Clauses</td></tr>
+    <tr><td>Anthropic</td><td>Nutrition-label OCR parsing (food diary feature)</td><td>US</td><td>Standard Contractual Clauses</td></tr>
+    <tr><td>Apple (HealthKit)</td><td>On-device health data you choose to share</td><td>Your device</td><td>Within EEA — on-device only</td></tr>
+    <tr><td>Withings (optional)</td><td>Device measurements, only if you connect it</td><td>EU (France)</td><td>Within EEA — no transfer</td></tr>
+  </table>
+  <p><strong>Anthropic note:</strong> when you use the barcode/label scanner, the OCR text from the nutrition-facts panel is sent to Anthropic's API to extract structured nutrient values. No other personal data is sent. We have a Data Processing Agreement and rely on Standard Contractual Clauses for this transfer.</p>
+  <p>Reference nutrition data (e.g. Open Food Facts, the Norwegian Matvaretabellen, and USDA) is fetched through our backend; your personal data is <strong>not</strong> sent to those sources.</p>
+  <p>We do not sell or rent your personal data, and we only disclose it where legally required.</p>
+
+  <h2>6. How long we keep it</h2>
+  <p>We keep your data for as long as your account is active. When you delete your account (Section 8), we erase your health, diet, body, and account data from our systems. Minimal security logs may persist for a short period as required for fraud prevention and legal compliance.</p>
+
+  <h2>7. International transfers</h2>
+  <p>Where data is transferred outside the EU/EEA (to Railway for API processing and to Anthropic for label parsing), we rely on Standard Contractual Clauses (SCCs) as the transfer mechanism. Your stored health data remains in the EU at all times.</p>
+
+  <h2>8. Your rights</h2>
+  <p>Under the GDPR you can, at any time:</p>
+  <ul>
+    <li><strong>Access</strong> the data we hold about you.</li>
+    <li><strong>Export / portability</strong> — download your data in JSON or CSV from <strong>Settings ▸ Account</strong> in the app.</li>
+    <li><strong>Erasure</strong> — delete your account and data from <strong>Settings ▸ Account</strong>.</li>
+    <li><strong>Rectify</strong> inaccurate data.</li>
+    <li><strong>Withdraw consent</strong> to health-data processing (deleting your account withdraws it and removes the data).</li>
+    <li><strong>Object to or restrict</strong> certain processing.</li>
+    <li><strong>Lodge a complaint</strong> with your supervisory authority. In Norway this is the Norwegian Data Protection Authority (Datatilsynet); in other EU/EEA countries, your national authority.</li>
+  </ul>
+  <p>To exercise rights that aren't self-service, contact us at <a href="mailto:frmingest@gmail.com">frmingest@gmail.com</a>.</p>
+
+  <h2>9. Children</h2>
+  <p>Empirical Tracker is not intended for children. You must be at least <strong>16 years old</strong> to use it.</p>
+
+  <h2>10. Not medical advice</h2>
+  <p>Empirical Tracker is a personal decision-support tool. It shows <strong>correlations, not causes</strong>, and is <strong>not</strong> a medical device or a substitute for professional medical advice, diagnosis, or treatment. Always consult a qualified clinician about your health.</p>
+
+  <h2>11. Changes to this policy</h2>
+  <p>We may update this policy. Material changes will be reflected by the "Last updated" date above and, where appropriate, surfaced in the app.</p>
+
+  <h2>12. Contact</h2>
+  <p>Questions about this policy or your data: <a href="mailto:frmingest@gmail.com">frmingest@gmail.com</a></p>
+</body>
+</html>
