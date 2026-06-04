@@ -57,7 +57,9 @@ struct AddCustomFoodView: View {
         _satFatText  = State(initialValue: Self.fmt(parsedLabel?.saturatedFat100g))
         _sodiumText  = State(initialValue: Self.fmt(parsedLabel?.sodiumMg100g))
         _servingText = State(initialValue: "100")
-        print("🔍 OCR-DEBUG AddCustomFoodView.init: energyText='\(Self.fmt(parsedLabel?.energyKcal100g))' carbsText='\(Self.fmt(parsedLabel?.carbs100g))' proteinText='\(Self.fmt(parsedLabel?.protein100g))'  fatText='\(Self.fmt(parsedLabel?.fat100g))'  sodiumText='\(Self.fmt(parsedLabel?.sodiumMg100g))'  servingText='100'")
+        let e = parsedLabel?.energyKcal100g; let cb = parsedLabel?.carbs100g
+        let pr = parsedLabel?.protein100g;   let ft = parsedLabel?.fat100g
+        print("🔍 OCR-DEBUG form-init: energy=\(e as Any) carbs=\(cb as Any) protein=\(pr as Any) fat=\(ft as Any)")
     }
 
     var body: some View {
