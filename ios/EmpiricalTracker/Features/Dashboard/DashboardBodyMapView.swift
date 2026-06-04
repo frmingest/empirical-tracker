@@ -42,8 +42,8 @@ struct DashboardBodyMapView: View {
 
     private func bodyCanvas(_ vm: BodyMapViewModel) -> some View {
         GeometryReader { geo in
-            let figureWidth  = min(geo.size.width * 0.52, 200)
-            let figureHeight = figureWidth * 2.4
+            let figureWidth  = min(geo.size.width * 0.65, 220)
+            let figureHeight = figureWidth * (2000.0 / 1381.0) // image native ratio
             let originX      = (geo.size.width  - figureWidth)  / 2
             let originY      = max((geo.size.height - figureHeight) / 2, 20)
 
