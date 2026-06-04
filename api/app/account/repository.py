@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from app.db import get_service_supabase, get_supabase
+from app.food_sources import custom
 from app.recipes import repository as recipes_repository
 
 # Every table that holds user-owned rows. All carry a `user_id` column and an
@@ -18,20 +19,27 @@ USER_TABLES: tuple[str, ...] = (
     "meal_plans",
     "planned_meals",
     "body_metrics",
+    # custom_foods carries a user_id + RLS like the rest; it joins the export so a
+    # user's own contributions appear in their Art. 20 download (ADR-027). The
+    # anonymous food_catalogue is intentionally NOT here — those rows are nobody's
+    # personal data. The same holds for recipes/recipe_favorites vs the anonymous
+    # recipe_catalogue (ADR-028).
+    "custom_foods",
     "recipes",
     "recipe_favorites",
 )
 
 # Deletion order: children before parents, so foreign-key constraints never
 # block erasure (results → panels/biomarkers; planned_meals → meal_plans;
-# recipe_favorites → recipes). body_metrics is a standalone table (no children),
-# so its position is free.
+# recipe_favorites → recipes). body_metrics and custom_foods are standalone
+# tables (no children), so their position is free.
 DELETE_ORDER: tuple[str, ...] = (
     "results",
     "planned_meals",
     "food_entries",
     "diet_events",
     "body_metrics",
+    "custom_foods",
     "meal_plans",
     "panels",
     "biomarkers",
@@ -82,18 +90,14 @@ def delete_user_data(user_id: str) -> dict:
     """
     db = get_service_supabase()
 
-    # Before erasing, donate the user's *public* recipes into the anonymous
-    # `recipe_catalogue` so the curated catalogue value survives de-identified
-    # (ADR-028). Private recipes are kept out, and the `recipes` rows themselves
-    # are then hard-deleted with the rest of the user's data below.
-    public_recipes = (
-        db.table("recipes")
-        .select("*")
-        .eq("user_id", user_id)
-        .eq("is_public", True)
-        .execute()
-    )
-    recipes_repository.donate_recipes(db, public_recipes.data or [])
+    # Anonymise-then-erase the shared catalogues before the DELETE loop hard-erases
+    # every row (public and private alike). Each donation copies only the *public*
+    # contributions' factual fields into the matching anonymous catalogue, so the
+    # curated value survives de-identified: custom_foods → food_catalogue (ADR-027),
+    # recipes → recipe_catalogue (ADR-028). Both run on this same service-role
+    # client (the one sanctioned service-role data path, ADR-026).
+    custom.donate_public_foods(db, user_id)
+    recipes_repository.donate_public_recipes(db, user_id)
 
     for table in DELETE_ORDER:
         db.table(table).delete().eq("user_id", user_id).execute()

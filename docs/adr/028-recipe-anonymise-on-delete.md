@@ -59,7 +59,7 @@ recipe (or their whole account), we keep the *factual catalogue value* by copyin
 it into a separate, de-identified table and then hard-delete the original
 user-owned row.
 
-### 1. New table — `recipe_catalogue` (`013_recipes_anonymise.sql`)
+### 1. New table — `recipe_catalogue` (`014_recipes_anonymise.sql`)
 
 A donated-facts table that is **not** a `USER_TABLES` member and has **no**
 `user_id`:
@@ -135,7 +135,7 @@ anonymous and intentionally *not* part of any individual's export.)
 
 ## Consequences
 
-- **Migration:** `013_recipes_anonymise.sql` must be run in the Supabase SQL
+- **Migration:** `014_recipes_anonymise.sql` must be run in the Supabase SQL
   editor before the new path works (manual-migration convention).
 - **Required pre-req:** the authoring UI must capture `is_public` as an explicit,
   informed "share to the catalogue" choice; donating on an implicitly-defaulted

@@ -65,15 +65,17 @@ def test_delete_user_data_erases_every_table_child_first(mock_db):
     db = _fluent()
     mock_db.return_value = db
     out = repository.delete_user_data("u1")
-    tabled = [call.args[0] for call in db.table.call_args_list]
-    # The first touch is the public-recipe donation read (ADR-028); the rest is
-    # the explicit child-first erase loop.
-    assert tabled[0] == "recipes"
-    assert tabled[1:] == list(repository.DELETE_ORDER)
+    tables = [call.args[0] for call in db.table.call_args_list]
+    # The donation reads come first — custom_foods (ADR-027) then recipes
+    # (ADR-028) — followed by the explicit child-first erase loop.
+    assert tables == ["custom_foods", "recipes", *repository.DELETE_ORDER]
+    # Both catalogues' source tables join the explicit erase path (ADR-013 gap).
+    assert "custom_foods" in repository.DELETE_ORDER
+    assert "recipes" in repository.DELETE_ORDER
+    deleted = tables[2:]
     # recipe_favorites (a child of recipes) is erased before recipes.
-    assert tabled[1:].index("recipe_favorites") < tabled[1:].index("recipes")
+    assert deleted.index("recipe_favorites") < deleted.index("recipes")
     # results (a child of panels) is erased before its parents.
-    deleted = tabled[1:]
     assert deleted.index("results") < deleted.index("panels")
     assert deleted.index("results") < deleted.index("biomarkers")
     eq_calls = [call.args for call in db.eq.call_args_list]
@@ -101,11 +103,14 @@ def test_delete_user_data_donates_public_recipes_before_erasing(mock_db):
     )
     mock_db.return_value = db
     repository.delete_user_data("u1")
+    # donate_public_recipes runs last, so the final insert is the recipe donation:
+    # a single de-identified facts dict (factual fields + coarse donated_at).
     donated = db.insert.call_args.args[0]
-    assert donated[0]["title"] == "Ribeye"
-    assert "user_id" not in donated[0]
-    assert "image_url" not in donated[0]
-    assert "created_at" not in donated[0]
+    assert donated["title"] == "Ribeye"
+    assert "donated_at" in donated
+    assert "user_id" not in donated
+    assert "image_url" not in donated
+    assert "created_at" not in donated
 
 
 @patch("app.account.repository.get_service_supabase")

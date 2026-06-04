@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from app.db import get_service_supabase, get_supabase
 
@@ -83,19 +83,42 @@ def _scrub_for_catalogue(row: dict) -> dict:
     return {field: row.get(field) for field in _DONATED_FIELDS}
 
 
-def donate_recipes(service_db, rows: list[dict]) -> None:
-    """Copy the factual fields of any *public* recipes in `rows` into the
-    anonymous `recipe_catalogue`, using the given service-role client.
+def donate_to_catalogue(service_db, row: dict) -> None:
+    """Copy a public recipe's factual fields into the anonymous catalogue.
 
-    Private recipes are skipped — a recipe the user never shared carries the
-    strongest expectation of deletion. The catalogue is writable only by the
-    service role (the one sanctioned service-role data path, ADR-026), so the
-    caller must pass a service-role client. Shared by the per-recipe delete and
-    account erasure so the scrub rule lives in exactly one place.
+    Keeps only the factual recipe columns (`_DONATED_FIELDS`), dropping
+    `user_id` / `created_at` / `image_url` so the result is anonymous, not merely
+    pseudonymous (GDPR Recital 26). Recipes have no natural unique key, so this is
+    a plain insert — the source row is hard-deleted immediately after, so the same
+    recipe can't be re-donated and rows don't pile up.
+
+    Runs on the **service-role** client — the one sanctioned service-role data
+    path (ADR-026) — because `recipe_catalogue` is writable only by that role.
     """
-    donated = [_scrub_for_catalogue(row) for row in rows if row.get("is_public")]
-    if donated:
-        service_db.table("recipe_catalogue").insert(donated).execute()
+    facts = _scrub_for_catalogue(row)
+    facts["donated_at"] = date.today().isoformat()
+    service_db.table("recipe_catalogue").insert(facts).execute()
+
+
+def donate_public_recipes(service_db, user_id: str) -> int:
+    """Donate every public recipe a user owns before account erasure.
+
+    Called from the account-deletion path (which already runs on the service-role
+    client). Private recipes are left untouched here — the caller's explicit
+    `recipes` DELETE hard-erases all of them, public and private alike. Returns
+    the number of rows donated.
+    """
+    resp = (
+        service_db.table("recipes")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("is_public", True)
+        .execute()
+    )
+    rows = resp.data or []
+    for row in rows:
+        donate_to_catalogue(service_db, row)
+    return len(rows)
 
 
 def _catalogue_row_to_recipe(row: dict) -> dict:
@@ -292,7 +315,8 @@ def delete_recipe(user_id: str, recipe_id: str) -> None:
     rows = resp.data or []
     if not rows:
         return
-    donate_recipes(get_service_supabase(), rows)
+    if rows[0].get("is_public"):
+        donate_to_catalogue(get_service_supabase(), rows[0])
     (
         db.table("recipes")
         .delete()

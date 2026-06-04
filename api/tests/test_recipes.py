@@ -184,26 +184,17 @@ def test_delete_recipe_filters_by_user_and_donates_public(mock_db, mock_service)
     assert ("id", "r1") in eq_calls
     db.delete.assert_called()
 
+    # A single de-identified facts dict: factual fields + a coarse donated_at.
     donated = service.insert.call_args.args[0]
-    assert donated == [
-        {
-            "title": "Ribeye",
-            "category": "Beef",
-            "serving_size": None,
-            "calories_kcal": None,
-            "protein_g": None,
-            "fat_g": None,
-            "carbs_g": None,
-            "ingredients": ["1 ribeye"],
-            "instructions": ["Sear it"],
-            "fact": None,
-            "is_premium": None,
-        }
-    ]
+    assert donated["title"] == "Ribeye"
+    assert donated["category"] == "Beef"
+    assert donated["ingredients"] == ["1 ribeye"]
+    assert donated["instructions"] == ["Sear it"]
+    assert "donated_at" in donated
     # Identifying fields are never donated.
-    assert "user_id" not in donated[0]
-    assert "image_url" not in donated[0]
-    assert "created_at" not in donated[0]
+    assert "user_id" not in donated
+    assert "image_url" not in donated
+    assert "created_at" not in donated
 
 
 @patch("app.recipes.repository.get_service_supabase")

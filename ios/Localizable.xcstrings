@@ -2615,6 +2615,40 @@
         }
       }
     },
+    "food.custom.share.toggle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share to the common catalogue"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Del til felleskatalogen"
+          }
+        }
+      }
+    },
+    "food.custom.share.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Makes this product available to other users. If you later delete it or your account, the nutrition facts are kept anonymously (no link to you); your private items are deleted completely."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gjør dette produktet tilgjengelig for andre brukere. Hvis du senere sletter det eller kontoen din, beholdes næringsinnholdet anonymt (uten kobling til deg); private oppføringer slettes helt."
+          }
+        }
+      }
+    },
     "food.custom.section.identity" : {
       "extractionState" : "manual",
       "localizations" : {

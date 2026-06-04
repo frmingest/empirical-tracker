@@ -16,8 +16,15 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from app.food_sources import custom, matvaretabellen, openfoodfacts, usda
+from app.food_sources import (
+    custom,
+    food_catalogue,
+    matvaretabellen,
+    openfoodfacts,
+    usda,
+)
 from app.food_sources.base import (
+    SOURCE_CATALOGUE,
     SOURCE_CUSTOM,
     SOURCE_MVT,
     SOURCE_OFF,
@@ -52,6 +59,15 @@ async def _search_external_safe(source: str, query: str, page_size: int) -> list
         return []
 
 
+async def _search_catalogue_safe(query: str, page_size: int) -> list[FoodItem]:
+    """The anonymous donated catalogue, degrading to [] like any other source."""
+    try:
+        return await food_catalogue.search_products(query, page_size)
+    except Exception:  # noqa: BLE001
+        logger.warning("Food catalogue failed during 'all' search", exc_info=True)
+        return []
+
+
 async def search(
     query: str,
     source: str = SOURCE_ALL,
@@ -69,24 +85,33 @@ async def search(
             return []
         return await custom.search_with_user(query, user_id, page_size)
 
+    if source == SOURCE_CATALOGUE:
+        return await food_catalogue.search_products(query, page_size)
+
     if source == SOURCE_ALL:
         external_sources = [SOURCE_MVT, SOURCE_USDA, SOURCE_OFF]
-        tasks: list[asyncio.coroutines] = [  # type: ignore[valid-type]
-            *(_search_external_safe(s, query, page_size) for s in external_sources),
+        external_tasks = [
+            _search_external_safe(s, query, page_size) for s in external_sources
         ]
-        if user_id:
-            tasks.append(custom.search_with_user(query, user_id, page_size))
+        catalogue_task = _search_catalogue_safe(query, page_size)
+        custom_task = (
+            custom.search_with_user(query, user_id, page_size) if user_id else None
+        )
 
+        tasks = [*external_tasks, catalogue_task]
+        if custom_task is not None:
+            tasks.append(custom_task)
         results = await asyncio.gather(*tasks)
-        merged: list[FoodItem] = []
-        # Custom results first so user's own data wins.
-        if user_id:
-            merged.extend(results[-1])  # custom is the last task appended
-            for items in results[:-1]:
-                merged.extend(items)
-        else:
-            for items in results:
-                merged.extend(items)
+
+        external_results = results[: len(external_tasks)]
+        catalogue_results = results[len(external_tasks)]
+        custom_results = results[-1] if custom_task is not None else []
+
+        # Preference order: the user's own items, then anonymous donated facts,
+        # then the external sources.
+        merged: list[FoodItem] = [*custom_results, *catalogue_results]
+        for items in external_results:
+            merged.extend(items)
         return merged
 
     # Single named external source — propagate errors to the router.

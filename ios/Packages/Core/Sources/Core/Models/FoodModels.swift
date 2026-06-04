@@ -506,6 +506,10 @@ public struct CustomFoodPayload: Encodable, Sendable {
     public let servingG: Double?
     public let ingredients: String?
     public let ocrRaw: [String: String]?
+    /// The user's explicit "share to the common catalogue" choice. Serialised as
+    /// `is_public`. It both shares the item with other users and is the consent
+    /// gate for anonymised retention after deletion (ADR-027). Defaults to private.
+    public let isPublic: Bool
 
     public init(
         foodName: String,
@@ -519,7 +523,8 @@ public struct CustomFoodPayload: Encodable, Sendable {
         sodiumMg: Double? = nil,
         servingG: Double? = nil,
         ingredients: String? = nil,
-        ocrRaw: [String: String]? = nil
+        ocrRaw: [String: String]? = nil,
+        isPublic: Bool = false
     ) {
         self.foodName     = foodName
         self.brand        = brand
@@ -533,6 +538,7 @@ public struct CustomFoodPayload: Encodable, Sendable {
         self.servingG     = servingG
         self.ingredients  = ingredients
         self.ocrRaw       = ocrRaw
+        self.isPublic     = isPublic
     }
 }
 
