@@ -82,8 +82,8 @@ def _verify_token_local(token: str) -> str | None:
     if alg == "ES256":
         client = _get_jwks_client()
         if client is None:
-            # No supabase_url configured — cannot fetch JWKS.
-            raise HTTPException(status_code=401, detail="Invalid or expired token")
+            # No supabase_url configured — fall through to network.
+            return None
         try:
             signing_key = client.get_signing_key_from_jwt(token)
             claims = jwt.decode(
@@ -92,9 +92,15 @@ def _verify_token_local(token: str) -> str | None:
                 algorithms=["ES256"],
                 audience=_JWT_AUDIENCE,
             )
-        except (PyJWKClientError, jwt.PyJWTError) as exc:
+            return _cache_and_return(token, claims)
+        except jwt.InvalidTokenError as exc:
+            # Signature/expiry/audience mismatch — token is genuinely invalid.
             raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
-        return _cache_and_return(token, claims)
+        except (PyJWKClientError, Exception) as exc:
+            # JWKS fetch failed (network, missing crypto dep, key not found).
+            # Fall through to Supabase Auth network call rather than hard-failing.
+            logger.warning("JWKS verification failed, falling back to network: %s", exc)
+            return None
 
     # --- path 2: HS256 via shared secret ------------------------------------
     if alg == "HS256":
