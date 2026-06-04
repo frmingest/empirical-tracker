@@ -46,11 +46,20 @@ public enum KeychainService {
             kSecAttrService: service,
             kSecAttrAccount: key,
         ]
-        let update: [CFString: Any] = [kSecValueData: data]
+        // Keep the session token on *this device only*: never written to an
+        // unencrypted device backup and never synced to iCloud Keychain, so it
+        // cannot migrate off-device (ADR-026 F6). Applied on both update and
+        // insert so an item written before this change is re-pinned on next save.
+        let accessible = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        let update: [CFString: Any] = [
+            kSecValueData:      data,
+            kSecAttrAccessible: accessible,
+        ]
         let status = SecItemUpdate(query as CFDictionary, update as CFDictionary)
         if status == errSecItemNotFound {
             var insert = query
             insert[kSecValueData] = data
+            insert[kSecAttrAccessible] = accessible
             SecItemAdd(insert as CFDictionary, nil)
         }
     }

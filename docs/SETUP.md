@@ -26,6 +26,9 @@ gh repo create empirical-tracker --private --source . --push
      data is queried under RLS, not as the service role (ADR-026).
    - `service_role` secret key → `SUPABASE_SERVICE_KEY` (backend only — **never**
      ship this in the app; used only for account erasure).
+   - JWT secret (Project Settings → API → JWT Settings) → `SUPABASE_JWT_SECRET`
+     (backend only, optional). When set, the API verifies access tokens locally
+     instead of calling Supabase Auth on every request (ADR-026 F5).
 3. Enable email auth under Authentication → Providers.
 4. Run the SQL migrations in `api/supabase/migrations/` (in order) in the Supabase
    SQL editor to create the tables + RLS policies.
@@ -39,7 +42,7 @@ Create **one service** in a Railway project, pointing at this GitHub repo:
 
 | Service | Root directory | Env vars to set |
 |---------|---------------|-----------------|
-| `api`   | `api`         | `ENVIRONMENT=production`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`, `USDA_FDC_API_KEY` (optional — enables the USDA whole-food source) |
+| `api`   | `api`         | `ENVIRONMENT=production`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET` (optional — enables local token verification, ADR-026 F5), `USDA_FDC_API_KEY` (optional — enables the USDA whole-food source) |
 
 Steps in the Railway dashboard:
 1. New Project → Deploy from GitHub repo → select this repo.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tempfile
+import zipfile
 from collections import defaultdict
 from pathlib import Path
 
@@ -9,9 +10,53 @@ from pydantic import BaseModel
 
 from app.auth import current_user_id
 from app.biomarkers import parser, repository
+from app.config import get_settings
 from app.db import get_supabase
+from app.rate_limit import rate_limit
 
 router = APIRouter(prefix="/biomarkers", tags=["biomarkers"])
+
+# .xlsx files are ZIP containers; every valid one starts with the local-file
+# header magic. Checking the bytes (not just the extension) stops a renamed
+# payload from reaching the XML parser (ADR-026 F3).
+_ZIP_MAGIC = b"PK\x03\x04"
+
+
+async def _read_capped(file: UploadFile, max_bytes: int) -> bytes:
+    """Read an upload into memory, refusing anything over ``max_bytes``.
+
+    Reads in chunks so an oversized (or unknown-length) upload is rejected
+    without first buffering the whole thing — closing the memory-exhaustion
+    surface of an unbounded ``await file.read()`` (ADR-026 F3).
+    """
+    chunks: list[bytes] = []
+    total = 0
+    while chunk := await file.read(1024 * 1024):
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large (limit {max_bytes // (1024 * 1024)} MiB)",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def _assert_safe_xlsx(path: Path, max_uncompressed: int) -> None:
+    """Reject non-zip payloads and zip bombs before openpyxl parses the XML.
+
+    openpyxl parses attacker-controlled XML inside the zip; capping the total
+    declared uncompressed size guards against decompression-bomb amplification
+    (ADR-026 F3).
+    """
+    if not zipfile.is_zipfile(path):
+        raise HTTPException(status_code=400, detail="File is not a valid .xlsx workbook")
+    with zipfile.ZipFile(path) as zf:
+        if zf.testzip() is not None:
+            raise HTTPException(status_code=400, detail="File is not a valid .xlsx workbook")
+        total = sum(info.file_size for info in zf.infolist())
+    if total > max_uncompressed:
+        raise HTTPException(status_code=413, detail="File expands to an unsafe size")
 
 
 def _in_range(
@@ -42,16 +87,22 @@ class ManualResultIn(BaseModel):
 @router.post("/import")
 async def import_xlsx(
     file: UploadFile,
-    user_id: str = Depends(current_user_id),
+    user_id: str = Depends(rate_limit("biomarkers_import", expensive=True)),
 ) -> dict:
     if not file.filename or not file.filename.lower().endswith(".xlsx"):
         raise HTTPException(status_code=400, detail="Only .xlsx files are accepted")
 
+    settings = get_settings()
+    data = await _read_capped(file, settings.max_upload_bytes)
+    if not data.startswith(_ZIP_MAGIC):
+        raise HTTPException(status_code=400, detail="File is not a valid .xlsx workbook")
+
     with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
-        tmp.write(await file.read())
+        tmp.write(data)
         tmp_path = Path(tmp.name)
 
     try:
+        _assert_safe_xlsx(tmp_path, settings.max_xlsx_uncompressed_bytes)
         sheet = parser.parse_xlsx(tmp_path)
     finally:
         tmp_path.unlink(missing_ok=True)

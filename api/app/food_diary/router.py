@@ -5,10 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, field_validator
 
 from app.auth import current_user_id
+from app.config import get_settings
 from app.food_diary import repository
 from app.food_sources import custom as custom_source
 from app.food_sources import openfoodfacts, registry
 from app.food_sources.base import VALID_SOURCES
+from app.rate_limit import rate_limit
 
 router = APIRouter(prefix="/food-diary", tags=["food-diary"])
 
@@ -79,9 +81,16 @@ class ParseLabelIn(BaseModel):
     @field_validator("ocr_text")
     @classmethod
     def _non_empty(cls, v: str) -> str:
-        if not v.strip():
+        v = v.strip()
+        if not v:
             raise ValueError("ocr_text must not be empty")
-        return v.strip()
+        # Cap the text shipped to the LLM so a single request cannot amplify
+        # token spend or be used as a prompt-injection delivery vehicle at
+        # scale (ADR-026 F4).
+        max_chars = get_settings().max_ocr_chars
+        if len(v) > max_chars:
+            raise ValueError(f"ocr_text must be at most {max_chars} characters")
+        return v
 
 
 # ── Food-source proxy ───────────────────────────────────────────────────────────
@@ -91,7 +100,7 @@ class ParseLabelIn(BaseModel):
 async def search_foods(
     q: str = Query(min_length=1),
     source: str = Query(default=registry.SOURCE_ALL),
-    user_id: str = Depends(current_user_id),
+    user_id: str = Depends(rate_limit("food_search", expensive=True)),
 ) -> list[dict]:
     if source not in registry.SELECTABLE_SOURCES:
         raise HTTPException(
@@ -109,7 +118,7 @@ async def search_foods(
 @router.get("/barcode/{barcode}")
 async def lookup_barcode(
     barcode: str,
-    user_id: str = Depends(current_user_id),
+    user_id: str = Depends(rate_limit("food_barcode", expensive=True)),
 ) -> dict:
     # User's own custom foods take priority over Open Food Facts.
     custom_hit = await custom_source.lookup_barcode_with_user(barcode, user_id)
@@ -133,7 +142,7 @@ async def lookup_barcode(
 @router.post("/parse-label")
 async def parse_label(
     body: ParseLabelIn,
-    _user_id: str = Depends(current_user_id),
+    _user_id: str = Depends(rate_limit("parse_label", expensive=True)),
 ) -> dict:
     """Convert raw nutrition-label OCR text to per-100g structured nutrients.
 
