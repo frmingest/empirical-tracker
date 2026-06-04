@@ -71,98 +71,12 @@ struct BodyMapView: View {
     // MARK: - Body canvas
 
     private func bodyCanvas(_ vm: BodyMapViewModel) -> some View {
-        GeometryReader { geo in
-            let figureWidth  = geo.size.width * 0.76
-            let figureHeight = figureWidth * (2000.0 / 1381.0) // image native ratio
-            let originX      = (geo.size.width  - figureWidth)  / 2
-            let originY      = (geo.size.height - figureHeight) / 2
-
-            ZStack(alignment: .topLeading) {
-                // Body silhouette
-                Image("BodySilhouette")
-                    .resizable()
-                    .renderingMode(.template)
-                    .scaledToFit()
-                    .foregroundStyle(Color.textMuted.opacity(0.22))
-                    .frame(width: figureWidth, height: figureHeight)
-                    .position(
-                        x: originX + figureWidth  / 2,
-                        y: originY + figureHeight / 2
-                    )
-
-                // Hotspot pins
-                ForEach(vm.regions) { region in
-                    HotspotPin(region: region) {
-                        selectedRegion = region
-                    }
-                    .position(
-                        x: originX + figureWidth  * region.relativeX,
-                        y: originY + figureHeight * region.relativeY
-                    )
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-    }
-}
-
-// MARK: - Hotspot pin
-
-private struct HotspotPin: View {
-    let region: BodyRegion
-    let onTap: () -> Void
-
-    @State private var isPulsing = false
-
-    private var assessment: MarkerSignals.Assessment { region.worstAssessment }
-
-    var body: some View {
-        Button(action: onTap) {
-            ZStack {
-                // Pulse ring — only for out-of-range markers
-                if assessment == .outOfRange || assessment == .watch {
-                    Circle()
-                        .fill(pinColor.opacity(0.25))
-                        .frame(width: isPulsing ? 38 : 28, height: isPulsing ? 38 : 28)
-                        .animation(
-                            .easeInOut(duration: 1.2).repeatForever(autoreverses: true),
-                            value: isPulsing
-                        )
-                }
-
-                // Main pin circle
-                Circle()
-                    .fill(pinColor)
-                    .frame(width: 26, height: 26)
-                    .shadow(color: pinColor.opacity(0.5), radius: 4, x: 0, y: 2)
-
-                // Icon
-                Image(systemName: region.systemImage)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(region.label): \(accessibilityStatus)")
-        .onAppear { isPulsing = true }
-    }
-
-    private var pinColor: Color {
-        switch assessment {
-        case .outOfRange: return .outRange
-        case .watch:      return .orange
-        case .inRange:    return .inRange
-        case .unknown:    return Color.textMuted
-        }
-    }
-
-    private var accessibilityStatus: String {
-        guard !region.items.isEmpty else { return "no data" }
-        switch assessment {
-        case .outOfRange: return "out of range"
-        case .watch:      return "watch"
-        case .inRange:    return "in range"
-        case .unknown:    return "unknown"
+        BodyMapCanvas(
+            regions: vm.regions,
+            silhouetteOpacity: 0.22,
+            bottomReserve: 84
+        ) { region in
+            selectedRegion = region
         }
     }
 }
