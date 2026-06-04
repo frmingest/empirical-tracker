@@ -2567,6 +2567,20 @@
         }
       }
     },
+    "food.edit.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Edit Entry" } },
+        "nb" : { "stringUnit" : { "state" : "translated", "value" : "Rediger måltid" } }
+      }
+    },
+    "food.edit.nutrients.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Values are the totals for the quantity logged. Edit freely if they need correcting." } },
+        "nb" : { "stringUnit" : { "state" : "translated", "value" : "Verdiene er totaler for den loggede mengden. Rediger fritt ved behov." } }
+      }
+    },
     "food.custom.ocr.hint" : {
       "extractionState" : "manual",
       "localizations" : {

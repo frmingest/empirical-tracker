@@ -34,6 +34,14 @@ struct FoodDiaryView: View {
                     FoodSearchSheet(viewModel: vm)
                 }
             }
+            .sheet(item: Binding(
+                get: { viewModel?.editingEntry },
+                set: { viewModel?.editingEntry = $0 }
+            )) { entry in
+                if let vm = viewModel {
+                    EditFoodEntrySheet(viewModel: vm, entry: entry)
+                }
+            }
             .alert(
                 String(localized: "food.error.title"),
                 isPresented: Binding(
@@ -120,6 +128,8 @@ struct FoodDiaryView: View {
                     Section {
                         ForEach(mealEntries) { entry in
                             FoodEntryRow(entry: entry, tint: meal.tint)
+                                .contentShape(Rectangle())
+                                .onTapGesture { vm.editingEntry = entry }
                                 // Faint per-meal wash tints the whole section box so the
                                 // eye can separate breakfast / lunch / dinner at a glance.
                                 .listRowBackground(meal.tint.opacity(0.09))

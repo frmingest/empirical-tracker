@@ -45,6 +45,15 @@ public final class FoodDiaryRepository {
         entries.append(entry)
     }
 
+    // MARK: - Update
+
+    public func update(id: String, payload: FoodEntryUpdatePayload) async throws {
+        let updated: FoodEntry = try await client.request(.put("/food-diary/\(id)", body: payload))
+        if let idx = entries.firstIndex(where: { $0.id == id }) {
+            entries[idx] = updated
+        }
+    }
+
     // MARK: - Delete
 
     public func delete(id: String) async throws {

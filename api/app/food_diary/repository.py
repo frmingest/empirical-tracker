@@ -50,6 +50,25 @@ def create_entry(user_id: str, entry: dict) -> dict:
     return resp.data[0] if resp.data else {}
 
 
+def update_entry(user_id: str, entry_id: str, fields: dict) -> dict:
+    """Patch a food entry the user owns and return the updated row."""
+    db = get_supabase()
+    allowed = {
+        "meal", "food_name", "brand", "quantity_g",
+        "energy_kcal", "carbs_g", "protein_g", "fat_g",
+        "saturated_fat_g", "sodium_mg", "note",
+    }
+    patch = {k: v for k, v in fields.items() if k in allowed}
+    resp = (
+        db.table("food_entries")
+        .update(patch)
+        .eq("id", entry_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    return resp.data[0] if resp.data else {}
+
+
 def delete_entry(user_id: str, entry_id: str) -> None:
     """Delete one of the user's food entries (no-op if it isn't theirs)."""
     db = get_supabase()

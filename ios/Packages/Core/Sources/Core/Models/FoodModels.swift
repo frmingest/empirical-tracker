@@ -234,6 +234,48 @@ public struct FoodItem: Codable, Identifiable, Sendable {
     }
 }
 
+// MARK: - FoodEntryUpdatePayload (PUT /food-diary/{id})
+
+public struct FoodEntryUpdatePayload: Encodable, Sendable {
+    public let meal: Meal
+    public let foodName: String
+    public let brand: String?
+    public let quantityG: Double?
+    public let energyKcal: Double?
+    public let carbsG: Double?
+    public let proteinG: Double?
+    public let fatG: Double?
+    public let saturatedFatG: Double?
+    public let sodiumMg: Double?
+    public let note: String?
+
+    public init(
+        meal: Meal,
+        foodName: String,
+        brand: String? = nil,
+        quantityG: Double? = nil,
+        energyKcal: Double? = nil,
+        carbsG: Double? = nil,
+        proteinG: Double? = nil,
+        fatG: Double? = nil,
+        saturatedFatG: Double? = nil,
+        sodiumMg: Double? = nil,
+        note: String? = nil
+    ) {
+        self.meal          = meal
+        self.foodName      = foodName
+        self.brand         = brand
+        self.quantityG     = quantityG
+        self.energyKcal    = energyKcal
+        self.carbsG        = carbsG
+        self.proteinG      = proteinG
+        self.fatG          = fatG
+        self.saturatedFatG = saturatedFatG
+        self.sodiumMg      = sodiumMg
+        self.note          = note
+    }
+}
+
 // MARK: - FoodEntryPayload (POST body)
 
 public struct FoodEntryPayload: Encodable, Sendable {

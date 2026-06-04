@@ -19,6 +19,8 @@ final class FoodDiaryViewModel {
     var isAddPresented = false
     /// Meal the add-sheet should default to (set from the "+" the user tapped).
     var addTargetMeal: Meal = .breakfast
+    /// Set to open the edit sheet for an existing entry.
+    var editingEntry: FoodEntry?
 
     var searchQuery = ""
     var selectedSource: FoodSearchSource = .all
@@ -127,6 +129,15 @@ final class FoodDiaryViewModel {
             try await repo.create(payload)
             await load()
             isAddPresented = false
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func update(_ entry: FoodEntry, payload: FoodEntryUpdatePayload) async {
+        do {
+            try await repo.update(id: entry.id, payload: payload)
+            editingEntry = nil
         } catch {
             errorMessage = error.localizedDescription
         }
