@@ -193,7 +193,7 @@ struct NutritionLabelCaptureView: View {
         phase = .parsing
         do {
             let label = try await viewModel.repo.parseLabel(ocrText: ocrText)
-            print("🔍 OCR-DEBUG ParsedLabel: name=\(label.foodName ?? "nil") energy=\(label.energyKcal100g.map(String.init) ?? "nil") carbs=\(label.carbs100g.map(String.init) ?? "nil") protein=\(label.protein100g.map(String.init) ?? "nil") fat=\(label.fat100g.map(String.init) ?? "nil") sodium=\(label.sodiumMg100g.map(String.init) ?? "nil")")
+            print("🔍 OCR-DEBUG ParsedLabel name=\(label.foodName as Any) energy=\(label.energyKcal100g as Any) carbs=\(label.carbs100g as Any) fat=\(label.fat100g as Any) sodium=\(label.sodiumMg100g as Any)")
             parsedLabel = label   // triggers .sheet(item:) — safe, same hierarchy
             phase = .done
         } catch {

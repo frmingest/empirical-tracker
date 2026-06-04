@@ -67,7 +67,7 @@ struct AddCustomFoodView: View {
                 ocrHintSection
             }
             .onAppear {
-                print("🔍 OCR-DEBUG form-appear: energyText='\(energyText)' carbsText='\(carbsText)' proteinText='\(proteinText)' fatText='\(fatText)' sodiumText='\(sodiumText)'")
+                print("🔍 OCR-DEBUG form-appear energy=\(energyText) carbs=\(carbsText) protein=\(proteinText) fat=\(fatText) sodium=\(sodiumText)")
             }
             .navigationTitle(String(localized: "food.custom.title"))
             .navigationBarTitleDisplayMode(.inline)
@@ -191,7 +191,7 @@ struct AddCustomFoodView: View {
             sodiumMg: parse(sodiumText),
             servingG: parse(servingText)
         )
-        print("🔍 OCR-DEBUG CustomFoodPayload: energyKcal=\(payload.energyKcal.map(String.init) ?? "nil") carbsG=\(payload.carbsG.map(String.init) ?? "nil") proteinG=\(payload.proteinG.map(String.init) ?? "nil") fatG=\(payload.fatG.map(String.init) ?? "nil")")
+        print("🔍 OCR-DEBUG payload energy=\(payload.energyKcal as Any) carbs=\(payload.carbsG as Any) protein=\(payload.proteinG as Any) fat=\(payload.fatG as Any)")
 
         do {
             let record = try await viewModel.createCustomFood(payload)
