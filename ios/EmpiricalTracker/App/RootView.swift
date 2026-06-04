@@ -16,12 +16,17 @@ struct RootView: View {
                 // GDPR special-category (health) data requires explicit consent
                 // before the app starts processing it.
                 ConsentView()
+            } else if !env.userProfile.hasCompletedSetup {
+                // First run after consent: offer to capture profile basics (height,
+                // weight, waist, units) or sync with Apple Health. Fully skippable.
+                ProfileSetupView()
             } else {
                 MainTabView()
             }
         }
         .animation(.easeInOut(duration: 0.3), value: env.authStore.isAuthenticated)
         .animation(.easeInOut(duration: 0.3), value: env.consent.hasConsented)
+        .animation(.easeInOut(duration: 0.3), value: env.userProfile.hasCompletedSetup)
     }
 }
 

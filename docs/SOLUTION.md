@@ -258,6 +258,22 @@ population reference, *not* a clinical-target line or personalised verdict).
   backend exposes the `/withings/*` endpoints**, activating automatically when that work
   deploys.
 
+### First-run profile setup (onboarding)
+
+After consent, a newly registered account is shown a one-time **profile setup**
+screen (`Features/Onboarding/`) to capture the basics the rest of the app builds
+on: a **unit-of-measure** choice (metric / imperial), **height**, current
+**weight**, **waist**, and optional **biological sex** — or to **sync with Apple
+Health** instead. Everything is optional and the whole screen is **skippable**.
+Static attributes (height, biological sex) and the chosen unit system persist
+locally (`UserProfileStore`, `SettingsStore`) — there is no `user_profile` backend
+table yet — while the time-series measurements (weight, waist) are written to the
+`body_metrics` backend as that day's row, seeding the Body tab's first data point.
+The gate lives in `RootView` (Auth → Consent → Profile setup → app) and resets on
+sign-out so each account is offered its own setup. Imperial entries are converted
+to the canonical metric storage units at the edge; propagating an imperial
+*display* preference across every existing screen is a noted follow-up.
+
 ### Data export & account deletion (ADR-013)
 
 The two GDPR rights that matter most over health data exist as backend endpoints:
@@ -371,6 +387,7 @@ native features (widgets, notifications, Watch, Siri/App Intents, offline cache)
 | `ios/EmpiricalTracker/Features/BodyMetrics/` | Log + charts, HealthSync + WithingsCloud sections |
 | `ios/EmpiricalTracker/Features/ReportShare/` | Client-side doctor PDF report |
 | `ios/EmpiricalTracker/Features/Consent/` | Health-data consent gate (versioned `ConsentStore`) |
+| `ios/EmpiricalTracker/Features/Onboarding/` | First-run profile setup (height/weight/waist + units, or Apple Health) |
 
 ---
 
