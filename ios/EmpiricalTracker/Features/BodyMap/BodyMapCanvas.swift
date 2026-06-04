@@ -53,7 +53,7 @@ struct BodyMapCanvas: View {
             // Pin metrics scale with the *visible body* width (not the padded
             // frame) so pins stay proportional to the figure on every device.
             let bodyWidth   = figureWidth * (bodyMaxX - bodyMinX)
-            let pinDiameter = min(max(bodyWidth * 0.22, 22), 44)
+            let pinDiameter = min(max(bodyWidth * 0.11, 11), 22)
 
             ZStack(alignment: .topLeading) {
                 Image("BodySilhouette")
