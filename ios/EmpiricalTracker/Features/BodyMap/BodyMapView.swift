@@ -72,8 +72,8 @@ struct BodyMapView: View {
 
     private func bodyCanvas(_ vm: BodyMapViewModel) -> some View {
         GeometryReader { geo in
-            let figureWidth  = geo.size.width * 0.52
-            let figureHeight = figureWidth * 2.4
+            let figureWidth  = geo.size.width * 0.76
+            let figureHeight = figureWidth * (2000.0 / 1381.0) // image native ratio
             let originX      = (geo.size.width  - figureWidth)  / 2
             let originY      = (geo.size.height - figureHeight) / 2
 
