@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from app.db import get_supabase
+from app.db import get_service_supabase, get_supabase
 
 # Every table that holds user-owned rows. All carry a `user_id` column and an
 # RLS policy scoping rows to their owner, so a single per-user query is enough
@@ -68,8 +68,13 @@ def delete_user_data(user_id: str) -> dict:
     so erasure is transparent and unit-testable. The auth user is then removed
     so the account is fully gone; if the admin step is unavailable the health
     data is already deleted, and we report that the login record may linger.
+
+    Erasure is a genuinely administrative operation — it removes the auth user
+    via the admin API and must complete regardless of any RLS edge case — so it
+    runs on the service-role client (the one sanctioned service-role data path,
+    ADR-026). The export path, by contrast, uses the user's RLS-scoped client.
     """
-    db = get_supabase()
+    db = get_service_supabase()
     for table in DELETE_ORDER:
         db.table(table).delete().eq("user_id", user_id).execute()
 

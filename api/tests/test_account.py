@@ -58,8 +58,10 @@ def test_build_export_wraps_data_with_metadata(mock_db):
 
 # ── repository: deletion ──────────────────────────────────────────────────────
 
-@patch("app.account.repository.get_supabase")
+@patch("app.account.repository.get_service_supabase")
 def test_delete_user_data_erases_every_table_child_first(mock_db):
+    # Erasure is the one sanctioned service-role data path (ADR-026): it removes
+    # the auth user via the admin API and must complete regardless of RLS.
     db = _fluent()
     mock_db.return_value = db
     out = repository.delete_user_data("u1")
@@ -74,7 +76,7 @@ def test_delete_user_data_erases_every_table_child_first(mock_db):
     assert out == {"data_deleted": True, "account_deleted": True}
 
 
-@patch("app.account.repository.get_supabase")
+@patch("app.account.repository.get_service_supabase")
 def test_delete_user_data_survives_admin_failure(mock_db):
     db = _fluent()
     db.auth.admin.delete_user.side_effect = RuntimeError("admin api unavailable")

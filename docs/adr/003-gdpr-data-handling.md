@@ -4,6 +4,16 @@
 **Date:** 2026-05-31  
 **Author:** Faiz (solo developer)
 
+> **Update (ADR-026, 2026-06-04):** Points 2–4 below describe the *intended* RLS
+> model. When the web client was retired, the FastAPI backend became the only
+> client and accessed Postgres with the **service-role key**, which **bypasses
+> RLS** — so on the live API path isolation rested on application-layer
+> `.eq("user_id", …)` filtering, not on the database backstop this ADR promises.
+> [ADR-026](026-security-risk-compliance.md) restored that backstop: the API now
+> queries Postgres *as the user* via a per-request, JWT-scoped client, and the
+> service-role key is reserved for account erasure only. Read points 2–4 as
+> realised by ADR-026, not by the original service-role implementation.
+
 ---
 
 ## Context

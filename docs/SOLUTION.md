@@ -141,12 +141,18 @@ Schema evolutions worth knowing (all in `api/supabase/migrations/`):
 Blood-test data is GDPR special-category health data; the app is designed around it:
 
 - **Row-Level Security (RLS):** a database rule that a user can only read/write rows
-  where `user_id` matches their own ID — enforced even if the application code had a bug.
+  where `user_id` matches their own ID. The API enforces it on the live data path by
+  querying Postgres **as the user** — each request builds a Supabase client scoped to
+  the caller's JWT, so RLS holds even if application code forgot a `user_id` filter
+  (ADR-026). The service-role key (which bypasses RLS) is reserved for one audited
+  admin operation: account erasure.
 - **EU data storage:** the Supabase database runs in Frankfurt; health data never
   leaves the EU. HealthKit data stays **on device** unless the user explicitly enables
   sync to the backend.
-- **Server-side service key:** the RLS-bypassing service-role key exists only on the
-  server (a Railway env var). The app only ever holds the limited, public **anon key**.
+- **Server-side keys:** the RLS-bypassing service-role key exists only on the server
+  (a Railway env var) and is used only for account erasure. The API also holds the
+  public **anon key** (the same one the app ships) to build per-request, JWT-scoped
+  clients for all ordinary data access.
 - **Keychain + JWT:** the iOS app stores its short-lived Supabase JWT in the Keychain;
   every API request carries it and the API verifies it before touching any data.
 
