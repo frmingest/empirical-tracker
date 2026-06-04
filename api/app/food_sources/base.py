@@ -21,10 +21,12 @@ SOURCE_OFF = "off"      # Open Food Facts — branded / barcode
 SOURCE_MVT = "mvt"      # Matvaretabellen — Norwegian whole foods
 SOURCE_USDA = "usda"    # USDA FoodData Central — American whole foods
 SOURCE_CUSTOM = "custom"  # User-contributed catalogue (custom_foods table)
+SOURCE_CATALOGUE = "catalogue"  # Anonymous donated facts (food_catalogue, ADR-027)
 
 # Real database sources, in the order the "all" search and UI prefer them.
-# Custom comes first so a user's own data always wins over external sources.
-SOURCES = (SOURCE_CUSTOM, SOURCE_MVT, SOURCE_USDA, SOURCE_OFF)
+# Custom (the user's own) comes first, then the anonymous donated catalogue, so a
+# user's own data wins, then community-donated facts, then external sources.
+SOURCES = (SOURCE_CUSTOM, SOURCE_CATALOGUE, SOURCE_MVT, SOURCE_USDA, SOURCE_OFF)
 VALID_SOURCES = frozenset(SOURCES)
 
 

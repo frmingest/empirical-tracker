@@ -1,6 +1,6 @@
 # ADR-027: Retain the custom-food catalogue by anonymising on delete
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-06-04
 **Author:** Faiz (solo developer)
 **Sprint:** — (compliance / data-retention follow-up)

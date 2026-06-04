@@ -8,7 +8,7 @@ from app.auth import current_user_id
 from app.config import get_settings
 from app.food_diary import repository
 from app.food_sources import custom as custom_source
-from app.food_sources import openfoodfacts, registry
+from app.food_sources import food_catalogue, openfoodfacts, registry
 from app.food_sources.base import VALID_SOURCES
 from app.rate_limit import rate_limit
 
@@ -95,6 +95,9 @@ class CustomFoodIn(BaseModel):
     serving_g: float | None = None
     ingredients: str | None = None
     ocr_raw: dict | None = None
+    # Explicit "share to the common catalogue" choice. Off by default (private),
+    # and the consent gate for anonymised retention on delete (ADR-027).
+    is_public: bool = False
 
     @field_validator("food_name")
     @classmethod
@@ -149,10 +152,15 @@ async def lookup_barcode(
     barcode: str,
     user_id: str = Depends(rate_limit("food_barcode", expensive=True)),
 ) -> dict:
-    # User's own custom foods take priority over Open Food Facts.
+    # User's own custom foods take priority, then the anonymous donated
+    # catalogue (ADR-027), then Open Food Facts.
     custom_hit = await custom_source.lookup_barcode_with_user(barcode, user_id)
     if custom_hit is not None:
         return custom_hit
+
+    catalogue_hit = await food_catalogue.lookup_barcode(barcode)
+    if catalogue_hit is not None:
+        return catalogue_hit
 
     try:
         product = await openfoodfacts.lookup_barcode(barcode)

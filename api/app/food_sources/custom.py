@@ -7,8 +7,27 @@ module also owns the create/update/delete path so the router stays thin.
 
 from __future__ import annotations
 
-from app.db import get_supabase
+from datetime import date
+
+from app.db import get_service_supabase, get_supabase
 from app.food_sources.base import SOURCE_CUSTOM, FoodItem, make_food_item
+
+# The factual product fields donated to the anonymous ``food_catalogue`` on
+# delete (ADR-027). Deliberately excludes the identifying / unbounded columns —
+# ``user_id``, ``created_at`` and ``ocr_raw`` — which are never donated.
+_CATALOGUE_FIELDS = (
+    "food_name",
+    "brand",
+    "barcode",
+    "energy_kcal",
+    "carbs_g",
+    "protein_g",
+    "fat_g",
+    "saturated_fat_g",
+    "sodium_mg",
+    "serving_g",
+    "ingredients",
+)
 
 _COLUMNS = (
     "id,food_name,brand,barcode,"
@@ -108,6 +127,10 @@ def create_custom_food(user_id: str, payload: dict) -> dict:
         "serving_g": payload.get("serving_g"),
         "ingredients": payload.get("ingredients"),
         "ocr_raw": payload.get("ocr_raw"),
+        # The user's explicit, informed "share to the common catalogue" choice.
+        # It both publishes the item to other users today and is the consent gate
+        # for anonymised retention on delete (ADR-027); default is private.
+        "is_public": bool(payload.get("is_public", False)),
     }
     resp = db.table("custom_foods").insert(row).execute()
     return resp.data[0] if resp.data else {}
@@ -123,6 +146,7 @@ def update_custom_food(user_id: str, food_id: str, payload: dict) -> dict:
             "food_name", "brand", "barcode",
             "energy_kcal", "carbs_g", "protein_g", "fat_g",
             "saturated_fat_g", "sodium_mg", "serving_g", "ingredients",
+            "is_public",
         }
     }
     if not updatable:
@@ -138,8 +162,28 @@ def update_custom_food(user_id: str, food_id: str, payload: dict) -> dict:
 
 
 def delete_custom_food(user_id: str, food_id: str) -> None:
-    """Delete the user's own custom food (no-op if not theirs)."""
+    """Delete the user's own custom food, donating it first if it was public.
+
+    Donate-then-delete (ADR-027): a row the user shared (``is_public``) has its
+    factual fields copied into the anonymous ``food_catalogue`` before the
+    user-owned row is hard-deleted, so the curated catalogue value survives while
+    the personal data is erased. A private row is deleted with nothing kept.
+    No-op if the item is not theirs / doesn't exist.
+    """
     db = get_supabase()
+    resp = (
+        db.table("custom_foods")
+        .select("*")
+        .eq("id", food_id)
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    rows = resp.data or []
+    if not rows:
+        return
+    if rows[0].get("is_public"):
+        donate_to_catalogue(get_service_supabase(), rows[0])
     (
         db.table("custom_foods")
         .delete()
@@ -147,3 +191,48 @@ def delete_custom_food(user_id: str, food_id: str) -> None:
         .eq("user_id", user_id)
         .execute()
     )
+
+
+# ── Anonymising donation (ADR-027) ──────────────────────────────────────────────
+
+
+def donate_to_catalogue(service_db, row: dict) -> None:
+    """Copy a public custom food's factual fields into ``food_catalogue``.
+
+    Keeps only the factual product columns (``_CATALOGUE_FIELDS``), dropping
+    ``user_id`` / ``created_at`` / ``ocr_raw`` so the result is anonymous, not
+    merely pseudonymous (GDPR Recital 26). Upserts on ``barcode`` so re-donating
+    the same product updates its facts instead of piling up duplicates;
+    barcodeless rows are simply inserted (NULL barcodes stay distinct).
+
+    Runs on the **service-role** client — the one sanctioned service-role data
+    path (ADR-026) — because ``food_catalogue`` is writable only by that role.
+    """
+    facts = {k: row.get(k) for k in _CATALOGUE_FIELDS}
+    facts["donated_at"] = date.today().isoformat()
+    table = service_db.table("food_catalogue")
+    if row.get("barcode"):
+        table.upsert(facts, on_conflict="barcode").execute()
+    else:
+        table.insert(facts).execute()
+
+
+def donate_public_foods(service_db, user_id: str) -> int:
+    """Donate every public custom food a user owns before account erasure.
+
+    Called from the account-deletion path (which already runs on the service-role
+    client). Private rows are left untouched here — the caller's explicit
+    ``custom_foods`` DELETE hard-erases all of them, public and private alike.
+    Returns the number of rows donated.
+    """
+    resp = (
+        service_db.table("custom_foods")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("is_public", True)
+        .execute()
+    )
+    rows = resp.data or []
+    for row in rows:
+        donate_to_catalogue(service_db, row)
+    return len(rows)

@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from app.db import get_service_supabase, get_supabase
+from app.food_sources import custom
 
 # Every table that holds user-owned rows. All carry a `user_id` column and an
 # RLS policy scoping rows to their owner, so a single per-user query is enough
@@ -17,17 +18,24 @@ USER_TABLES: tuple[str, ...] = (
     "meal_plans",
     "planned_meals",
     "body_metrics",
+    # custom_foods carries a user_id + RLS like the rest; it joins the export so a
+    # user's own contributions appear in their Art. 20 download (ADR-027). The
+    # anonymous food_catalogue is intentionally NOT here — those rows are nobody's
+    # personal data.
+    "custom_foods",
 )
 
 # Deletion order: children before parents, so foreign-key constraints never
 # block erasure (results → panels/biomarkers; planned_meals → meal_plans).
-# body_metrics is a standalone table (no children), so its position is free.
+# body_metrics and custom_foods are standalone tables (no children), so their
+# position is free.
 DELETE_ORDER: tuple[str, ...] = (
     "results",
     "planned_meals",
     "food_entries",
     "diet_events",
     "body_metrics",
+    "custom_foods",
     "meal_plans",
     "panels",
     "biomarkers",
@@ -75,6 +83,13 @@ def delete_user_data(user_id: str) -> dict:
     ADR-026). The export path, by contrast, uses the user's RLS-scoped client.
     """
     db = get_service_supabase()
+
+    # Anonymise-then-erase the custom-food catalogue (ADR-027): donate the user's
+    # *public* contributions into the anonymous food_catalogue before the
+    # custom_foods DELETE below hard-erases every row (public and private alike).
+    # Donation runs on this same service-role client (the sanctioned path).
+    custom.donate_public_foods(db, user_id)
+
     for table in DELETE_ORDER:
         db.table(table).delete().eq("user_id", user_id).execute()
 
