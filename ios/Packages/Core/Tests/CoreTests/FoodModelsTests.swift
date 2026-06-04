@@ -139,6 +139,44 @@ struct FoodModelsTests {
         #expect(item.source == .custom)
     }
 
+    // MARK: - ParsedLabel decoding (OCR → nutrient pre-fill)
+
+    /// Regression guard: JSONDecoder.api uses convertFromSnakeCase, so CodingKeys must
+    /// use implicit camelCase names — never explicit snake_case raw values — or every
+    /// nutrient field silently decodes as nil.
+    @Test func parsedLabelDecodesNutrientsFromSnakeCaseJSON() throws {
+        let json = """
+        {
+            "code": "",
+            "name": "URGE",
+            "brand": "Coca-Cola",
+            "quantity": "330 ml",
+            "source": "custom",
+            "energy_kcal_100g": 56.0,
+            "carbs_100g": 13.6,
+            "protein_100g": 0.0,
+            "fat_100g": 0.0,
+            "saturated_fat_100g": 0.0,
+            "sodium_mg_100g": 27.3,
+            "serving_g": 100.0,
+            "ingredients": "Kullsyreholdig vann, sukker",
+            "ocr_raw": {"food_name": "URGE"}
+        }
+        """.data(using: .utf8)!
+
+        let label = try JSONDecoder.api.decode(ParsedLabel.self, from: json)
+        #expect(label.foodName == "URGE")
+        #expect(label.brand == "Coca-Cola")
+        #expect(label.energyKcal100g == 56.0)
+        #expect(label.carbs100g == 13.6)
+        #expect(label.protein100g == 0.0)
+        #expect(label.fat100g == 0.0)
+        #expect(label.saturatedFat100g == 0.0)
+        #expect(label.sodiumMg100g == 27.3)
+        #expect(label.servingG == 100.0)
+        #expect(label.ingredients == "Kullsyreholdig vann, sukker")
+    }
+
     // MARK: - Search source contract
 
     @Test func searchSourceQueryValues() {
