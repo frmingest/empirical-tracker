@@ -53,6 +53,35 @@ class FoodEntryIn(BaseModel):
         return v
 
 
+class FoodEntryUpdateIn(BaseModel):
+    """PUT body — same fields as FoodEntryIn except logged_on (date cannot change)."""
+    meal: str = "other"
+    food_name: str
+    brand: str | None = None
+    quantity_g: float | None = None
+    energy_kcal: float | None = None
+    carbs_g: float | None = None
+    protein_g: float | None = None
+    fat_g: float | None = None
+    sodium_mg: float | None = None
+    saturated_fat_g: float | None = None
+    note: str | None = None
+
+    @field_validator("food_name")
+    @classmethod
+    def _non_empty_name(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("food_name must not be empty")
+        return v.strip()
+
+    @field_validator("meal")
+    @classmethod
+    def _valid_meal(cls, v: str) -> str:
+        if v not in repository.VALID_MEALS:
+            raise ValueError(f"meal must be one of {sorted(repository.VALID_MEALS)}")
+        return v
+
+
 class CustomFoodIn(BaseModel):
     food_name: str
     brand: str | None = None
@@ -215,6 +244,15 @@ async def create_food_entry(
     user_id: str = Depends(current_user_id),
 ) -> dict:
     return repository.create_entry(user_id, body.model_dump())
+
+
+@router.put("/{entry_id}")
+async def update_food_entry(
+    entry_id: str,
+    body: FoodEntryUpdateIn,
+    user_id: str = Depends(current_user_id),
+) -> dict:
+    return repository.update_entry(user_id, entry_id, body.model_dump())
 
 
 @router.delete("/{entry_id}")
