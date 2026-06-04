@@ -57,7 +57,6 @@ struct AddCustomFoodView: View {
         _satFatText  = State(initialValue: Self.fmt(parsedLabel?.saturatedFat100g))
         _sodiumText  = State(initialValue: Self.fmt(parsedLabel?.sodiumMg100g))
         _servingText = State(initialValue: "100")
-        print("🔍 OCR-DEBUG AddCustomFoodView.init: energyText='\(Self.fmt(parsedLabel?.energyKcal100g))' carbsText='\(Self.fmt(parsedLabel?.carbs100g))' proteinText='\(Self.fmt(parsedLabel?.protein100g))'  fatText='\(Self.fmt(parsedLabel?.fat100g))'  sodiumText='\(Self.fmt(parsedLabel?.sodiumMg100g))'  servingText='100'")
     }
 
     var body: some View {
@@ -66,6 +65,9 @@ struct AddCustomFoodView: View {
                 identitySection
                 nutrientsSection
                 ocrHintSection
+            }
+            .onAppear {
+                print("🔍 OCR-DEBUG form-appear: energyText='\(energyText)' carbsText='\(carbsText)' proteinText='\(proteinText)' fatText='\(fatText)' sodiumText='\(sodiumText)'")
             }
             .navigationTitle(String(localized: "food.custom.title"))
             .navigationBarTitleDisplayMode(.inline)
