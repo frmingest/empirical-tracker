@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from app.db import get_service_supabase, get_supabase
+from app.recipes import repository as recipes_repository
 
 # Every table that holds user-owned rows. All carry a `user_id` column and an
 # RLS policy scoping rows to their owner, so a single per-user query is enough
@@ -17,11 +18,14 @@ USER_TABLES: tuple[str, ...] = (
     "meal_plans",
     "planned_meals",
     "body_metrics",
+    "recipes",
+    "recipe_favorites",
 )
 
 # Deletion order: children before parents, so foreign-key constraints never
-# block erasure (results → panels/biomarkers; planned_meals → meal_plans).
-# body_metrics is a standalone table (no children), so its position is free.
+# block erasure (results → panels/biomarkers; planned_meals → meal_plans;
+# recipe_favorites → recipes). body_metrics is a standalone table (no children),
+# so its position is free.
 DELETE_ORDER: tuple[str, ...] = (
     "results",
     "planned_meals",
@@ -32,6 +36,8 @@ DELETE_ORDER: tuple[str, ...] = (
     "panels",
     "biomarkers",
     "user_settings",
+    "recipe_favorites",
+    "recipes",
 )
 
 
@@ -75,6 +81,20 @@ def delete_user_data(user_id: str) -> dict:
     ADR-026). The export path, by contrast, uses the user's RLS-scoped client.
     """
     db = get_service_supabase()
+
+    # Before erasing, donate the user's *public* recipes into the anonymous
+    # `recipe_catalogue` so the curated catalogue value survives de-identified
+    # (ADR-028). Private recipes are kept out, and the `recipes` rows themselves
+    # are then hard-deleted with the rest of the user's data below.
+    public_recipes = (
+        db.table("recipes")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("is_public", True)
+        .execute()
+    )
+    recipes_repository.donate_recipes(db, public_recipes.data or [])
+
     for table in DELETE_ORDER:
         db.table(table).delete().eq("user_id", user_id).execute()
 

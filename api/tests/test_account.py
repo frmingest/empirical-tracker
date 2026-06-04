@@ -16,7 +16,7 @@ def _fluent(execute_data=None):
     """Build a fluent mock where every chained method returns self."""
     m = MagicMock()
     m.execute.return_value = MagicMock(data=execute_data or [])
-    for method in ("table", "select", "eq", "delete"):
+    for method in ("table", "select", "eq", "delete", "insert", "order"):
         getattr(m, method).return_value = m
     return m
 
@@ -65,15 +65,47 @@ def test_delete_user_data_erases_every_table_child_first(mock_db):
     db = _fluent()
     mock_db.return_value = db
     out = repository.delete_user_data("u1")
-    deleted = [call.args[0] for call in db.table.call_args_list]
-    assert deleted == list(repository.DELETE_ORDER)
+    tabled = [call.args[0] for call in db.table.call_args_list]
+    # The first touch is the public-recipe donation read (ADR-028); the rest is
+    # the explicit child-first erase loop.
+    assert tabled[0] == "recipes"
+    assert tabled[1:] == list(repository.DELETE_ORDER)
+    # recipe_favorites (a child of recipes) is erased before recipes.
+    assert tabled[1:].index("recipe_favorites") < tabled[1:].index("recipes")
     # results (a child of panels) is erased before its parents.
+    deleted = tabled[1:]
     assert deleted.index("results") < deleted.index("panels")
     assert deleted.index("results") < deleted.index("biomarkers")
     eq_calls = [call.args for call in db.eq.call_args_list]
     assert ("user_id", "u1") in eq_calls
     db.auth.admin.delete_user.assert_called_once_with("u1")
     assert out == {"data_deleted": True, "account_deleted": True}
+
+
+@patch("app.account.repository.get_service_supabase")
+def test_delete_user_data_donates_public_recipes_before_erasing(mock_db):
+    # The user's public recipes are anonymised into recipe_catalogue (factual
+    # fields only) before the rows themselves are hard-deleted (ADR-028).
+    db = _fluent(
+        execute_data=[
+            {
+                "id": "r1",
+                "user_id": "u1",
+                "title": "Ribeye",
+                "category": "Beef",
+                "image_url": "https://cdn/u1/ribeye.jpg",
+                "is_public": True,
+                "created_at": "2026-01-01T00:00:00+00:00",
+            }
+        ]
+    )
+    mock_db.return_value = db
+    repository.delete_user_data("u1")
+    donated = db.insert.call_args.args[0]
+    assert donated[0]["title"] == "Ribeye"
+    assert "user_id" not in donated[0]
+    assert "image_url" not in donated[0]
+    assert "created_at" not in donated[0]
 
 
 @patch("app.account.repository.get_service_supabase")
