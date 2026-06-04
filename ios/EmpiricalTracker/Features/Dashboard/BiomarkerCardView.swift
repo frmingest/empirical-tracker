@@ -12,7 +12,10 @@ struct BiomarkerCardView: View {
     private var info: BiomarkerInfo { item.biomarker }
 
     var body: some View {
-        CardView(padding: EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12)) {
+        SoftCard(
+            cornerRadius: 18,
+            padding: EdgeInsets(top: 14, leading: 14, bottom: 14, trailing: 14)
+        ) {
             VStack(alignment: .leading, spacing: 8) {
                 nameRow
                 valueRow

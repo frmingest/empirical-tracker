@@ -120,23 +120,19 @@ struct DashboardView: View {
                     }
                 }
                 .padding(.top, 8)
-                .padding(.bottom, 4)
+                .padding(.bottom, 8)
 
                 // Flagged-only toggle
                 flaggedToggle(vm)
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-
-                Divider()
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, 12)
 
                 // Category sections
                 if vm.sections.isEmpty {
                     noResultsForFilter
                         .padding(.top, 40)
                 } else {
-                    LazyVStack(alignment: .leading, spacing: 24) {
+                    LazyVStack(alignment: .leading, spacing: 28) {
                         ForEach(vm.sections) { group in
                             CategorySectionView(
                                 group: group,
@@ -149,6 +145,7 @@ struct DashboardView: View {
                 }
             }
         }
+        .background(Color.bgBase)
         .refreshable { await vm.load() }
         .sheet(isPresented: Binding(
             get: { vm.isCustomPickerPresented },
@@ -172,10 +169,14 @@ struct DashboardView: View {
             set: { vm.showFlaggedOnly = $0 }
         )) {
             Label("Out of range only", systemImage: "exclamationmark.circle")
-                .font(.bodyMedium)
+                .font(.headlineSmall)
                 .foregroundStyle(Color.textPrimary)
         }
         .tint(Color.outRange)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color.bgCard, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
     }
 
     // MARK: - Empty / skeleton states
