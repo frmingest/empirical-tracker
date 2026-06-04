@@ -16,7 +16,7 @@ def _fluent(execute_data=None):
     """Build a fluent mock where every chained method returns self."""
     m = MagicMock()
     m.execute.return_value = MagicMock(data=execute_data or [])
-    for method in ("table", "select", "eq", "delete"):
+    for method in ("table", "select", "eq", "delete", "insert", "order"):
         getattr(m, method).return_value = m
     return m
 
@@ -66,11 +66,15 @@ def test_delete_user_data_erases_every_table_child_first(mock_db):
     mock_db.return_value = db
     out = repository.delete_user_data("u1")
     tables = [call.args[0] for call in db.table.call_args_list]
-    # Donation queries custom_foods first (ADR-027), then every table is erased.
-    assert tables == ["custom_foods", *repository.DELETE_ORDER]
-    # custom_foods now joins the explicit erase path (closes the ADR-013 gap).
+    # The donation reads come first — custom_foods (ADR-027) then recipes
+    # (ADR-028) — followed by the explicit child-first erase loop.
+    assert tables == ["custom_foods", "recipes", *repository.DELETE_ORDER]
+    # Both catalogues' source tables join the explicit erase path (ADR-013 gap).
     assert "custom_foods" in repository.DELETE_ORDER
-    deleted = tables[1:]
+    assert "recipes" in repository.DELETE_ORDER
+    deleted = tables[2:]
+    # recipe_favorites (a child of recipes) is erased before recipes.
+    assert deleted.index("recipe_favorites") < deleted.index("recipes")
     # results (a child of panels) is erased before its parents.
     assert deleted.index("results") < deleted.index("panels")
     assert deleted.index("results") < deleted.index("biomarkers")
@@ -78,6 +82,35 @@ def test_delete_user_data_erases_every_table_child_first(mock_db):
     assert ("user_id", "u1") in eq_calls
     db.auth.admin.delete_user.assert_called_once_with("u1")
     assert out == {"data_deleted": True, "account_deleted": True}
+
+
+@patch("app.account.repository.get_service_supabase")
+def test_delete_user_data_donates_public_recipes_before_erasing(mock_db):
+    # The user's public recipes are anonymised into recipe_catalogue (factual
+    # fields only) before the rows themselves are hard-deleted (ADR-028).
+    db = _fluent(
+        execute_data=[
+            {
+                "id": "r1",
+                "user_id": "u1",
+                "title": "Ribeye",
+                "category": "Beef",
+                "image_url": "https://cdn/u1/ribeye.jpg",
+                "is_public": True,
+                "created_at": "2026-01-01T00:00:00+00:00",
+            }
+        ]
+    )
+    mock_db.return_value = db
+    repository.delete_user_data("u1")
+    # donate_public_recipes runs last, so the final insert is the recipe donation:
+    # a single de-identified facts dict (factual fields + coarse donated_at).
+    donated = db.insert.call_args.args[0]
+    assert donated["title"] == "Ribeye"
+    assert "donated_at" in donated
+    assert "user_id" not in donated
+    assert "image_url" not in donated
+    assert "created_at" not in donated
 
 
 @patch("app.account.repository.get_service_supabase")

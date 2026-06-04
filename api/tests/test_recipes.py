@@ -42,8 +42,10 @@ def test_list_recipes_scopes_to_user_or_public(mock_db):
         ]
     )
     favs = _fluent(execute_data=[])
+    catalogue = _fluent(execute_data=[])
     mock_db.return_value = recipes
-    recipes.table.side_effect = [recipes, favs]
+    # recipes → recipe_favorites → recipe_catalogue
+    recipes.table.side_effect = [recipes, favs, catalogue]
     out = repository.list_recipes("u-9")
     assert out[0]["title"] == "Pork Belly Bites"
     recipes.or_.assert_called_with("user_id.eq.u-9,is_public.eq.true")
@@ -59,9 +61,10 @@ def test_list_recipes_marks_favorite_and_new(mock_db):
         ]
     )
     favs = _fluent(execute_data=[{"recipe_id": "r1"}])
-    # First .table() call is recipes, second is recipe_favorites.
+    catalogue = _fluent(execute_data=[])
+    # recipes → recipe_favorites → recipe_catalogue.
     mock_db.return_value = recipes
-    recipes.table.side_effect = [recipes, favs]
+    recipes.table.side_effect = [recipes, favs, catalogue]
 
     out = repository.list_recipes("u1")
     by_id = {r["id"]: r for r in out}
@@ -151,14 +154,131 @@ def test_update_recipe_returns_none_when_not_owned(mock_db):
     assert repository.update_recipe("u1", "r1", {"title": "X", "category": "Beef"}) is None
 
 
+@patch("app.recipes.repository.get_service_supabase")
 @patch("app.recipes.repository.get_supabase")
-def test_delete_recipe_filters_by_user(mock_db):
-    db = _fluent()
+def test_delete_recipe_filters_by_user_and_donates_public(mock_db, mock_service):
+    # A public recipe is donated (factual fields only) before being deleted.
+    db = _fluent(
+        execute_data=[
+            {
+                "id": "r1",
+                "user_id": "u1",
+                "title": "Ribeye",
+                "category": "Beef",
+                "image_url": "https://cdn/u1/ribeye.jpg",
+                "ingredients": ["1 ribeye"],
+                "instructions": ["Sear it"],
+                "is_public": True,
+                "created_at": _iso(3),
+            }
+        ]
+    )
     mock_db.return_value = db
+    service = _fluent()
+    mock_service.return_value = service
+
     repository.delete_recipe("u1", "r1")
+
     eq_calls = [call.args for call in db.eq.call_args_list]
     assert ("user_id", "u1") in eq_calls
     assert ("id", "r1") in eq_calls
+    db.delete.assert_called()
+
+    # A single de-identified facts dict: factual fields + a coarse donated_at.
+    donated = service.insert.call_args.args[0]
+    assert donated["title"] == "Ribeye"
+    assert donated["category"] == "Beef"
+    assert donated["ingredients"] == ["1 ribeye"]
+    assert donated["instructions"] == ["Sear it"]
+    assert "donated_at" in donated
+    # Identifying fields are never donated.
+    assert "user_id" not in donated
+    assert "image_url" not in donated
+    assert "created_at" not in donated
+
+
+@patch("app.recipes.repository.get_service_supabase")
+@patch("app.recipes.repository.get_supabase")
+def test_delete_recipe_skips_donation_when_private(mock_db, mock_service):
+    db = _fluent(
+        execute_data=[
+            {"id": "r1", "user_id": "u1", "title": "Secret", "category": "Beef",
+             "is_public": False, "created_at": _iso(3)}
+        ]
+    )
+    mock_db.return_value = db
+    service = _fluent()
+    mock_service.return_value = service
+
+    repository.delete_recipe("u1", "r1")
+
+    service.insert.assert_not_called()
+    db.delete.assert_called()
+
+
+@patch("app.recipes.repository.get_service_supabase")
+@patch("app.recipes.repository.get_supabase")
+def test_delete_recipe_noop_when_not_owned(mock_db, mock_service):
+    db = _fluent(execute_data=[])  # select finds nothing → not the user's recipe
+    mock_db.return_value = db
+    service = _fluent()
+    mock_service.return_value = service
+
+    repository.delete_recipe("u1", "r1")
+
+    service.insert.assert_not_called()
+    db.delete.assert_not_called()
+
+
+@patch("app.recipes.repository.get_supabase")
+def test_list_recipes_includes_donated_catalogue(mock_db):
+    recipes = _fluent(
+        execute_data=[
+            {"id": "r1", "title": "Own", "category": "Beef", "created_at": _iso(1)}
+        ]
+    )
+    favs = _fluent(execute_data=[])
+    catalogue = _fluent(
+        execute_data=[
+            {
+                "id": "c1",
+                "title": "Donated",
+                "category": "Beef",
+                "ingredients": ["x"],
+                "instructions": ["y"],
+                "donated_at": "2026-05-01",
+            }
+        ]
+    )
+    mock_db.return_value = recipes
+    recipes.table.side_effect = [recipes, favs, catalogue]
+
+    out = repository.list_recipes("u1")
+    by_id = {r["id"]: r for r in out}
+    # Donated rows are anonymous: no owner, never favourited, no "New!" badge.
+    donated = by_id["c1"]
+    assert donated["user_id"] is None
+    assert donated["is_favorite"] is False
+    assert donated["is_new"] is False
+    assert donated["is_donated"] is True
+    assert donated["image_url"] is None
+
+
+@patch("app.recipes.repository.get_supabase")
+def test_get_recipe_falls_back_to_catalogue(mock_db):
+    recipes = _fluent(execute_data=[])  # not in the user's recipes
+    catalogue = _fluent(
+        execute_data=[
+            {"id": "c1", "title": "Donated", "category": "Beef", "donated_at": "2026-05-01"}
+        ]
+    )
+    mock_db.return_value = recipes
+    recipes.table.side_effect = [recipes, catalogue]
+
+    out = repository.get_recipe("u1", "c1")
+    assert out is not None
+    assert out["id"] == "c1"
+    assert out["is_donated"] is True
 
 
 @patch("app.recipes.repository.get_supabase")
