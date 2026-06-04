@@ -35,11 +35,13 @@ struct AddCustomFoodView: View {
     init(
         viewModel: FoodDiaryViewModel,
         parsedLabel: ParsedLabel? = nil,
-        prefilledBarcode: String? = nil
+        prefilledBarcode: String? = nil,
+        onSaved: (() -> Void)? = nil
     ) {
         self.viewModel = viewModel
         self.parsedLabel = parsedLabel
         self.prefilledBarcode = prefilledBarcode
+        self.onSaved = onSaved
 
         // Pre-fill from OCR result when available.
         _foodName    = State(initialValue: parsedLabel?.foodName ?? "")
