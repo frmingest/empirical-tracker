@@ -4,6 +4,7 @@ import Biomarkers
 import DietEvents
 import FoodDiary
 import MealPlans
+import Recipes
 import BodyMetrics
 import Account
 import HealthSync
@@ -40,6 +41,7 @@ public final class AppEnvironment {
     public let dietEvents: DietEventsRepository
     public let foodDiary: FoodDiaryRepository
     public let mealPlans: MealPlansRepository
+    public let recipes: RecipesRepository
     public let bodyMetrics: BodyMetricsRepository
     public let account: AccountRepository
     public let healthSync: HealthSyncManager
@@ -81,6 +83,7 @@ public final class AppEnvironment {
         dietEvents  = DietEventsRepository(client: apiClient)
         foodDiary   = FoodDiaryRepository(client: apiClient)
         mealPlans   = MealPlansRepository(client: apiClient)
+        recipes     = RecipesRepository(client: apiClient)
         bodyMetrics = BodyMetricsRepository(client: apiClient)
         account     = AccountRepository(client: apiClient)
 
