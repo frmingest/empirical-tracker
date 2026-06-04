@@ -118,6 +118,19 @@ struct FoodSearchSheet: View {
                 .buttonBorderShape(.capsule)
                 .tint(Color.accent)
             }
+            // Dedicated camera button to scan a nutrition label directly.
+            Button {
+                missedBarcode = nil
+                parsedLabel = nil
+                isCapturingLabel = true
+            } label: {
+                Image(systemName: "camera")
+                    .font(.bodyMedium)
+            }
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.capsule)
+            .tint(Color.accent)
+            .accessibilityLabel(String(localized: "food.label.capture.button"))
             // Always-visible "add my food" shortcut.
             Button {
                 parsedLabel = nil
