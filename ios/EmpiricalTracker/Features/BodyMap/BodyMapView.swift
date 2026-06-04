@@ -79,8 +79,11 @@ struct BodyMapView: View {
 
             ZStack(alignment: .topLeading) {
                 // Body silhouette
-                HumanBodySilhouette()
-                    .fill(Color.textMuted.opacity(0.20))
+                Image("BodySilhouette")
+                    .resizable()
+                    .renderingMode(.template)
+                    .scaledToFit()
+                    .foregroundStyle(Color.textMuted.opacity(0.22))
                     .frame(width: figureWidth, height: figureHeight)
                     .position(
                         x: originX + figureWidth  / 2,
