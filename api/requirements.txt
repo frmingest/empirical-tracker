@@ -4,7 +4,8 @@ uvicorn[standard]==0.34.0
 pydantic==2.10.4
 pydantic-settings==2.7.1
 supabase==2.11.0
-pyjwt==2.10.1  # local Supabase access-token verification (ADR-026 F5)
+pyjwt[crypto]==2.10.1  # local token verification: HS256 (ADR-026 F5) + ES256 via JWKS
+cryptography>=43.0.0  # EC key support for PyJWKClient (ES256 / P-256)
 python-dotenv==1.0.1
 openpyxl==3.1.5
 python-multipart==0.0.20
