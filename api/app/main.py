@@ -19,12 +19,16 @@ settings = get_settings()
 
 app = FastAPI(title=settings.app_name)
 
+# The only client is the native iOS app, which authenticates with a bearer token
+# and sends no cookies, so credentialed CORS is unnecessary (and invalid combined
+# with a wildcard origin). Keep it uncredentialed and scope methods/headers to
+# what the app actually uses (ADR-026 F9).
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 

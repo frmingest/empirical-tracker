@@ -1,6 +1,6 @@
 # ADR-026: Security, Risk & Compliance Baseline
 
-**Status:** Accepted (F1 implemented; F2–F10 sequenced)
+**Status:** Accepted (F1 + P1 hardening [F2–F5] + F6/F9 implemented; F7/F8/F10 + compliance closeout sequenced)
 **Date:** 2026-06-04
 **Author:** Security / iOS-platform review
 **Supersedes the RLS guarantee in:** [ADR-003](003-gdpr-data-handling.md) (clarified, not retired)
@@ -133,13 +133,35 @@ this *secure* rather than *convenient* is that it fails closed.
 (`app/config.py`, `.env.example`, `docs/SETUP.md`). It is the public key the iOS
 app already ships; it is **not** a secret, but it is now required server-side.
 
+### P1 — Hardening (implemented)
+
+| Finding | What shipped |
+|---------|--------------|
+| **F2** | Per-user sliding-window rate limiting (`app/rate_limit.py`), applied to the expensive paths — `/biomarkers/import`, `/food-diary/parse-label`, `/food-diary/search`, `/food-diary/barcode`. In-memory and process-local (single Railway instance); must move to a shared store if scaled horizontally. Returns `429` + `Retry-After`. |
+| **F3** | `/biomarkers/import` now reads the upload in capped chunks (`max_upload_bytes`, default 10 MiB → `413`), validates the ZIP **magic bytes** (not just the extension), and rejects decompression bombs via a total-uncompressed-size cap before `openpyxl` touches the XML. |
+| **F4** | `parse-label` caps OCR text length (`max_ocr_chars`, default 20 000) and is rate-limited (F2). (The flow already sends text, not images — the image-OCR runs on-device.) |
+| **F5** | Access tokens are verified locally — HS256 signature + `exp` + `aud` — via `SUPABASE_JWT_SECRET`, with a short bounded cache, removing the per-request `auth.get_user` round-trip. Falls back to network validation when the secret is unset; an invalid token still fails closed. |
+
+### F6 / F9 (implemented alongside P1)
+
+- **F6** — `KeychainService` now writes the session token with
+  `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`, so it is excluded from
+  device/iCloud-Keychain backups and cannot migrate off-device. (Optional Face ID
+  App-Lock remains a follow-up.)
+- **F9** — CORS is no longer credentialed or wildcarded: `allow_credentials=False`
+  with an explicit method/header allow-list, matching the bearer-token,
+  cookieless iOS client.
+
 ### Next — sequenced, not yet built
 
 | Phase | Items | Rationale |
 |-------|-------|-----------|
-| **P1 — Hardening** | F2 rate limiting; F3 upload size/type + hardened xlsx parse; F4 OCR size/rate limits; F5 local JWT verification + short cache | Remove DoS / cost / availability surfaces on a public API |
-| **P2 — Client & governance** | F6 `…ThisDeviceOnly` (+ optional App-Lock); F7 server-side `consents` table; F8 sub-processor list + DPA + manifest; F9 drop credentialed/wildcard CORS; F10 access logging + breach runbook | Demonstrable GDPR consent, transport, sub-processor & breach readiness |
-| **P3 — Compliance + UX** | Legal `[TBD]` closeout + hosting URL; retention/minimization policy; service-key rotation; a "Your data" transparency screen with one-tap export/delete; layered + per-flow consent | Submittable and trustworthy; aligns with `IOS_APP_STORE_READINESS.md` |
+| **P2 — Governance** | F7 server-side `consents` table (demonstrable Art 9 consent); F8 sub-processor list + DPA + `PrivacyInfo.xcprivacy`/policy entries for Anthropic & USDA; F10 access logging + breach runbook | Demonstrable GDPR consent, sub-processor & breach readiness |
+| **P3 — Compliance + UX** | Legal `[TBD]` closeout + hosting URL; retention/minimization policy; service-key rotation; a "Your data" transparency screen with one-tap export/delete; layered + per-flow consent; optional Face ID App-Lock (F6) | Submittable and trustworthy; aligns with `IOS_APP_STORE_READINESS.md` |
+
+> F7/F8/P3 compliance items are intentionally deferred: they require product/legal
+> inputs (controller identity, executed DPAs, hosting URL) that are still `[TBD]`
+> in `docs/legal/`, not just engineering work.
 
 ---
 
