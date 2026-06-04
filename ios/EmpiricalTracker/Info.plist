@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDisplayName</key>
-	<string>$(PRODUCT_NAME)</string>
+	<string>Biotrack</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -25,11 +25,11 @@
 	<key>SupabaseAnonKey</key>
 	<string>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFoZmxmam5kdmtodWxtcWF0ZHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyMTMyMjAsImV4cCI6MjA5NTc4OTIyMH0.NyMQ87lhKXr0TGeoFsj80Ajgb-_cvB5cNA6fFqNRek0</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>EmpiricalTracker reads your weight and blood pressure from Apple Health — including readings your Withings devices write there via Health Mate — so it can chart them alongside your blood biomarkers and diet events. It only reads the data types you enable, and never writes to Apple Health.</string>
+	<string>Biotrack reads your weight and blood pressure from Apple Health — including readings your Withings devices write there via Health Mate — so it can chart them alongside your blood biomarkers and diet events. It only reads the data types you enable, and never writes to Apple Health.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>EmpiricalTracker uses the camera to scan food barcodes and photograph nutrition labels. Barcode data is looked up online; label photos are processed for text only and never stored on our servers.</string>
+	<string>Biotrack uses the camera to scan food barcodes and photograph nutrition labels. Barcode data is looked up online; label photos are processed for text only and never stored on our servers.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>EmpiricalTracker can read a nutrition label photo from your library to extract nutrition facts for your diary. The photo is processed for text only and never stored.</string>
+	<string>Biotrack can read a nutrition label photo from your library to extract nutrition facts for your diary. The photo is processed for text only and never stored.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
