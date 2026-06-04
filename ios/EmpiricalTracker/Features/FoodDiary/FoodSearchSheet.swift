@@ -58,10 +58,16 @@ struct FoodSearchSheet: View {
                     prefilledBarcode: missedBarcode,
                     repo: viewModel.repo
                 ) { label, barcode in
-                    isCapturingLabel = false
+                    // Store the label BEFORE dismissing the fullScreenCover, then
+                    // wait for the dismiss animation (~0.35s) before presenting the
+                    // sheet — otherwise AddCustomFoodView.init captures a nil label.
                     parsedLabel = label
                     missedBarcode = barcode
-                    isAddingCustom = true
+                    isCapturingLabel = false
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(400))
+                        isAddingCustom = true
+                    }
                 } onCancel: {
                     isCapturingLabel = false
                 }
