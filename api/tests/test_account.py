@@ -65,8 +65,12 @@ def test_delete_user_data_erases_every_table_child_first(mock_db):
     db = _fluent()
     mock_db.return_value = db
     out = repository.delete_user_data("u1")
-    deleted = [call.args[0] for call in db.table.call_args_list]
-    assert deleted == list(repository.DELETE_ORDER)
+    tables = [call.args[0] for call in db.table.call_args_list]
+    # Donation queries custom_foods first (ADR-027), then every table is erased.
+    assert tables == ["custom_foods", *repository.DELETE_ORDER]
+    # custom_foods now joins the explicit erase path (closes the ADR-013 gap).
+    assert "custom_foods" in repository.DELETE_ORDER
+    deleted = tables[1:]
     # results (a child of panels) is erased before its parents.
     assert deleted.index("results") < deleted.index("panels")
     assert deleted.index("results") < deleted.index("biomarkers")

@@ -62,6 +62,30 @@ struct DTOContractTests {
         #expect(object["name_no"] == nil)
     }
 
+    // MARK: - CustomFoodPayload
+
+    /// The contribution payload must serialise the sharing choice as `is_public`
+    /// (snake_case), the consent gate the backend reads for anonymised retention
+    /// on delete (ADR-027). Default is private.
+    @Test func customFoodPayloadEncodesIsPublic() throws {
+        let shared = CustomFoodPayload(foodName: "Brand X Bar", isPublic: true)
+        let sharedObj = try #require(
+            try JSONSerialization.jsonObject(
+                with: try JSONEncoder.api.encode(shared)
+            ) as? [String: Any]
+        )
+        #expect(sharedObj["is_public"] as? Bool == true)
+        #expect(sharedObj["food_name"] as? String == "Brand X Bar")
+
+        let priv = CustomFoodPayload(foodName: "Private Bar")
+        let privObj = try #require(
+            try JSONSerialization.jsonObject(
+                with: try JSONEncoder.api.encode(priv)
+            ) as? [String: Any]
+        )
+        #expect(privObj["is_public"] as? Bool == false)
+    }
+
     // MARK: - DietEvent
 
     @Test func dietEventDecodes() throws {

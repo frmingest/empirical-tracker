@@ -295,15 +295,41 @@ def test_search_endpoint_handles_source_outage(mock_search):
 
 
 @patch("app.food_diary.router.openfoodfacts.lookup_barcode")
+@patch("app.food_diary.router.food_catalogue.lookup_barcode")
 @patch("app.food_diary.router.custom_source.lookup_barcode_with_user")
-def test_barcode_endpoint_404_when_missing(mock_custom_lookup, mock_off_lookup):
-    # Custom source returns nothing; OFF also returns nothing → 404.
+def test_barcode_endpoint_404_when_missing(
+    mock_custom_lookup, mock_catalogue_lookup, mock_off_lookup
+):
+    # Custom, donated catalogue and OFF all return nothing → 404.
     mock_custom_lookup.return_value = None
+    mock_catalogue_lookup.return_value = None
     mock_off_lookup.return_value = None
     app.dependency_overrides[current_user_id] = lambda: "u1"
     try:
         res = client.get("/food-diary/barcode/000")
         assert res.status_code == 404
+    finally:
+        app.dependency_overrides.clear()
+
+
+@patch("app.food_diary.router.openfoodfacts.lookup_barcode")
+@patch("app.food_diary.router.food_catalogue.lookup_barcode")
+@patch("app.food_diary.router.custom_source.lookup_barcode_with_user")
+def test_barcode_endpoint_returns_catalogue_hit_before_off(
+    mock_custom_lookup, mock_catalogue_lookup, mock_off_lookup
+):
+    # No personal custom hit, but the anonymous donated catalogue has it (ADR-027)
+    # — it wins over OFF, which must not be called.
+    mock_custom_lookup.return_value = None
+    mock_catalogue_lookup.return_value = {
+        "code": "cat-id", "name": "Donated Bar", "source": "catalogue"
+    }
+    app.dependency_overrides[current_user_id] = lambda: "u1"
+    try:
+        res = client.get("/food-diary/barcode/737")
+        assert res.status_code == 200
+        assert res.json()["source"] == "catalogue"
+        mock_off_lookup.assert_not_called()
     finally:
         app.dependency_overrides.clear()
 

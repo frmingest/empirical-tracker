@@ -28,6 +28,10 @@ struct AddCustomFoodView: View {
     @State private var satFatText: String
     @State private var sodiumText: String
     @State private var servingText: String
+    /// Explicit opt-in to share this food into the common catalogue. Off by
+    /// default — sharing is a deliberate choice and the consent basis for keeping
+    /// the item (anonymised) after deletion (ADR-027).
+    @State private var shareToCatalogue = false
 
     @State private var isSaving = false
     @State private var savedItem: FoodItem?
@@ -64,6 +68,7 @@ struct AddCustomFoodView: View {
             Form {
                 identitySection
                 nutrientsSection
+                sharingSection
                 ocrHintSection
             }
             .onAppear {
@@ -132,6 +137,17 @@ struct AddCustomFoodView: View {
         }
     }
 
+    private var sharingSection: some View {
+        Section {
+            Toggle(isOn: $shareToCatalogue) {
+                Text(String(localized: "food.custom.share.toggle"))
+                    .foregroundStyle(Color.textPrimary)
+            }
+        } footer: {
+            Text(String(localized: "food.custom.share.footer"))
+        }
+    }
+
     @ViewBuilder
     private var ocrHintSection: some View {
         if parsedLabel != nil {
@@ -189,7 +205,8 @@ struct AddCustomFoodView: View {
             fatG: parse(fatText),
             saturatedFatG: parse(satFatText),
             sodiumMg: parse(sodiumText),
-            servingG: parse(servingText)
+            servingG: parse(servingText),
+            isPublic: shareToCatalogue
         )
         print("🔍 OCR-DEBUG payload energy=\(payload.energyKcal as Any) carbs=\(payload.carbsG as Any) protein=\(payload.proteinG as Any) fat=\(payload.fatG as Any)")
 
