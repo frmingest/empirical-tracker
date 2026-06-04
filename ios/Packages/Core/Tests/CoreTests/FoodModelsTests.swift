@@ -141,9 +141,9 @@ struct FoodModelsTests {
 
     // MARK: - ParsedLabel decoding (OCR → nutrient pre-fill)
 
-    /// Regression guard: JSONDecoder.api uses convertFromSnakeCase, so CodingKeys must
-    /// use implicit camelCase names — never explicit snake_case raw values — otherwise
-    /// every nutrient field silently decodes as nil.
+    /// Regression guard: JSONDecoder.api uses convertFromSnakeCase. Swift's .capitalized
+    /// treats a letter after digits as a new word ("100g" → "100G"), so "energy_kcal_100g"
+    /// converts to "energyKcal100G" (capital G). CodingKeys must use that exact string.
     @Test func parsedLabelDecodesNutrientsFromSnakeCaseJSON() throws {
         let json = """
         {
