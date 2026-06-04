@@ -1,5 +1,9 @@
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(name)s: %(message)s")
 
 from app.account.router import router as account_router
 from app.biomarkers.router import router as biomarkers_router
