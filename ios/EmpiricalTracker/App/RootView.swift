@@ -27,8 +27,8 @@ struct RootView: View {
 
 // MARK: - Main Tab Bar
 
-/// Five-tab shell declared in the migration plan §1.4.
-/// Each destination is a placeholder until its sprint ships.
+/// Main tab shell. The original five tabs from the migration plan §1.4 plus the
+/// Recipes catalogue; on compact widths iOS folds the overflow into a "More" tab.
 struct MainTabView: View {
     var body: some View {
         TabView {
@@ -41,6 +41,9 @@ struct MainTabView: View {
             Tab(String(localized: "tab.plan"), systemImage: "calendar") {
                 MealPlanCalendarView()
             }
+            Tab(String(localized: "tab.recipes"), systemImage: "frying.pan") {
+                RecipesView()
+            }
             Tab(String(localized: "tab.body"), systemImage: "figure.walk") {
                 BodyMetricsView()
             }
@@ -52,4 +55,4 @@ struct MainTabView: View {
     }
 }
 
-// All five tabs are now backed by real feature screens.
+// All tabs are backed by real feature screens.

@@ -17,6 +17,7 @@
 		B13404A42FCE16E70012EB6E /* Account in Frameworks */ = {isa = PBXBuildFile; productRef = B13404A32FCE16E70012EB6E /* Account */; };
 		B13404A72FCE18510012EB6E /* AppAuth in Frameworks */ = {isa = PBXBuildFile; productRef = B13404A62FCE18510012EB6E /* AppAuth */; };
 		B13404B02FCE20000012EB6E /* MealPlans in Frameworks */ = {isa = PBXBuildFile; productRef = B13404B12FCE20000012EB6E /* MealPlans */; };
+		B13404C02FCE21000012EB6E /* Recipes in Frameworks */ = {isa = PBXBuildFile; productRef = B13404C12FCE21000012EB6E /* Recipes */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -87,6 +88,7 @@
 				B13404A22FCE16E30012EB6E /* HealthSync in Frameworks */,
 				B134049E2FCE16D80012EB6E /* FoodDiary in Frameworks */,
 				B13404B02FCE20000012EB6E /* MealPlans in Frameworks */,
+				B13404C02FCE21000012EB6E /* Recipes in Frameworks */,
 				B134049A2FCE16CF0012EB6E /* Biomarkers in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -162,6 +164,7 @@
 				B134049B2FCE16D50012EB6E /* DietEvents */,
 				B134049D2FCE16D80012EB6E /* FoodDiary */,
 				B13404B12FCE20000012EB6E /* MealPlans */,
+				B13404C12FCE21000012EB6E /* Recipes */,
 				B134049F2FCE16DC0012EB6E /* BodyMetrics */,
 				B13404A12FCE16E30012EB6E /* HealthSync */,
 				B13404A32FCE16E70012EB6E /* Account */,
@@ -256,6 +259,7 @@
 				B134048F2FCE0F9E0012EB6E /* XCLocalSwiftPackageReference "Packages/DietEvents" */,
 				B13404902FCE0FAB0012EB6E /* XCLocalSwiftPackageReference "Packages/FoodDiary" */,
 				B13404B22FCE20000012EB6E /* XCLocalSwiftPackageReference "Packages/MealPlans" */,
+				B13404C22FCE21000012EB6E /* XCLocalSwiftPackageReference "Packages/Recipes" */,
 				B13404912FCE0FBA0012EB6E /* XCLocalSwiftPackageReference "Packages/BodyMetrics" */,
 				B13404922FCE0FC90012EB6E /* XCLocalSwiftPackageReference "Packages/HealthSync" */,
 				B13404932FCE0FDB0012EB6E /* XCLocalSwiftPackageReference "Packages/Account" */,
@@ -675,6 +679,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/MealPlans;
 		};
+		B13404C22FCE21000012EB6E /* XCLocalSwiftPackageReference "Packages/Recipes" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/Recipes;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -722,6 +730,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B13404B22FCE20000012EB6E /* XCLocalSwiftPackageReference "Packages/MealPlans" */;
 			productName = MealPlans;
+		};
+		B13404C12FCE21000012EB6E /* Recipes */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B13404C22FCE21000012EB6E /* XCLocalSwiftPackageReference "Packages/Recipes" */;
+			productName = Recipes;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

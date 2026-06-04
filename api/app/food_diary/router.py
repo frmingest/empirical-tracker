@@ -8,7 +8,7 @@ from app.auth import current_user_id
 from app.food_diary import repository
 from app.food_sources import custom as custom_source
 from app.food_sources import openfoodfacts, registry
-from app.food_sources.base import SOURCE_CUSTOM, VALID_SOURCES
+from app.food_sources.base import VALID_SOURCES
 
 router = APIRouter(prefix="/food-diary", tags=["food-diary"])
 
