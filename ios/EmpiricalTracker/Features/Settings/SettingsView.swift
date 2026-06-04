@@ -113,6 +113,22 @@ struct SettingsView: View {
                 .accessibilityLabel(String(localized: "settings.language.label"))
             }
             .padding(.vertical, 4)
+
+            // Units (set at first-run profile setup; editable here)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(String(localized: "settings.units.label"))
+                    .font(.labelLarge)
+                    .foregroundStyle(Color.textSecondary)
+                @Bindable var s = settings
+                Picker(String(localized: "settings.units.label"), selection: $s.measurementSystem) {
+                    ForEach(MeasurementSystem.allCases) { system in
+                        Text(system.label).tag(system)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .accessibilityLabel(String(localized: "settings.units.label"))
+            }
+            .padding(.vertical, 4)
         }
     }
 

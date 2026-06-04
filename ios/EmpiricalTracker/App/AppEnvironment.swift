@@ -27,6 +27,10 @@ public final class AppEnvironment {
     /// until the user agrees (see `RootView`).
     public let consent: ConsentStore
 
+    /// First-run profile (height, biological sex) + the setup-completion flag that
+    /// gates `ProfileSetupView` after consent.
+    public let userProfile: UserProfileStore
+
     // MARK: - Networking
 
     public let client: APIClient
@@ -69,6 +73,7 @@ public final class AppEnvironment {
         self.authStore = store
         self.settings = SettingsStore()
         self.consent = ConsentStore()
+        self.userProfile = UserProfileStore()
 
         let tokenProvider = AuthTokenProvider(authStore: store)
         let config = APIClient.Configuration.resolved()
@@ -110,11 +115,13 @@ public final class AppEnvironment {
 
     // MARK: - Convenience
 
-    /// Signs out and clears the local health-data consent flag so the next user
-    /// to sign in on this device must give their own consent.
+    /// Signs out and clears the local health-data consent flag and profile so the
+    /// next user to sign in on this device must give their own consent and is
+    /// offered their own first-run setup.
     public func signOut() async {
         await authStore.signOut()
         consent.reset()
+        userProfile.reset()
     }
 
     /// Called on every app foreground to refresh the primary read paths.
