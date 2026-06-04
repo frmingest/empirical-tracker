@@ -57,6 +57,7 @@ struct AddCustomFoodView: View {
         _satFatText  = State(initialValue: Self.fmt(parsedLabel?.saturatedFat100g))
         _sodiumText  = State(initialValue: Self.fmt(parsedLabel?.sodiumMg100g))
         _servingText = State(initialValue: "100")
+        print("🔍 OCR-DEBUG AddCustomFoodView.init: energyText='\(Self.fmt(parsedLabel?.energyKcal100g))' carbsText='\(Self.fmt(parsedLabel?.carbs100g))' proteinText='\(Self.fmt(parsedLabel?.protein100g))'  fatText='\(Self.fmt(parsedLabel?.fat100g))'  sodiumText='\(Self.fmt(parsedLabel?.sodiumMg100g))'  servingText='100'")
     }
 
     var body: some View {
@@ -188,6 +189,7 @@ struct AddCustomFoodView: View {
             sodiumMg: parse(sodiumText),
             servingG: parse(servingText)
         )
+        print("🔍 OCR-DEBUG CustomFoodPayload: energyKcal=\(payload.energyKcal.map(String.init) ?? "nil") carbsG=\(payload.carbsG.map(String.init) ?? "nil") proteinG=\(payload.proteinG.map(String.init) ?? "nil") fatG=\(payload.fatG.map(String.init) ?? "nil")")
 
         do {
             let record = try await viewModel.createCustomFood(payload)
