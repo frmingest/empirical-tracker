@@ -3,6 +3,27 @@ import Core
 import AppAuth
 import SwiftUI
 
+// MARK: - View mode
+
+enum DashboardViewMode: String, CaseIterable {
+    case grid    = "grid"
+    case bodyMap = "bodyMap"
+
+    var icon: String {
+        switch self {
+        case .grid:    return "square.grid.2x2"
+        case .bodyMap: return "figure.stand"
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .grid:    return "Grid"
+        case .bodyMap: return "Body Map"
+        }
+    }
+}
+
 /// Home tab — faithful replica of the web dashboard.
 /// Sprint 2 delivers the read path: live data, category grid, diet filter, flagged toggle.
 /// Import action is wired in Sprint 4.
@@ -11,6 +32,7 @@ struct DashboardView: View {
 
     @State private var viewModel: DashboardViewModel?
     @State private var customMarkerDraft: Set<String> = []
+    @State private var dashboardMode: DashboardViewMode = .grid
 
     // Sprint 4 — import & panel timeline state
     @State private var importViewModel: ImportViewModel?
@@ -98,12 +120,20 @@ struct DashboardView: View {
 
     @ViewBuilder
     private func content(_ vm: DashboardViewModel) -> some View {
-        if vm.isLoading && !vm.hasData {
-            skeletonView
-        } else if !vm.hasData {
-            emptyState
-        } else {
-            scrollContent(vm)
+        switch dashboardMode {
+        case .grid:
+            if vm.isLoading && !vm.hasData {
+                skeletonView
+            } else if !vm.hasData {
+                emptyState
+            } else {
+                scrollContent(vm)
+            }
+        case .bodyMap:
+            DashboardBodyMapView(
+                onSelectCategory: { category in selectedCategory = category },
+                onSelectMarker:   { marker   in selectedMarker   = marker   }
+            )
         }
     }
 
@@ -223,6 +253,10 @@ struct DashboardView: View {
             }
             .foregroundStyle(Color.accent)
         }
+        // View mode toggle
+        ToolbarItem(placement: .topBarLeading) {
+            ViewModeToggle(mode: $dashboardMode)
+        }
         // Share-report button
         ToolbarItem(placement: .topBarTrailing) {
             Button {
@@ -270,6 +304,41 @@ private struct SkeletonSectionView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - View mode toggle
+
+private struct ViewModeToggle: View {
+    @Binding var mode: DashboardViewMode
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(DashboardViewMode.allCases, id: \.rawValue) { m in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { mode = m }
+                } label: {
+                    Image(systemName: m.icon)
+                        .font(.system(size: 13, weight: .semibold))
+                        .frame(width: 30, height: 28)
+                        .background(
+                            mode == m
+                                ? Color.accent.opacity(0.15)
+                                : Color.clear,
+                            in: RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        )
+                        .foregroundStyle(mode == m ? Color.accent : Color.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(m.label)
+            }
+        }
+        .padding(3)
+        .background(Color.bgCard, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(Color.borderSubtle, lineWidth: 0.5)
+        )
     }
 }
 
