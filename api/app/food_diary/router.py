@@ -152,6 +152,8 @@ async def parse_label(
     except Exception as exc:
         raise HTTPException(status_code=502, detail="Label parsing failed") from exc
 
+    import logging as _logging
+    _logging.getLogger(__name__).info("parse-label result: %s", food_item)
     return {**food_item, "ocr_raw": ocr_raw}
 
 
