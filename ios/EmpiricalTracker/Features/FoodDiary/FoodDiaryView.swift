@@ -143,6 +143,8 @@ struct FoodDiaryView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color.bgBase)
         .refreshable { await vm.load() }
     }
 }
@@ -186,20 +188,21 @@ private struct MealSectionHeader: View {
     let onAdd: () -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: meal.icon)
-                .font(.headlineSmall)
-                .foregroundStyle(meal.tint)
+        HStack(spacing: 10) {
+            CircleIconBadge(meal.icon, tint: meal.tint, size: 32)
             Text(meal.localizedName)
-                .font(.headlineSmall)
-                .foregroundStyle(Color.textSecondary)
+                .font(.headlineMedium)
+                .foregroundStyle(Color.textPrimary)
+                .textCase(nil)
             Spacer()
             Button(action: onAdd) {
-                Image(systemName: "plus.circle")
+                Image(systemName: "plus.circle.fill")
+                    .font(.title3)
                     .foregroundStyle(Color.accent)
             }
             .accessibilityLabel(Text(String(localized: "food.add.to_meal \(meal.localizedName)")))
         }
+        .padding(.bottom, 4)
     }
 }
 
@@ -209,32 +212,32 @@ private struct DailyTotalsCard: View {
     let totals: DailyTotals
 
     var body: some View {
-        CardView {
-            VStack(alignment: .leading, spacing: 14) {
-                // Hero: the day's energy, captioned above so the number never has to
-                // share its baseline with a label that pushes it onto a second line.
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(String(localized: "food.totals.title"))
-                        .font(.labelSmall)
-                        .foregroundStyle(Color.textMuted)
-                    Text(NutritionFormat.energy(totals.energyKcal))
-                        .font(.numericLarge)
-                        .foregroundStyle(Color.textPrimary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
+        SoftCard {
+            VStack(alignment: .leading, spacing: 16) {
+                // Hero row: a circular energy badge beside the day's headline number.
+                HStack(spacing: 16) {
+                    CircleIconBadge("flame.fill", tint: .mealBreakfast, size: 56)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(String(localized: "food.totals.title"))
+                            .font(.labelSmall)
+                            .foregroundStyle(Color.textMuted)
+                        Text(NutritionFormat.energy(totals.energyKcal))
+                            .font(.numericLarge)
+                            .foregroundStyle(Color.textPrimary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                    }
+                    Spacer(minLength: 0)
                 }
 
-                Divider().background(Color.borderSubtle)
-
-                // Primary macros: one even row of three.
-                HStack(spacing: 0) {
-                    macro(String(localized: "food.macro.carbs"),   NutritionFormat.grams(totals.carbsG))
-                    macro(String(localized: "food.macro.protein"), NutritionFormat.grams(totals.proteinG))
-                    macro(String(localized: "food.macro.fat"),     NutritionFormat.grams(totals.fatG))
+                // Primary macros as soft tinted pills.
+                HStack(spacing: 8) {
+                    macroPill(String(localized: "food.macro.carbs"),   NutritionFormat.grams(totals.carbsG),   tint: .mealLunch)
+                    macroPill(String(localized: "food.macro.protein"), NutritionFormat.grams(totals.proteinG), tint: .mealDinner)
+                    macroPill(String(localized: "food.macro.fat"),     NutritionFormat.grams(totals.fatG),     tint: .mealSnack)
                 }
 
-                // Secondary nutrients inline on one muted line, rather than a second
-                // grid row with an empty third cell.
+                // Secondary nutrients on one muted line.
                 HStack(spacing: 16) {
                     micro(String(localized: "food.macro.sat_fat"), NutritionFormat.grams(totals.saturatedFatG))
                     micro(String(localized: "food.macro.sodium"),  NutritionFormat.milligrams(totals.sodiumMg))
@@ -245,11 +248,11 @@ private struct DailyTotalsCard: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func macro(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+    private func macroPill(_ label: String, _ value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
             Text(label)
                 .font(.labelSmall)
-                .foregroundStyle(Color.textMuted)
+                .foregroundStyle(tint)
             Text(value)
                 .font(.numericSmall)
                 .foregroundStyle(Color.textPrimary)
@@ -257,6 +260,9 @@ private struct DailyTotalsCard: View {
                 .minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private func micro(_ label: String, _ value: String) -> some View {

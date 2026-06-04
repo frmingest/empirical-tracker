@@ -42,6 +42,24 @@ See `docs/SOLUTION.md` for full sprint descriptions.
 - **DB/Auth:** Supabase (Postgres + RLS) — EU region (Frankfurt)
 - **Deploy:** Railway (auto-deploys on push to `main`)
 
+## Design system (iOS)
+
+**All iOS UI work must use the shared design system** — see `docs/DESIGN_SYSTEM.md`
+(architecture in `docs/adr/025-ios-soft-design-system.md`). The rules:
+
+- Build screens from the shared components in `ios/Packages/Core/Sources/Core/DesignSystem/`
+  (`SoftCard`, `CardView`, `PillChip`, `CircleIconBadge`, `StatusBadgeView`,
+  `EmptyStateView`, `LoadingView`, `PrimaryButtonStyle`). Default new top-level
+  surfaces to `SoftCard`; keep `CardView` for dense data grids.
+- Use semantic tokens only — `Color.*` from `AppColors.swift` and `Font.*` from
+  `AppTypography.swift`. **Never** hardcode hex, use system colours for chrome, or
+  call `Font.system(size:)` inline in a feature view.
+- Colour is never the only signal — always pair it with an icon or text label.
+- Need a new primitive? Add it to `Core/DesignSystem/` (with a `#Preview`) and
+  document it in `docs/DESIGN_SYSTEM.md` **before** use — no one-off styling.
+- App shell: add tabs via the `AppTab` enum in `App/RootView.swift`; do not
+  reintroduce a system `TabView`.
+
 ## Key conventions
 
 - DB migrations live in `api/supabase/migrations/` — numbered sequentially, run manually in Supabase SQL editor
