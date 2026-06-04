@@ -217,6 +217,15 @@ async def create_food_entry(
     return repository.create_entry(user_id, body.model_dump())
 
 
+@router.put("/{entry_id}")
+async def update_food_entry(
+    entry_id: str,
+    body: FoodEntryIn,
+    user_id: str = Depends(current_user_id),
+) -> dict:
+    return repository.update_entry(user_id, entry_id, body.model_dump(exclude={"logged_on"}))
+
+
 @router.delete("/{entry_id}")
 async def delete_food_entry(
     entry_id: str,
