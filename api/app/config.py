@@ -14,7 +14,11 @@ class Settings(BaseSettings):
 
     # Supabase — populated per environment, never committed.
     supabase_url: str = ""
+    # Service-role key: bypasses RLS, used only for admin operations (ADR-026).
     supabase_service_key: str = ""
+    # Public anon key: used to build per-request, JWT-scoped clients so user-data
+    # queries run under RLS rather than as the service role (ADR-026).
+    supabase_anon_key: str = ""
 
     # USDA FoodData Central — free api.data.gov key, server-only (never exposed
     # to the browser). When unset, the USDA food source degrades gracefully to

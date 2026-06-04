@@ -21,9 +21,11 @@ gh repo create empirical-tracker --private --source . --push
    - Project URL → `SUPABASE_URL` (backend) and the `SupabaseURL` key in the iOS
      `EmpiricalTracker/Info.plist`.
    - `anon` public key → the `SupabaseAnonKey` key in the iOS `Info.plist`
-     (public client key, safe to ship).
+     (public client key, safe to ship) **and** `SUPABASE_ANON_KEY` on the
+     backend — the API uses it to build per-request, JWT-scoped clients so user
+     data is queried under RLS, not as the service role (ADR-026).
    - `service_role` secret key → `SUPABASE_SERVICE_KEY` (backend only — **never**
-     ship this in the app).
+     ship this in the app; used only for account erasure).
 3. Enable email auth under Authentication → Providers.
 4. Run the SQL migrations in `api/supabase/migrations/` (in order) in the Supabase
    SQL editor to create the tables + RLS policies.
@@ -37,7 +39,7 @@ Create **one service** in a Railway project, pointing at this GitHub repo:
 
 | Service | Root directory | Env vars to set |
 |---------|---------------|-----------------|
-| `api`   | `api`         | `ENVIRONMENT=production`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `USDA_FDC_API_KEY` (optional — enables the USDA whole-food source) |
+| `api`   | `api`         | `ENVIRONMENT=production`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`, `USDA_FDC_API_KEY` (optional — enables the USDA whole-food source) |
 
 Steps in the Railway dashboard:
 1. New Project → Deploy from GitHub repo → select this repo.
