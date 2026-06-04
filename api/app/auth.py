@@ -82,8 +82,8 @@ def _verify_token_local(token: str) -> str | None:
     if alg == "ES256":
         client = _get_jwks_client()
         if client is None:
-            # No supabase_url configured — fall through to network.
-            return None
+            # No supabase_url configured — cannot verify ES256; fail closed.
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
         try:
             signing_key = client.get_signing_key_from_jwt(token)
             claims = jwt.decode(
