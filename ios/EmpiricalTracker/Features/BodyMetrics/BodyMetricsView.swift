@@ -10,7 +10,9 @@ struct BodyMetricsView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var viewModel: BodyMetricsViewModel?
     @State private var isBodyMapPresented = false
-    @State private var showAllHistory = false
+    @AppStorage("body.heightCm") private var heightCm: Double = 0
+    @State private var heightInput = ""
+    @State private var isEditingHeight = false
 
     var body: some View {
         NavigationStack {
@@ -94,16 +96,10 @@ struct BodyMetricsView: View {
             LoadingView(message: String(localized: "body.loading"))
         } else {
             List {
-                // Apple Health connect / sync card (Sprint 9) — shown above the data
-                // so a first-run user can import before logging anything by hand.
-                HealthSyncSection(state: env.healthSyncState)
-                // Withings Cloud connect / sync card (Sprint 10) — Path B, self-hides
-                // until the backend exposes the Withings endpoints.
-                WithingsCloudSection(state: env.withingsCloudState)
+                statsCardsSection(vm)
 
                 if vm.hasMetrics {
                     chartsSection(vm)
-                    historySection(vm)
                 } else {
                     emptySection(vm)
                 }
@@ -134,38 +130,68 @@ struct BodyMetricsView: View {
         .listRowBackground(Color.clear)
     }
 
-    private static let historyPageSize = 100
+    // MARK: - Stats cards
 
-    private func historySection(_ vm: BodyMetricsViewModel) -> some View {
-        let all = vm.history
-        let visible = showAllHistory ? all : Array(all.prefix(Self.historyPageSize))
-        let hasMore = !showAllHistory && all.count > Self.historyPageSize
+    @ViewBuilder
+    private func statsCardsSection(_ vm: BodyMetricsViewModel) -> some View {
+        let latestWeight = vm.weightPoints.last?.value
+        let latestWaist  = vm.waistPoints.last?.value
+        let bmi: Double? = {
+            guard let w = latestWeight, heightCm > 0 else { return nil }
+            let hm = heightCm / 100.0
+            return w / (hm * hm)
+        }()
 
-        return Section {
-            ForEach(visible) { metric in
-                BodyMetricRow(metric: metric)
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button(role: .destructive) {
-                            Task { await vm.delete(metric) }
-                        } label: {
-                            Label(String(localized: "common.delete"), systemImage: "trash")
-                        }
-                    }
+        Section {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                StatCard(
+                    title: "Weight",
+                    value: latestWeight.map { "\($0.formatted(.number.precision(.fractionLength(0...1)))) kg" } ?? "–",
+                    icon: "scalemass",
+                    color: .accent
+                )
+                StatCard(
+                    title: "Waist",
+                    value: latestWaist.map { "\($0.formatted(.number.precision(.fractionLength(0...1)))) cm" } ?? "–",
+                    icon: "ruler",
+                    color: .inRange
+                )
+                HeightStatCard(
+                    heightCm: $heightCm,
+                    heightInput: $heightInput,
+                    isEditing: $isEditingHeight
+                )
+                StatCard(
+                    title: "BMI",
+                    value: bmi.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "–",
+                    icon: "chart.bar.fill",
+                    color: bmiColor(bmi),
+                    subtitle: bmiCategory(bmi)
+                )
             }
-            if hasMore {
-                Button {
-                    showAllHistory = true
-                } label: {
-                    Text("Show all \(all.count) entries")
-                        .font(.bodyMedium)
-                        .foregroundStyle(Color.accent)
-                        .frame(maxWidth: .infinity)
-                }
-            }
-        } header: {
-            Text(String(localized: "body.history.title"))
-        } footer: {
-            disclaimerFooter
+            .padding(.vertical, 4)
+        }
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+    }
+
+    private func bmiColor(_ bmi: Double?) -> Color {
+        guard let bmi else { return .textMuted }
+        switch bmi {
+        case ..<18.5: return .outRange
+        case 18.5..<25: return .inRange
+        case 25..<30: return .outRange
+        default: return .outRange
+        }
+    }
+
+    private func bmiCategory(_ bmi: Double?) -> String? {
+        guard let bmi else { return nil }
+        switch bmi {
+        case ..<18.5: return "Underweight"
+        case 18.5..<25: return "Normal"
+        case 25..<30: return "Overweight"
+        default: return "Obese"
         }
     }
 
@@ -226,18 +252,6 @@ struct BodyMetricsView: View {
         }
     }
 
-    private var disclaimerFooter: some View {
-        Label {
-            Text(String(localized: "body.disclaimer"))
-                .font(.bodySmall)
-                .foregroundStyle(Color.textSecondary)
-        } icon: {
-            Image(systemName: "info.circle")
-                .foregroundStyle(Color.accent)
-        }
-        .padding(.top, 8)
-        .accessibilityElement(children: .combine)
-    }
 }
 
 // MARK: - Chart row styling
@@ -252,74 +266,94 @@ private extension View {
     }
 }
 
-// MARK: - History row
+// MARK: - Stat cards
 
-private struct BodyMetricRow: View {
-    let metric: BodyMetric
+private struct StatCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    var subtitle: String? = nil
 
     var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(dateText)
-                    .font(.bodyMedium)
-                    .foregroundStyle(Color.textPrimary)
-                Text(summaryText)
-                    .font(.numericSmall)
-                    .foregroundStyle(Color.textSecondary)
-                if let note = metric.note, !note.isEmpty {
-                    Text(note)
-                        .font(.bodySmall)
-                        .foregroundStyle(Color.textMuted)
-                        .lineLimit(1)
-                }
-            }
-            Spacer()
-            if let sourceLabel = metric.source.badgeLabel {
-                Text(sourceLabel)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
                     .font(.labelSmall)
-                    .foregroundStyle(Color.textMuted)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.bgElevated, in: Capsule())
+                    .foregroundStyle(color)
+                Text(title)
+                    .font(.labelSmall)
+                    .foregroundStyle(Color.textSecondary)
+            }
+            Text(value)
+                .font(.numericMedium)
+                .foregroundStyle(Color.textPrimary)
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+            if let subtitle {
+                Text(subtitle)
+                    .font(.bodySmall)
+                    .foregroundStyle(color)
             }
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(dateText). \(summaryText)")
-    }
-
-    private var dateText: String {
-        metric.measuredOn.formatted(.dateTime.day().month(.abbreviated).year())
-    }
-
-    private var summaryText: String {
-        var parts: [String] = []
-        if let w = metric.weightKg {
-            parts.append("\(format(w)) \(String(localized: "body.unit.kg"))")
-        }
-        if let waist = metric.waistCm {
-            parts.append("\(format(waist)) \(String(localized: "body.unit.cm"))")
-        }
-        if let sys = metric.systolic, let dia = metric.diastolic {
-            parts.append("\(sys)/\(dia) \(String(localized: "body.unit.mmhg"))")
-        }
-        return parts.joined(separator: " · ")
-    }
-
-    private func format(_ value: Double) -> String {
-        value.formatted(.number.precision(.fractionLength(0...1)))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(Color.bgCard, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
-// MARK: - Source provenance (view layer)
+private struct HeightStatCard: View {
+    @Binding var heightCm: Double
+    @Binding var heightInput: String
+    @Binding var isEditing: Bool
 
-private extension BodyMetric.Source {
-    /// A small badge for synced rows (Sprints 9–10). Manual entries carry no badge.
-    var badgeLabel: String? {
-        switch self {
-        case .manual:    return nil
-        case .healthkit: return String(localized: "body.source.healthkit")
-        case .withings:  return String(localized: "body.source.withings")
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.up.and.down")
+                    .font(.labelSmall)
+                    .foregroundStyle(Color.accent)
+                Text("Height")
+                    .font(.labelSmall)
+                    .foregroundStyle(Color.textSecondary)
+            }
+            if isEditing {
+                HStack(spacing: 4) {
+                    TextField("cm", text: $heightInput)
+                        .font(.numericMedium)
+                        .keyboardType(.decimalPad)
+                        .foregroundStyle(Color.textPrimary)
+                        .frame(maxWidth: .infinity)
+                    Button {
+                        if let v = Double(heightInput.replacingOccurrences(of: ",", with: ".")), v > 0 {
+                            heightCm = v
+                        }
+                        isEditing = false
+                    } label: {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(Color.accent)
+                    }
+                }
+            } else {
+                Button {
+                    heightInput = heightCm > 0 ? String(format: "%.0f", heightCm) : ""
+                    isEditing = true
+                } label: {
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text(heightCm > 0 ? String(format: "%.0f cm", heightCm) : "Tap to set")
+                            .font(.numericMedium)
+                            .foregroundStyle(heightCm > 0 ? Color.textPrimary : Color.textMuted)
+                            .minimumScaleFactor(0.7)
+                            .lineLimit(1)
+                        Spacer()
+                    }
+                }
+                .buttonStyle(.plain)
+            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(Color.bgCard, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
