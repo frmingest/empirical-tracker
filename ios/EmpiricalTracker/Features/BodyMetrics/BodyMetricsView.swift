@@ -72,7 +72,7 @@ struct BodyMetricsView: View {
             Button {
                 isBodyMapPresented = true
             } label: {
-                Image(systemName: "figure.stand.line.dotted")
+                Image(systemName: "figure.arms.open")
                     .accessibilityLabel("Body Map")
             }
             .foregroundStyle(Color.accent)
@@ -169,18 +169,25 @@ struct BodyMetricsView: View {
                     subtitle: bmiCategory(bmi)
                 )
                 StatCard(
-                    title: "Latest BP",
-                    value: vm.latestBP.map { "\($0.systolic)/\($0.diastolic)" } ?? "–",
+                    title: "Resting HR",
+                    value: vm.latestRestingHR.map { "\($0)" } ?? "–",
                     icon: "heart.fill",
-                    color: bpColor(vm.latestBP),
-                    subtitle: vm.latestBP.map { _ in "mmHg" }
+                    color: hrColor(vm.latestRestingHR),
+                    subtitle: vm.latestRestingHR.map { _ in "BPM" }
                 )
                 StatCard(
-                    title: "Avg BP",
-                    value: vm.averageBP.map { "\($0.systolic)/\($0.diastolic)" } ?? "–",
+                    title: "HRV",
+                    value: vm.latestHRV.map { "\($0.formatted(.number.precision(.fractionLength(0...1))))" } ?? "–",
                     icon: "waveform.path.ecg",
-                    color: .textMuted,
-                    subtitle: vm.averageBP.map { _ in "mmHg" }
+                    color: .accent,
+                    subtitle: vm.latestHRV.map { _ in "ms SDNN" }
+                )
+                StatCard(
+                    title: "Avg HR",
+                    value: vm.latestHeartRate.map { "\($0)" } ?? "–",
+                    icon: "waveform.path",
+                    color: .textSecondary,
+                    subtitle: vm.latestHeartRate.map { _ in "BPM" }
                 )
             }
             .padding(.vertical, 4)
@@ -211,8 +218,13 @@ struct BodyMetricsView: View {
 
     private func bpColor(_ bp: BodyMetricsViewModel.BPReading?) -> Color {
         guard let bp else { return .textMuted }
-        // AHA stage-1 hypertension threshold: ≥130 systolic or ≥80 diastolic
         return (bp.systolic >= 130 || bp.diastolic >= 80) ? .outRange : .inRange
+    }
+
+    private func hrColor(_ bpm: Int?) -> Color {
+        guard let bpm else { return .textMuted }
+        // Normal resting HR: 60–100 BPM
+        return (60...100).contains(bpm) ? .inRange : .outRange
     }
 
     // MARK: - Charts
@@ -265,6 +277,41 @@ struct BodyMetricsView: View {
                               color: .accent, points: vm.diastolicPoints),
                     ],
                     guidelines: [.init(value: 120), .init(value: 80)],
+                    events: vm.overlappingEvents
+                )
+                .chartRowStyle()
+            }
+        }
+
+        if !vm.restingHRPoints.isEmpty {
+            Section {
+                BodyMetricChart(
+                    title: "Resting Heart Rate",
+                    unit: "BPM",
+                    series: [.init(
+                        id: "rhr",
+                        label: "Resting HR",
+                        color: .outRange,
+                        points: vm.restingHRPoints
+                    )],
+                    guidelines: [.init(value: 60), .init(value: 100)],
+                    events: vm.overlappingEvents
+                )
+                .chartRowStyle()
+            }
+        }
+
+        if !vm.hrvPoints.isEmpty {
+            Section {
+                BodyMetricChart(
+                    title: "Heart Rate Variability",
+                    unit: "ms",
+                    series: [.init(
+                        id: "hrv",
+                        label: "HRV (SDNN)",
+                        color: .accent,
+                        points: vm.hrvPoints
+                    )],
                     events: vm.overlappingEvents
                 )
                 .chartRowStyle()

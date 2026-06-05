@@ -25,14 +25,27 @@ public actor HealthSyncManager {
     public struct SyncSummary: Sendable, Equatable {
         public let weight: Int
         public let bloodPressure: Int
+        public let restingHeartRate: Int
+        public let heartRateVariability: Int
+        public let heartRate: Int
         public let duplicatesSkipped: Int
 
-        public var imported: Int { weight + bloodPressure }
+        public var imported: Int { weight + bloodPressure + restingHeartRate + heartRateVariability + heartRate }
         public var isEmpty: Bool { imported == 0 }
 
-        public init(weight: Int, bloodPressure: Int, duplicatesSkipped: Int) {
+        public init(
+            weight: Int,
+            bloodPressure: Int,
+            restingHeartRate: Int = 0,
+            heartRateVariability: Int = 0,
+            heartRate: Int = 0,
+            duplicatesSkipped: Int
+        ) {
             self.weight = weight
             self.bloodPressure = bloodPressure
+            self.restingHeartRate = restingHeartRate
+            self.heartRateVariability = heartRateVariability
+            self.heartRate = heartRate
             self.duplicatesSkipped = duplicatesSkipped
         }
     }
@@ -95,6 +108,9 @@ public actor HealthSyncManager {
 
         var weightCount = 0
         var bpCount = 0
+        var rhrCount = 0
+        var hrvCount = 0
+        var hrCount = 0
         var skipped = 0
 
         if types.contains(.weight) {
@@ -124,7 +140,53 @@ public actor HealthSyncManager {
             }
         }
 
-        return SyncSummary(weight: weightCount, bloodPressure: bpCount, duplicatesSkipped: skipped)
+        if types.contains(.restingHeartRate) {
+            for reading in try await readRestingHRSamples(since: since) {
+                if await syncedStore.contains(reading.uuid) { skipped += 1; continue }
+                try await sink.upload(BodyMetricPayload(
+                    measuredOn: Self.dayStart(reading.date),
+                    restingHeartRateBpm: reading.bpm,
+                    source: .healthkit
+                ))
+                await syncedStore.insert(reading.uuid)
+                rhrCount += 1
+            }
+        }
+
+        if types.contains(.heartRateVariability) {
+            for reading in try await readHRVSamples(since: since) {
+                if await syncedStore.contains(reading.uuid) { skipped += 1; continue }
+                try await sink.upload(BodyMetricPayload(
+                    measuredOn: Self.dayStart(reading.date),
+                    hrvMs: reading.ms,
+                    source: .healthkit
+                ))
+                await syncedStore.insert(reading.uuid)
+                hrvCount += 1
+            }
+        }
+
+        if types.contains(.heartRate) {
+            for reading in try await readDailyAverageHRSamples(since: since) {
+                if await syncedStore.contains(reading.dedupKey) { skipped += 1; continue }
+                try await sink.upload(BodyMetricPayload(
+                    measuredOn: reading.day,
+                    heartRateBpm: reading.bpm,
+                    source: .healthkit
+                ))
+                await syncedStore.insert(reading.dedupKey)
+                hrCount += 1
+            }
+        }
+
+        return SyncSummary(
+            weight: weightCount,
+            bloodPressure: bpCount,
+            restingHeartRate: rhrCount,
+            heartRateVariability: hrvCount,
+            heartRate: hrCount,
+            duplicatesSkipped: skipped
+        )
         #else
         throw HealthSyncError.unavailable
         #endif
@@ -191,6 +253,24 @@ public actor HealthSyncManager {
         let diastolic: Int
     }
 
+    private struct HRReading: Sendable {
+        let uuid: String
+        let date: Date
+        let bpm: Int
+    }
+
+    private struct HRVReading: Sendable {
+        let uuid: String
+        let date: Date
+        let ms: Double
+    }
+
+    private struct DailyAvgHRReading: Sendable {
+        let dedupKey: String
+        let day: Date
+        let bpm: Int
+    }
+
     private func stopObservingInternal() {
         for query in observerQueries { store.stop(query) }
         observerQueries.removeAll()
@@ -203,6 +283,47 @@ public actor HealthSyncManager {
             guard kg > 0 else { return nil }
             return WeightReading(uuid: q.uuid.uuidString, date: q.endDate, kg: kg)
         }
+    }
+
+    private func readRestingHRSamples(since: Date?) async throws -> [HRReading] {
+        try await query(type: HKQuantityType(.restingHeartRate), since: since) { sample in
+            guard let q = sample as? HKQuantitySample else { return nil }
+            let bpm = q.quantity.doubleValue(for: HKUnit(from: "count/min"))
+            guard bpm > 0 else { return nil }
+            return HRReading(uuid: q.uuid.uuidString, date: q.endDate, bpm: Int(bpm.rounded()))
+        }
+    }
+
+    private func readHRVSamples(since: Date?) async throws -> [HRVReading] {
+        try await query(type: HKQuantityType(.heartRateVariabilitySDNN), since: since) { sample in
+            guard let q = sample as? HKQuantitySample else { return nil }
+            let ms = q.quantity.doubleValue(for: .secondUnit(with: .milli))
+            guard ms > 0 else { return nil }
+            return HRVReading(uuid: q.uuid.uuidString, date: q.endDate, ms: ms)
+        }
+    }
+
+    private func readDailyAverageHRSamples(since: Date?) async throws -> [DailyAvgHRReading] {
+        let samples: [HRReading] = try await query(type: HKQuantityType(.heartRate), since: since) { sample in
+            guard let q = sample as? HKQuantitySample else { return nil }
+            let bpm = q.quantity.doubleValue(for: HKUnit(from: "count/min"))
+            guard bpm > 0 else { return nil }
+            return HRReading(uuid: q.uuid.uuidString, date: q.endDate, bpm: Int(bpm.rounded()))
+        }
+        // Group by day and average. The dedup key is date-based so re-syncs skip already-stored days.
+        let cal = Calendar.current
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+        var byDay: [Date: [Int]] = [:]
+        for s in samples {
+            let day = cal.startOfDay(for: s.date)
+            byDay[day, default: []].append(s.bpm)
+        }
+        return byDay.map { day, values in
+            let avg = values.reduce(0, +) / values.count
+            let key = "avg-hr-\(formatter.string(from: day))"
+            return DailyAvgHRReading(dedupKey: key, day: day, bpm: avg)
+        }.sorted { $0.day < $1.day }
     }
 
     private func readBloodPressureSamples(since: Date?) async throws -> [BPReading] {
@@ -261,12 +382,14 @@ public actor HealthSyncManager {
             case .weight:
                 set.insert(HKQuantityType(.bodyMass))
             case .bloodPressure:
-                // Apple requires the correlation type AND its component quantity types
-                // in the read authorization set for HKSampleQuery on correlations to
-                // return data. Omitting HKCorrelationType causes silent empty results.
-                set.insert(HKCorrelationType(.bloodPressure))
                 set.insert(HKQuantityType(.bloodPressureSystolic))
                 set.insert(HKQuantityType(.bloodPressureDiastolic))
+            case .restingHeartRate:
+                set.insert(HKQuantityType(.restingHeartRate))
+            case .heartRateVariability:
+                set.insert(HKQuantityType(.heartRateVariabilitySDNN))
+            case .heartRate:
+                set.insert(HKQuantityType(.heartRate))
             }
         }
         return set
@@ -276,8 +399,11 @@ public actor HealthSyncManager {
         var set: [HKSampleType] = []
         for type in types {
             switch type {
-            case .weight:        set.append(HKQuantityType(.bodyMass))
-            case .bloodPressure: set.append(HKCorrelationType(.bloodPressure))
+            case .weight:               set.append(HKQuantityType(.bodyMass))
+            case .bloodPressure:        set.append(HKCorrelationType(.bloodPressure))
+            case .restingHeartRate:     set.append(HKQuantityType(.restingHeartRate))
+            case .heartRateVariability: set.append(HKQuantityType(.heartRateVariabilitySDNN))
+            case .heartRate:            set.append(HKQuantityType(.heartRate))
             }
         }
         return set

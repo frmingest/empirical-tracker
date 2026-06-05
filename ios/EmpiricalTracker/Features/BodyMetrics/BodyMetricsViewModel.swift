@@ -90,6 +90,37 @@ final class BodyMetricsViewModel {
         return BPReading(systolic: avgSys, diastolic: avgDia)
     }
 
+    // MARK: - Heart metrics (Apple Watch via HealthKit)
+
+    var latestRestingHR: Int? {
+        repo.metrics
+            .sorted { $0.measuredOn > $1.measuredOn }
+            .first { $0.restingHeartRateBpm != nil }?
+            .restingHeartRateBpm
+    }
+
+    var latestHRV: Double? {
+        repo.metrics
+            .sorted { $0.measuredOn > $1.measuredOn }
+            .first { $0.hrvMs != nil }?
+            .hrvMs
+    }
+
+    var latestHeartRate: Int? {
+        repo.metrics
+            .sorted { $0.measuredOn > $1.measuredOn }
+            .first { $0.heartRateBpm != nil }?
+            .heartRateBpm
+    }
+
+    var restingHRPoints: [BodyMetricChart.DataPoint] {
+        repo.metrics.compactMap { m in m.restingHeartRateBpm.map { .init(date: m.measuredOn, value: Double($0)) } }
+    }
+
+    var hrvPoints: [BodyMetricChart.DataPoint] {
+        repo.metrics.compactMap { m in m.hrvMs.map { .init(date: m.measuredOn, value: $0) } }
+    }
+
     /// Diet events intersecting the full body-metrics window, for the chart overlay.
     var overlappingEvents: [DietEvent] {
         let dates = repo.metrics.map(\.measuredOn)

@@ -61,7 +61,7 @@ struct DashboardBodyMapView: View {
             .padding(.trailing, 12)
         }
         .overlay(alignment: .bottomLeading) {
-            BPStatsPanel(metrics: env.bodyMetrics.metrics)
+            HeartStatsPanel(metrics: env.bodyMetrics.metrics)
                 .padding(.bottom, 96)
                 .padding(.leading, 12)
         }
@@ -125,8 +125,9 @@ struct BodyMetricsStatsPanel: View {
             StatRow(icon: "circle.dashed",  label: "Waist",  value: waistVal),
             StatRow(icon: "figure.stand",   label: "BMI",    value: bmiVal),
         ]
-        if let sys = latest?.systolic, let dia = latest?.diastolic {
-            result.append(StatRow(icon: "heart.fill", label: "BP", value: "\(sys)/\(dia)"))
+        if let rhr = metrics.sorted(by: { $0.measuredOn > $1.measuredOn })
+            .first(where: { $0.restingHeartRateBpm != nil })?.restingHeartRateBpm {
+            result.append(StatRow(icon: "heart.fill", label: "Resting HR", value: "\(rhr) BPM"))
         }
         return result
     }
@@ -155,55 +156,36 @@ private struct BodyMetricsStatRow: View {
     }
 }
 
-// MARK: - BP stats panel (bottom-left)
+// MARK: - Heart stats panel (bottom-left)
 
-/// Compact panel showing latest and average blood pressure.
+/// Compact panel showing latest resting heart rate and HRV from Apple Watch.
 /// Always rendered so @Observable tracking is established on first pass.
-struct BPStatsPanel: View {
+struct HeartStatsPanel: View {
     let metrics: [BodyMetric]
 
-    private struct BPPair { let sys: Int; let dia: Int }
+    private var sorted: [BodyMetric] { metrics.sorted { $0.measuredOn > $1.measuredOn } }
 
-    private var bpReadings: [BPPair] {
-        metrics.compactMap { m in
-            guard let s = m.systolic, let d = m.diastolic else { return nil }
-            return BPPair(sys: s, dia: d)
-        }
-    }
+    private var latestRHR: Int? { sorted.first { $0.restingHeartRateBpm != nil }?.restingHeartRateBpm }
+    private var latestHRV: Double? { sorted.first { $0.hrvMs != nil }?.hrvMs }
 
-    private var latest: BPPair? {
-        metrics
-            .sorted { $0.measuredOn > $1.measuredOn }
-            .first { $0.systolic != nil && $0.diastolic != nil }
-            .flatMap { m in
-                guard let s = m.systolic, let d = m.diastolic else { return nil }
-                return BPPair(sys: s, dia: d)
-            }
-    }
-
-    private var average: BPPair? {
-        guard !bpReadings.isEmpty else { return nil }
-        let avgSys = bpReadings.map(\.sys).reduce(0, +) / bpReadings.count
-        let avgDia = bpReadings.map(\.dia).reduce(0, +) / bpReadings.count
-        return BPPair(sys: avgSys, dia: avgDia)
-    }
-
-    private func bpColor(_ pair: BPPair?) -> Color {
-        guard let pair else { return .textMuted }
-        return (pair.sys >= 130 || pair.dia >= 80) ? .outRange : .inRange
+    private func hrColor(_ bpm: Int?) -> Color {
+        guard let bpm else { return .textMuted }
+        return (60...100).contains(bpm) ? .inRange : .outRange
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            BPRow(
-                label: "Latest BP",
-                value: latest.map { "\($0.sys)/\($0.dia)" } ?? "--",
-                color: bpColor(latest)
+            HeartRow(
+                icon: "heart.fill",
+                label: "Resting HR",
+                value: latestRHR.map { "\($0) BPM" } ?? "--",
+                color: hrColor(latestRHR)
             )
-            BPRow(
-                label: "Avg BP",
-                value: average.map { "\($0.sys)/\($0.dia)" } ?? "--",
-                color: .textMuted
+            HeartRow(
+                icon: "waveform.path.ecg",
+                label: "HRV",
+                value: latestHRV.map { String(format: "%.0f ms", $0) } ?? "--",
+                color: .accent
             )
         }
         .padding(.horizontal, 12)
@@ -218,14 +200,15 @@ struct BPStatsPanel: View {
     }
 }
 
-private struct BPRow: View {
+private struct HeartRow: View {
+    let icon: String
     let label: String
     let value: String
     let color: Color
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: "heart.fill")
+            Image(systemName: icon)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(color)
                 .frame(width: 14)
