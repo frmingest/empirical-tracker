@@ -173,14 +173,14 @@ struct BodyMetricsView: View {
                     value: vm.latestBP.map { "\($0.systolic)/\($0.diastolic)" } ?? "–",
                     icon: "heart.fill",
                     color: bpColor(vm.latestBP),
-                    subtitle: vm.latestBP.map { "mmHg" }
+                    subtitle: vm.latestBP.map { _ in "mmHg" }
                 )
                 StatCard(
                     title: "Avg BP",
                     value: vm.averageBP.map { "\($0.systolic)/\($0.diastolic)" } ?? "–",
                     icon: "waveform.path.ecg",
                     color: .textMuted,
-                    subtitle: vm.averageBP.map { "mmHg" }
+                    subtitle: vm.averageBP.map { _ in "mmHg" }
                 )
             }
             .padding(.vertical, 4)
