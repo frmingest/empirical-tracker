@@ -382,7 +382,10 @@ token exchange, history pull, `Notify` webhooks) and the `withings_measures` tab
 [`IOS_APP_STORE_READINESS.md`](IOS_APP_STORE_READINESS.md) for remaining items
 (all blockers resolved; external confirmations remain), and [`WISHLIST.md`](WISHLIST.md)
 for forward-looking native features (widgets, notifications, Watch, Siri/App Intents,
-offline cache).
+offline cache). **WidgetKit widgets** are planned in
+[ADR-031](adr/031-ios-home-lock-screen-widgets.md) — an App Group `WidgetSnapshot`
+the app write-throughs and the extension reads with no network/auth (Latest panel +
+Weight trend; Lock Screen status-only by default).
 
 > **ADR sprint numbering:** ADRs 010–018 were authored against the **web** app and carry
 > its sprint numbers; the iOS work re-sequences the same surface per the migration plan

@@ -54,13 +54,18 @@ A clean, modular SwiftUI client over the existing FastAPI + Supabase backend —
 A blood-test app is opened rarely; these turn it into something glanceable and
 timely, which is the whole point of being native.
 
-### 1. Home Screen & Lock Screen widgets (WidgetKit)
+### 1. Home Screen & Lock Screen widgets (WidgetKit) — 📐 Planned ([ADR-031](adr/031-ios-home-lock-screen-widgets.md))
 - A **latest-panel** widget (e.g. LDL / HbA1c trend + Watch-marker count), a
   **today's macros vs target** diary widget, and a **weight-trend** widget.
 - Biggest single retention lever — keeps the app present between the rare
   panel imports.
 - Builds on existing data shapes (`BiomarkerWithSeries`, diary daily totals);
-  needs an **App Group** + a shared read cache (see #9).
+  needs an **App Group** + a shared read cache.
+- **Plan ([ADR-031](adr/031-ios-home-lock-screen-widgets.md)):** instead of waiting
+  on the SwiftData cache (#9), the app write-throughs a tiny `WidgetSnapshot` JSON to
+  a shared **App Group** container that the extension reads with **no network/auth**.
+  First widgets: **Latest panel** + **Weight trend**. Lock Screen is **status-only**
+  by default (special-category data), with an opt-in "Show values in widgets" toggle.
 
 ### 2. Smart reminders & insight notifications (UserNotifications)
 - "Time to log dinner" / "log your morning weight" (diet-event aware).
