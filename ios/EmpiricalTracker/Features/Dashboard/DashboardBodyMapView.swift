@@ -82,9 +82,9 @@ struct BodyMetricsStatsPanel: View {
     let metrics: [BodyMetric]
     let heightCm: Double?
 
-    private var latest: BodyMetric? {
-        metrics.sorted { $0.measuredOn > $1.measuredOn }.first
-    }
+    private var sorted: [BodyMetric] { metrics.sorted { $0.measuredOn > $1.measuredOn } }
+    private var latestWeight: Double? { sorted.first { $0.weightKg != nil }?.weightKg }
+    private var latestWaist: Double?  { sorted.first { $0.waistCm  != nil }?.waistCm  }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -111,11 +111,11 @@ struct BodyMetricsStatsPanel: View {
 
     private var rows: [StatRow] {
         let heightVal = heightCm.map { String(format: "%.0f cm", $0) } ?? "--"
-        let weightVal = latest?.weightKg.map { String(format: "%.1f kg", $0) } ?? "--"
-        let waistVal  = latest?.waistCm.map  { String(format: "%.0f cm", $0) } ?? "--"
+        let weightVal = latestWeight.map { String(format: "%.1f kg", $0) } ?? "--"
+        let waistVal  = latestWaist.map  { String(format: "%.0f cm", $0) } ?? "--"
 
         var bmiVal = "--"
-        if let hm = heightCm.map({ $0 / 100.0 }), let kg = latest?.weightKg {
+        if let hm = heightCm.map({ $0 / 100.0 }), let kg = latestWeight {
             bmiVal = String(format: "%.1f", kg / (hm * hm))
         }
 

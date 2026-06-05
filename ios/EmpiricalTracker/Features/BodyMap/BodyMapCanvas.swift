@@ -232,41 +232,21 @@ struct BodyMapHotspotPin: View {
     let diameter: CGFloat
     let onTap: () -> Void
 
-    @State private var isPulsing = false
-
     private var assessment: MarkerSignals.Assessment { region.worstAssessment }
 
-    /// Keep the tappable region comfortable (≥44pt, per Apple's HIG) even when
-    /// the visible pin is small.
     private var hitSize: CGFloat { max(diameter * 1.45, 44) }
 
     var body: some View {
         Button(action: onTap) {
             ZStack {
-                // Invisible spacer that sizes the tap target to `hitSize`.
                 Color.clear
                     .frame(width: hitSize, height: hitSize)
-
-                // Pulse ring — only for markers that need attention.
-                if assessment == .outOfRange || assessment == .watch {
-                    Circle()
-                        .fill(assessment.pinColor.opacity(0.22))
-                        .frame(
-                            width:  isPulsing ? diameter * 1.45 : diameter * 1.1,
-                            height: isPulsing ? diameter * 1.45 : diameter * 1.1
-                        )
-                        .animation(
-                            .easeInOut(duration: 1.3).repeatForever(autoreverses: true),
-                            value: isPulsing
-                        )
-                }
 
                 Circle()
                     .fill(assessment.pinColor)
                     .frame(width: diameter, height: diameter)
                     .shadow(color: assessment.pinColor.opacity(0.45), radius: diameter * 0.18, x: 0, y: 2)
 
-                // Resizable so the glyph scales with the pin (no fixed point size).
                 Image(systemName: region.systemImage)
                     .resizable()
                     .scaledToFit()
@@ -278,7 +258,6 @@ struct BodyMapHotspotPin: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(region.label): \(accessibilityStatus)")
-        .onAppear { isPulsing = true }
     }
 
     private var accessibilityStatus: String {
