@@ -72,7 +72,7 @@ struct BodyMetricsView: View {
             Button {
                 isBodyMapPresented = true
             } label: {
-                Image(systemName: "figure.stand.line.dotted")
+                Image(systemName: "figure.arms.open")
                     .accessibilityLabel("Body Map")
             }
             .foregroundStyle(Color.accent)

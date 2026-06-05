@@ -261,10 +261,6 @@ public actor HealthSyncManager {
             case .weight:
                 set.insert(HKQuantityType(.bodyMass))
             case .bloodPressure:
-                // Apple requires the correlation type AND its component quantity types
-                // in the read authorization set for HKSampleQuery on correlations to
-                // return data. Omitting HKCorrelationType causes silent empty results.
-                set.insert(HKCorrelationType(.bloodPressure))
                 set.insert(HKQuantityType(.bloodPressureSystolic))
                 set.insert(HKQuantityType(.bloodPressureDiastolic))
             }
