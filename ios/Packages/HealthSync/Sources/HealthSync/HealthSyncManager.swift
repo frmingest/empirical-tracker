@@ -288,7 +288,9 @@ public actor HealthSyncManager {
     private func readRestingHRSamples(since: Date?) async throws -> [HRReading] {
         try await query(type: HKQuantityType(.restingHeartRate), since: since) { sample in
             guard let q = sample as? HKQuantitySample else { return nil }
-            let bpm = q.quantity.doubleValue(for: HKUnit(from: "count/min"))
+            // Build unit inside the @Sendable closure — HKUnit isn't Sendable.
+            let unit = HKUnit.count().unitDivided(by: .minute())
+            let bpm = q.quantity.doubleValue(for: unit)
             guard bpm > 0 else { return nil }
             return HRReading(uuid: q.uuid.uuidString, date: q.endDate, bpm: Int(bpm.rounded()))
         }
@@ -304,26 +306,32 @@ public actor HealthSyncManager {
     }
 
     private func readDailyAverageHRSamples(since: Date?) async throws -> [DailyAvgHRReading] {
-        let samples: [HRReading] = try await query(type: HKQuantityType(.heartRate), since: since) { sample in
+        let rawSamples: [HRReading] = try await query(
+            type: HKQuantityType(.heartRate), since: since
+        ) { sample in
             guard let q = sample as? HKQuantitySample else { return nil }
-            let bpm = q.quantity.doubleValue(for: HKUnit(from: "count/min"))
+            let unit = HKUnit.count().unitDivided(by: .minute())
+            let bpm = q.quantity.doubleValue(for: unit)
             guard bpm > 0 else { return nil }
             return HRReading(uuid: q.uuid.uuidString, date: q.endDate, bpm: Int(bpm.rounded()))
         }
-        // Group by day and average. The dedup key is date-based so re-syncs skip already-stored days.
+        // Group by calendar day and average. Dedup key is date-based so re-syncs skip
+        // days that were already stored, without re-using individual sample UUIDs.
         let cal = Calendar.current
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withFullDate]
         var byDay: [Date: [Int]] = [:]
-        for s in samples {
+        for s in rawSamples {
             let day = cal.startOfDay(for: s.date)
             byDay[day, default: []].append(s.bpm)
         }
-        return byDay.map { day, values in
+        var result: [DailyAvgHRReading] = []
+        for (day, values) in byDay {
             let avg = values.reduce(0, +) / values.count
             let key = "avg-hr-\(formatter.string(from: day))"
-            return DailyAvgHRReading(dedupKey: key, day: day, bpm: avg)
-        }.sorted { $0.day < $1.day }
+            result.append(DailyAvgHRReading(dedupKey: key, day: day, bpm: avg))
+        }
+        return result.sorted { $0.day < $1.day }
     }
 
     private func readBloodPressureSamples(since: Date?) async throws -> [BPReading] {

@@ -79,7 +79,7 @@ struct RecipesView: View {
                 icon: "fork.knife",
                 title: String(localized: "recipes.empty.title"),
                 message: String(localized: "recipes.empty.message"),
-                action: .init(label: String(localized: "recipes.create.cta")) {
+                action: .init(label: String(localized: "recipes.create.cta")) { @MainActor in
                     vm.isCreatePresented = true
                 }
             )

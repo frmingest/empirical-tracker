@@ -283,6 +283,23 @@ struct BodyMetricsView: View {
             }
         }
 
+        if !vm.hrvPoints.isEmpty {
+            Section {
+                BodyMetricChart(
+                    title: "Heart Rate Variability",
+                    unit: "ms",
+                    series: [.init(
+                        id: "hrv",
+                        label: "HRV (SDNN)",
+                        color: .accent,
+                        points: vm.hrvPoints
+                    )],
+                    events: vm.overlappingEvents
+                )
+                .chartRowStyle()
+            }
+        }
+
         if !vm.restingHRPoints.isEmpty {
             Section {
                 BodyMetricChart(
@@ -295,23 +312,6 @@ struct BodyMetricsView: View {
                         points: vm.restingHRPoints
                     )],
                     guidelines: [.init(value: 60), .init(value: 100)],
-                    events: vm.overlappingEvents
-                )
-                .chartRowStyle()
-            }
-        }
-
-        if !vm.hrvPoints.isEmpty {
-            Section {
-                BodyMetricChart(
-                    title: "Heart Rate Variability",
-                    unit: "ms",
-                    series: [.init(
-                        id: "hrv",
-                        label: "HRV (SDNN)",
-                        color: .accent,
-                        points: vm.hrvPoints
-                    )],
                     events: vm.overlappingEvents
                 )
                 .chartRowStyle()
