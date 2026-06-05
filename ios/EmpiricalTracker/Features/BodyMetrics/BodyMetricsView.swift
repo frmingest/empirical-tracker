@@ -168,6 +168,20 @@ struct BodyMetricsView: View {
                     color: bmiColor(bmi),
                     subtitle: bmiCategory(bmi)
                 )
+                StatCard(
+                    title: "Latest BP",
+                    value: vm.latestBP.map { "\($0.systolic)/\($0.diastolic)" } ?? "–",
+                    icon: "heart.fill",
+                    color: bpColor(vm.latestBP),
+                    subtitle: vm.latestBP.map { "mmHg" }
+                )
+                StatCard(
+                    title: "Avg BP",
+                    value: vm.averageBP.map { "\($0.systolic)/\($0.diastolic)" } ?? "–",
+                    icon: "waveform.path.ecg",
+                    color: .textMuted,
+                    subtitle: vm.averageBP.map { "mmHg" }
+                )
             }
             .padding(.vertical, 4)
         }
@@ -193,6 +207,12 @@ struct BodyMetricsView: View {
         case 25..<30: return "Overweight"
         default: return "Obese"
         }
+    }
+
+    private func bpColor(_ bp: BodyMetricsViewModel.BPReading?) -> Color {
+        guard let bp else { return .textMuted }
+        // AHA stage-1 hypertension threshold: ≥130 systolic or ≥80 diastolic
+        return (bp.systolic >= 130 || bp.diastolic >= 80) ? .outRange : .inRange
     }
 
     // MARK: - Charts

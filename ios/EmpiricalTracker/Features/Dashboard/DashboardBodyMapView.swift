@@ -13,6 +13,8 @@ struct DashboardBodyMapView: View {
 
     @State private var viewModel: BodyMapViewModel?
     @State private var selectedRegion: BodyRegion?
+    /// Same key as BodyMetricsView so the user only sets height once.
+    @AppStorage("body.heightCm") private var heightCm: Double = 0
 
     var body: some View {
         Group {
@@ -53,10 +55,15 @@ struct DashboardBodyMapView: View {
         .overlay(alignment: .topTrailing) {
             BodyMetricsStatsPanel(
                 metrics: env.bodyMetrics.metrics,
-                heightCm: env.userProfile.heightCm
+                heightCm: heightCm > 0 ? heightCm : nil
             )
             .padding(.top, 12)
             .padding(.trailing, 12)
+        }
+        .overlay(alignment: .bottomLeading) {
+            BPStatsPanel(metrics: env.bodyMetrics.metrics)
+                .padding(.bottom, 56)
+                .padding(.leading, 12)
         }
         .overlay(alignment: .bottom) {
             BodyMapLegendView()
@@ -68,9 +75,9 @@ struct DashboardBodyMapView: View {
 
 // MARK: - Health stats panel
 
-/// Compact top-right panel showing the most-recent body metric readings drawn
-/// from the user's logged/synced data (weight, height, waist, blood pressure).
-/// Rows with no data are omitted so the card stays small.
+/// Compact top-right panel always visible on the body-map dashboard.
+/// Rows show "--" when data hasn't loaded yet, which keeps the panel in the
+/// view hierarchy so @Observable tracking fires on first render.
 struct BodyMetricsStatsPanel: View {
     let metrics: [BodyMetric]
     let heightCm: Double?
@@ -80,24 +87,20 @@ struct BodyMetricsStatsPanel: View {
     }
 
     var body: some View {
-        let rows = buildRows()
-        if rows.isEmpty { return AnyView(EmptyView()) }
-        return AnyView(
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(rows, id: \.label) { row in
-                    BodyMetricsStatRow(icon: row.icon, label: row.label, value: row.value)
-                }
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(rows, id: \.label) { row in
+                BodyMetricsStatRow(icon: row.icon, label: row.label, value: row.value)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(Color.borderSubtle.opacity(0.5), lineWidth: 0.5)
-            )
-            .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 3)
-            .frame(maxWidth: 140)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.borderSubtle.opacity(0.5), lineWidth: 0.5)
         )
+        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 3)
+        .frame(maxWidth: 140)
     }
 
     private struct StatRow {
@@ -106,29 +109,26 @@ struct BodyMetricsStatsPanel: View {
         let value: String
     }
 
-    private func buildRows() -> [StatRow] {
-        var rows: [StatRow] = []
-        if let cm = heightCm {
-            rows.append(.init(icon: "ruler", label: "Height", value: formatHeight(cm)))
-        }
-        if let kg = latest?.weightKg {
-            rows.append(.init(icon: "scalemass", label: "Weight", value: String(format: "%.1f kg", kg)))
-        }
-        if let cm = latest?.waistCm {
-            rows.append(.init(icon: "circle.dashed", label: "Waist", value: String(format: "%.0f cm", cm)))
-        }
-        if let heightM = heightCm.map({ $0 / 100.0 }), let kg = latest?.weightKg {
-            let bmi = kg / (heightM * heightM)
-            rows.append(.init(icon: "figure.stand", label: "BMI", value: String(format: "%.1f", bmi)))
-        }
-        if let sys = latest?.systolic, let dia = latest?.diastolic {
-            rows.append(.init(icon: "heart.fill", label: "BP", value: "\(sys)/\(dia)"))
-        }
-        return rows
-    }
+    private var rows: [StatRow] {
+        let heightVal = heightCm.map { String(format: "%.0f cm", $0) } ?? "--"
+        let weightVal = latest?.weightKg.map { String(format: "%.1f kg", $0) } ?? "--"
+        let waistVal  = latest?.waistCm.map  { String(format: "%.0f cm", $0) } ?? "--"
 
-    private func formatHeight(_ cm: Double) -> String {
-        String(format: "%.0f cm", cm)
+        var bmiVal = "--"
+        if let hm = heightCm.map({ $0 / 100.0 }), let kg = latest?.weightKg {
+            bmiVal = String(format: "%.1f", kg / (hm * hm))
+        }
+
+        var result = [
+            StatRow(icon: "ruler",         label: "Height", value: heightVal),
+            StatRow(icon: "scalemass",      label: "Weight", value: weightVal),
+            StatRow(icon: "circle.dashed",  label: "Waist",  value: waistVal),
+            StatRow(icon: "figure.stand",   label: "BMI",    value: bmiVal),
+        ]
+        if let sys = latest?.systolic, let dia = latest?.diastolic {
+            result.append(StatRow(icon: "heart.fill", label: "BP", value: "\(sys)/\(dia)"))
+        }
+        return result
     }
 }
 
@@ -142,6 +142,92 @@ private struct BodyMetricsStatRow: View {
             Image(systemName: icon)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(Color.accent)
+                .frame(width: 14)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(label)
+                    .font(.labelSmall)
+                    .foregroundStyle(Color.textMuted)
+                Text(value)
+                    .font(.headlineSmall)
+                    .foregroundStyle(Color.textPrimary)
+            }
+        }
+    }
+}
+
+// MARK: - BP stats panel (bottom-left)
+
+/// Compact panel showing latest and average blood pressure.
+/// Always rendered so @Observable tracking is established on first pass.
+struct BPStatsPanel: View {
+    let metrics: [BodyMetric]
+
+    private struct BPPair { let sys: Int; let dia: Int }
+
+    private var bpReadings: [BPPair] {
+        metrics.compactMap { m in
+            guard let s = m.systolic, let d = m.diastolic else { return nil }
+            return BPPair(sys: s, dia: d)
+        }
+    }
+
+    private var latest: BPPair? {
+        metrics
+            .sorted { $0.measuredOn > $1.measuredOn }
+            .first { $0.systolic != nil && $0.diastolic != nil }
+            .flatMap { m in
+                guard let s = m.systolic, let d = m.diastolic else { return nil }
+                return BPPair(sys: s, dia: d)
+            }
+    }
+
+    private var average: BPPair? {
+        guard !bpReadings.isEmpty else { return nil }
+        let avgSys = bpReadings.map(\.sys).reduce(0, +) / bpReadings.count
+        let avgDia = bpReadings.map(\.dia).reduce(0, +) / bpReadings.count
+        return BPPair(sys: avgSys, dia: avgDia)
+    }
+
+    private func bpColor(_ pair: BPPair?) -> Color {
+        guard let pair else { return .textMuted }
+        return (pair.sys >= 130 || pair.dia >= 80) ? .outRange : .inRange
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            BPRow(
+                label: "Latest BP",
+                value: latest.map { "\($0.sys)/\($0.dia)" } ?? "--",
+                color: bpColor(latest)
+            )
+            BPRow(
+                label: "Avg BP",
+                value: average.map { "\($0.sys)/\($0.dia)" } ?? "--",
+                color: .textMuted
+            )
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.borderSubtle.opacity(0.5), lineWidth: 0.5)
+        )
+        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 3)
+        .frame(maxWidth: 140)
+    }
+}
+
+private struct BPRow: View {
+    let label: String
+    let value: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "heart.fill")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(color)
                 .frame(width: 14)
             VStack(alignment: .leading, spacing: 0) {
                 Text(label)
