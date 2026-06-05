@@ -13,6 +13,8 @@ struct DashboardBodyMapView: View {
 
     @State private var viewModel: BodyMapViewModel?
     @State private var selectedRegion: BodyRegion?
+    /// Same key as BodyMetricsView so the user only sets height once.
+    @AppStorage("body.heightCm") private var heightCm: Double = 0
 
     var body: some View {
         Group {
@@ -53,7 +55,7 @@ struct DashboardBodyMapView: View {
         .overlay(alignment: .topTrailing) {
             BodyMetricsStatsPanel(
                 metrics: env.bodyMetrics.metrics,
-                heightCm: env.userProfile.heightCm
+                heightCm: heightCm > 0 ? heightCm : nil
             )
             .padding(.top, 12)
             .padding(.trailing, 12)
