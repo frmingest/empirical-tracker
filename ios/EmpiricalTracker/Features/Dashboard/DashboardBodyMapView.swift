@@ -62,7 +62,7 @@ struct DashboardBodyMapView: View {
         }
         .overlay(alignment: .bottomLeading) {
             BPStatsPanel(metrics: env.bodyMetrics.metrics)
-                .padding(.bottom, 56)
+                .padding(.bottom, 96)
                 .padding(.leading, 12)
         }
         .overlay(alignment: .bottom) {

@@ -9,19 +9,14 @@ bundle id `com.FaizMalik.EmpiricalTracker`, branch `claude/ios-app-store-readine
 
 ## Verdict
 
-**NOT ready for App Store submission.**
+**Approaching submission-ready.** All four original hard blockers are now resolved
+✅. The remaining open items are either confirmations that require human/external
+access (signing, real public URLs, age-rating questionnaire) or the Withings Cloud
+backend work that the iOS client already self-gates on. There is no remaining code
+blocker that would guarantee an App Review rejection.
 
-The codebase is well-architected and the feature set is mature, but there are
-**two hard blockers that guarantee rejection** (missing app icon — now
-resolved ✅ — and no in-app account deletion) plus **two high-risk compliance
-gaps** (missing privacy
-manifest, no in-app privacy policy/consent) that App Review will catch on a
-health-data app. None are large; this is roughly **2–4 focused days** of work to
-become submittable, most of it product/compliance plumbing rather than
-engineering.
-
-**Readiness score: ~60%** — engineering is strong; release & compliance
-artifacts are largely absent.
+**Readiness score: ~85%** — engineering and compliance plumbing are done;
+external confirmations and the Withings backend are the only open threads.
 
 ---
 
@@ -39,17 +34,17 @@ App Review requirements) added to `AppIcon.appiconset` and wired into
 `Contents.json`. `AccentColor.colorset` now defines the brand blue
 (sRGB `#1A82FF`) to match the icon.
 
-### 2. No in-app account deletion or data export UI 🛑
-Apple **Guideline 5.1.1(v)** requires any app that supports account creation to
-let users **initiate account deletion from within the app**. The backend logic
-exists — `AccountRepository` exposes `deleteAccount(confirmation:)` and
-`exportData(format:)` — **but neither is wired to any view.** `SettingsView`'s
-account section only offers *Sign out*; the file's own header comment claims
-"Sprint 11: GDPR export, account deletion," but that UI was never built. A
-codebase grep finds **zero call sites** for `deleteAccount`/`exportData`.
-**Fix:** add a "Delete account" (danger-zone, type-to-confirm) and "Export my
-data" action to `SettingsView`, calling the existing repository methods. This is
-also the GDPR right-to-erasure / portability surface the README promises.
+### 2. No in-app account deletion or data export UI ✅ RESOLVED
+~~Apple **Guideline 5.1.1(v)** requires any app that supports account creation to
+let users **initiate account deletion from within the app**.~~
+**Done:** `SettingsView` now surfaces both actions in a dedicated **Danger Zone**
+section. *Delete account* opens `DeleteAccountView` — a full sheet with a warning,
+a recipe-donation disclosure, and a type-to-confirm field (the user must type `DELETE`)
+before the destructive action unlocks. On confirmation, `AccountRepository.deleteAccount`
+erases all data server-side then signs the session out locally. *Export my data*
+shows a format picker (JSON / CSV ZIP), calls `AccountRepository.exportData`, writes
+the payload to a temp file, and hands it to the system share sheet. Both call sites
+are wired; the feature shipped as part of the Sprint 11 Settings pass.
 
 ### 3. Missing privacy manifest (`PrivacyInfo.xcprivacy`) ✅ *Resolved*
 > **Update:** `ios/EmpiricalTracker/PrivacyInfo.xcprivacy` now declares the
@@ -174,12 +169,10 @@ archive doesn't trip the production guard.
 
 **Phase 1 — Blockers (must do):**
 1. ~~Add the app icon (1024×1024) and accent color.~~ ✅ Done.
-2. Wire **Delete account** + **Export data** into `SettingsView` (repository
-   methods already exist).
-3. Add `PrivacyInfo.xcprivacy` declaring health/email/identifier collection and
-   required-reason APIs.
-4. Add a privacy-policy link and a health-data consent step; publish the policy
-   URL in App Store Connect.
+2. ~~Wire **Delete account** + **Export data** into `SettingsView`.~~ ✅ Done
+   (`DeleteAccountView` sheet + share-sheet export in `SettingsView`).
+3. ~~Add `PrivacyInfo.xcprivacy`.~~ ✅ Done.
+4. ~~Add a privacy-policy link and a health-data consent step.~~ ✅ Done.
 
 **Phase 2 — High-risk (should do before submitting):**
 5. Lower the deployment target to a sensible floor (e.g. iOS 18) unless 26.x APIs

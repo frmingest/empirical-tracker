@@ -68,8 +68,10 @@ column) and a planned `withings_measures` table for richer signals.
 | Withings — HealthKit (Path A) | Weight + BP via Apple Health, UUID dedupe, background delivery (ADR-022) | ✅ Shipped |
 | Withings — Cloud (Path B) | iOS connect/disconnect/"Sync now" flow (ADR-023) | ◐ Client shipped; **backend pending** |
 | Doctor PDF report | Client-side selectable A4 report (Sprint 6 follow-up) | ✅ Shipped |
-| Account / GDPR / settings | Export + delete UI, settings polish | ☐ Outstanding (Sprint 11) |
-| Hardening & release | Offline cache, accessibility, perf, App Store submission | ☐ Outstanding (Sprint 12) |
+| Account / GDPR / settings | Export + delete UI (`DeleteAccountView` + share-sheet export in `SettingsView`), sign-up flow, first-run onboarding | ✅ Shipped (Sprint 11) |
+| Catalogue compliance | Custom-food + recipe anonymise-on-delete (ADR-027/028), proactive catalogue donation (ADR-029) | ✅ Shipped |
+| Body map dashboard | Anatomical silhouette as default Home view, health-stats + BP overlay panels, BMI, category drill-down (ADR-030) | ✅ Shipped |
+| Hardening & release | Offline cache, accessibility, perf, App Store submission | ◐ In progress (Sprint 12) — all blockers resolved; external sign-off + Withings backend remain |
 
 The submission-blocker detail (including wiring the Account/GDPR UI) is tracked in
 [`IOS_APP_STORE_READINESS.md`](IOS_APP_STORE_READINESS.md).

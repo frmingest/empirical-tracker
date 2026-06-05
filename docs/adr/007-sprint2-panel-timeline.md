@@ -4,6 +4,13 @@
 **Date:** 2026-05-31  
 **Author:** Faiz (solo developer)
 
+> **iOS note:** This ADR was written against the web client, but the **panel timeline**
+> and **manual-entry** concepts both survived into the iOS app. The backend endpoint
+> (`POST /biomarkers/results/manual`) is unchanged. On iOS, `PanelTimelineView` renders
+> panels from the same data shape; the manual-entry flow lives in
+> `BiomarkerDetailView`'s add-reading sheet. The web-specific UI details (modal form,
+> Next.js routing) are irrelevant but the data-model and API decisions stand.
+
 ---
 
 ## Context
