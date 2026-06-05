@@ -41,7 +41,7 @@ struct BodyMapCanvas: View {
             let originY = max((geo.size.height - bottomReserve - figureHeight) / 2, edgeInset)
 
             // Pin metrics scale with the figure so proportions hold everywhere.
-            let pinDiameter = min(max(figureWidth * 0.13, 22), 46)
+            let pinDiameter = min(max(figureWidth * 0.065, 11), 23)
 
             ZStack(alignment: .topLeading) {
                 Image("BodySilhouette")

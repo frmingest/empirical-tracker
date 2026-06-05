@@ -125,4 +125,9 @@ public final class BodyMetricsRepository {
         try await client.requestEmpty(.delete("/body-metrics/\(id)"))
         metrics.removeAll { $0.id == id }
     }
+
+    public func deleteBySource(_ source: BodyMetric.Source) async throws {
+        try await client.requestEmpty(.delete("/body-metrics/by-source/\(source.rawValue)"))
+        metrics.removeAll { $0.source == source }
+    }
 }

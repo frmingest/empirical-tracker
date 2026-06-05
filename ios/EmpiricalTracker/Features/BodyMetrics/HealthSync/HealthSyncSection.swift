@@ -12,6 +12,8 @@ struct HealthSyncSection: View {
     /// Read-only here (no `$` bindings); Observation still tracks property reads in `body`.
     let state: HealthSyncState
 
+    @State private var showingResetConfirmation = false
+
     var body: some View {
         if state.connection != .unavailable {
             Section {
@@ -85,6 +87,25 @@ struct HealthSyncSection: View {
             .foregroundStyle(Color.accent)
         }
         .disabled(state.isSyncing)
+
+        Button(role: .destructive) {
+            showingResetConfirmation = true
+        } label: {
+            Label("Clear data & re-sync", systemImage: "trash.circle")
+        }
+        .disabled(state.isSyncing)
+        .confirmationDialog(
+            "Clear all Apple Health data?",
+            isPresented: $showingResetConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Clear & Re-sync", role: .destructive) {
+                Task { await state.resetAndResync() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("All health-synced readings will be deleted from your account and re-imported fresh from Apple Health.")
+        }
 
         if let summary = state.lastSummary, state.errorMessage == nil {
             Text(summaryText(summary))

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, field_validator, model_validator
 
 from app.auth import current_user_id
@@ -58,6 +58,17 @@ async def create_body_metric(
     user_id: str = Depends(current_user_id),
 ) -> dict:
     return repository.create_metric(user_id, body.model_dump())
+
+
+@router.delete("/by-source/{source}")
+async def delete_body_metrics_by_source(
+    source: str,
+    user_id: str = Depends(current_user_id),
+) -> dict:
+    if source not in {"healthkit", "withings", "manual"}:
+        raise HTTPException(status_code=400, detail="Invalid source")
+    count = repository.delete_metrics_by_source(user_id, source)
+    return {"deleted_count": count, "source": source}
 
 
 @router.delete("/{metric_id}")
