@@ -75,7 +75,7 @@ struct DeleteAccountView: View {
         Section {
             Label {
                 Text(String(localized: "settings.account.delete.recipes.public"))
-                    .font(.bodyRegular)
+                    .font(.bodyMedium)
                     .foregroundStyle(Color.textPrimary)
             } icon: {
                 Image(systemName: "fork.knife.circle.fill")
