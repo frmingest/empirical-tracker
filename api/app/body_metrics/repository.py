@@ -47,3 +47,16 @@ def delete_metric(user_id: str, metric_id: str) -> None:
         .eq("user_id", user_id)
         .execute()
     )
+
+
+def delete_metrics_by_source(user_id: str, source: str) -> int:
+    """Delete all of the user's body metrics from a given source. Returns deleted count."""
+    db = get_supabase()
+    resp = (
+        db.table("body_metrics")
+        .delete()
+        .eq("user_id", user_id)
+        .eq("source", source)
+        .execute()
+    )
+    return len(resp.data) if resp.data else 0

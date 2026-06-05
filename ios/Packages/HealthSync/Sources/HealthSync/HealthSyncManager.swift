@@ -162,6 +162,11 @@ public actor HealthSyncManager {
         #endif
     }
 
+    /// Clears the local UUID dedup cache so the next sync re-imports all history.
+    public func resetSyncedSamples() async {
+        await syncedStore.reset()
+    }
+
     /// Tears down observers and disables background delivery (called on disconnect).
     public func stopObserving() async {
         #if canImport(HealthKit)

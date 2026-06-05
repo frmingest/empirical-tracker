@@ -127,6 +127,30 @@ final class HealthSyncState {
         Task { await manager.stopObserving() }
     }
 
+    /// Deletes all HealthKit-sourced records from the backend, clears the local
+    /// UUID dedup cache, then performs a fresh full import from Apple Health.
+    /// Use this when data is stuck / truncated and the user wants a clean slate.
+    func resetAndResync() async {
+        guard connection == .connected else { return }
+        isSyncing = true
+        errorMessage = nil
+        do {
+            try await bodyMetrics.deleteBySource(.healthkit)
+            await manager.resetSyncedSamples()
+            lastSyncDate = nil
+            defaults.removeObject(forKey: Key.lastSync)
+            let summary = try await manager.sync(types: enabledTypes)
+            lastSummary = summary
+            let now = Date()
+            lastSyncDate = now
+            defaults.set(now.timeIntervalSince1970, forKey: Key.lastSync)
+            await bodyMetrics.load()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isSyncing = false
+    }
+
     // MARK: - Sync
 
     func syncNow(silent: Bool = false) async {
