@@ -90,16 +90,33 @@ struct BodyMetricChart: View {
         return s.points.filter { $0.date >= cutoff }
     }
 
-    /// 7-day rolling average over the visible points of a series.
+    /// 7-day rolling average — O(n) sliding window instead of O(n²) filter-per-point.
     private func movingAverage(for s: Series) -> [DataPoint] {
         let pts = visiblePoints(for: s)
         guard pts.count > 7 else { return [] }
-        return pts.map { point in
-            let windowStart = point.date.addingTimeInterval(-7 * 24 * 3600)
-            let window = pts.filter { $0.date >= windowStart && $0.date <= point.date }
-            let avg = window.map(\.value).reduce(0, +) / Double(window.count)
-            return DataPoint(date: point.date, value: avg)
+        let windowDuration: TimeInterval = 7 * 24 * 3600
+        var lo = 0
+        var windowSum = 0.0
+        var result = [DataPoint]()
+        result.reserveCapacity(pts.count)
+        for (i, point) in pts.enumerated() {
+            windowSum += point.value
+            while pts[lo].date < point.date.addingTimeInterval(-windowDuration) {
+                windowSum -= pts[lo].value
+                lo += 1
+            }
+            result.append(DataPoint(date: point.date, value: windowSum / Double(i - lo + 1)))
         }
+        return result
+    }
+
+    /// Reduce a sorted array to at most `maxCount` evenly-spaced points,
+    /// always preserving the first and last. Charts can't display more than a
+    /// few hundred distinct pixels horizontally anyway.
+    private static func downsample(_ points: [DataPoint], to maxCount: Int) -> [DataPoint] {
+        guard points.count > maxCount else { return points }
+        let stride = Double(points.count - 1) / Double(maxCount - 1)
+        return (0..<maxCount).map { i in points[Int((Double(i) * stride).rounded())] }
     }
 
     /// Show raw dots only when the range is short enough that they don't clutter.
@@ -155,10 +172,13 @@ struct BodyMetricChart: View {
 
     private var chart: some View {
         Chart {
-            // Raw data — faded when moving average is present
+            // Raw data — faded when moving average is present.
+            // Downsampled to ≤400 points: Charts can't render more distinct
+            // pixels than that horizontally, and fewer marks = faster layout.
             ForEach(series) { s in
-                let pts = visiblePoints(for: s)
-                let hasMa = movingAverage(for: s).count > 0
+                let ma = movingAverage(for: s)
+                let hasMa = !ma.isEmpty
+                let pts = Self.downsample(visiblePoints(for: s), to: 400)
 
                 ForEach(pts) { point in
                     LineMark(
@@ -180,8 +200,8 @@ struct BodyMetricChart: View {
                     }
                 }
 
-                // 7-day moving average overlay
-                ForEach(movingAverage(for: s)) { point in
+                // 7-day moving average overlay (also downsampled for rendering)
+                ForEach(Self.downsample(ma, to: 400)) { point in
                     LineMark(
                         x: .value("Date", point.date),
                         y: .value("\(title) avg", point.value),

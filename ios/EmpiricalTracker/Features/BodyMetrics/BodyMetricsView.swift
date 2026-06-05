@@ -10,6 +10,7 @@ struct BodyMetricsView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var viewModel: BodyMetricsViewModel?
     @State private var isBodyMapPresented = false
+    @State private var showAllHistory = false
 
     var body: some View {
         NavigationStack {
@@ -133,9 +134,15 @@ struct BodyMetricsView: View {
         .listRowBackground(Color.clear)
     }
 
+    private static let historyPageSize = 100
+
     private func historySection(_ vm: BodyMetricsViewModel) -> some View {
-        Section {
-            ForEach(vm.history) { metric in
+        let all = vm.history
+        let visible = showAllHistory ? all : Array(all.prefix(Self.historyPageSize))
+        let hasMore = !showAllHistory && all.count > Self.historyPageSize
+
+        return Section {
+            ForEach(visible) { metric in
                 BodyMetricRow(metric: metric)
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button(role: .destructive) {
@@ -144,6 +151,16 @@ struct BodyMetricsView: View {
                             Label(String(localized: "common.delete"), systemImage: "trash")
                         }
                     }
+            }
+            if hasMore {
+                Button {
+                    showAllHistory = true
+                } label: {
+                    Text("Show all \(all.count) entries")
+                        .font(.bodyMedium)
+                        .foregroundStyle(Color.accent)
+                        .frame(maxWidth: .infinity)
+                }
             }
         } header: {
             Text(String(localized: "body.history.title"))
