@@ -64,6 +64,32 @@ final class BodyMetricsViewModel {
         repo.metrics.compactMap { m in m.diastolic.map { .init(date: m.measuredOn, value: Double($0)) } }
     }
 
+    struct BPReading {
+        let systolic: Int
+        let diastolic: Int
+    }
+
+    var latestBP: BPReading? {
+        repo.metrics
+            .sorted { $0.measuredOn > $1.measuredOn }
+            .first { $0.systolic != nil && $0.diastolic != nil }
+            .flatMap { m in
+                guard let s = m.systolic, let d = m.diastolic else { return nil }
+                return BPReading(systolic: s, diastolic: d)
+            }
+    }
+
+    var averageBP: BPReading? {
+        let readings = repo.metrics.compactMap { m -> BPReading? in
+            guard let s = m.systolic, let d = m.diastolic else { return nil }
+            return BPReading(systolic: s, diastolic: d)
+        }
+        guard !readings.isEmpty else { return nil }
+        let avgSys = readings.map(\.systolic).reduce(0, +) / readings.count
+        let avgDia = readings.map(\.diastolic).reduce(0, +) / readings.count
+        return BPReading(systolic: avgSys, diastolic: avgDia)
+    }
+
     /// Diet events intersecting the full body-metrics window, for the chart overlay.
     var overlappingEvents: [DietEvent] {
         let dates = repo.metrics.map(\.measuredOn)

@@ -60,6 +60,11 @@ struct DashboardBodyMapView: View {
             .padding(.top, 12)
             .padding(.trailing, 12)
         }
+        .overlay(alignment: .bottomLeading) {
+            BPStatsPanel(metrics: env.bodyMetrics.metrics)
+                .padding(.bottom, 56)
+                .padding(.leading, 12)
+        }
         .overlay(alignment: .bottom) {
             BodyMapLegendView()
                 .padding(.bottom, 16)
@@ -137,6 +142,92 @@ private struct BodyMetricsStatRow: View {
             Image(systemName: icon)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(Color.accent)
+                .frame(width: 14)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(label)
+                    .font(.labelSmall)
+                    .foregroundStyle(Color.textMuted)
+                Text(value)
+                    .font(.headlineSmall)
+                    .foregroundStyle(Color.textPrimary)
+            }
+        }
+    }
+}
+
+// MARK: - BP stats panel (bottom-left)
+
+/// Compact panel showing latest and average blood pressure.
+/// Always rendered so @Observable tracking is established on first pass.
+struct BPStatsPanel: View {
+    let metrics: [BodyMetric]
+
+    private struct BPPair { let sys: Int; let dia: Int }
+
+    private var bpReadings: [BPPair] {
+        metrics.compactMap { m in
+            guard let s = m.systolic, let d = m.diastolic else { return nil }
+            return BPPair(sys: s, dia: d)
+        }
+    }
+
+    private var latest: BPPair? {
+        metrics
+            .sorted { $0.measuredOn > $1.measuredOn }
+            .first { $0.systolic != nil && $0.diastolic != nil }
+            .flatMap { m in
+                guard let s = m.systolic, let d = m.diastolic else { return nil }
+                return BPPair(sys: s, dia: d)
+            }
+    }
+
+    private var average: BPPair? {
+        guard !bpReadings.isEmpty else { return nil }
+        let avgSys = bpReadings.map(\.sys).reduce(0, +) / bpReadings.count
+        let avgDia = bpReadings.map(\.dia).reduce(0, +) / bpReadings.count
+        return BPPair(sys: avgSys, dia: avgDia)
+    }
+
+    private func bpColor(_ pair: BPPair?) -> Color {
+        guard let pair else { return .textMuted }
+        return (pair.sys >= 130 || pair.dia >= 80) ? .outRange : .inRange
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            BPRow(
+                label: "Latest BP",
+                value: latest.map { "\($0.sys)/\($0.dia)" } ?? "--",
+                color: bpColor(latest)
+            )
+            BPRow(
+                label: "Avg BP",
+                value: average.map { "\($0.sys)/\($0.dia)" } ?? "--",
+                color: .textMuted
+            )
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.borderSubtle.opacity(0.5), lineWidth: 0.5)
+        )
+        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 3)
+        .frame(maxWidth: 140)
+    }
+}
+
+private struct BPRow: View {
+    let label: String
+    let value: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "heart.fill")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(color)
                 .frame(width: 14)
             VStack(alignment: .leading, spacing: 0) {
                 Text(label)
