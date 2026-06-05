@@ -55,7 +55,8 @@ struct DashboardView: View {
                     LoadingView(message: "Loading…")
                 }
             }
-            .navigationTitle("Dashboard")
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .navigationDestination(item: $selectedMarker) { marker in
                 BiomarkerDetailView(initialMarker: marker)
