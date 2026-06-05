@@ -230,6 +230,128 @@ def test_delete_recipe_noop_when_not_owned(mock_db, mock_service):
     db.delete.assert_not_called()
 
 
+# ── proactive donation: mirror on create / update (ADR-029) ─────────────────────
+
+
+@patch("app.recipes.repository.get_service_supabase")
+@patch("app.recipes.repository.get_supabase")
+def test_create_public_recipe_mirrors_and_links(mock_db, mock_service):
+    inserted = {
+        "id": "r1", "title": "Ribeye", "category": "Beef",
+        "image_url": "https://cdn/u1/r.jpg", "ingredients": ["1 ribeye"],
+        "instructions": ["Sear it"], "is_public": True,
+        "created_at": _iso(0), "catalogue_id": None,
+    }
+    recipes = _fluent(execute_data=[inserted])
+    favs = _fluent(execute_data=[])
+    service = _fluent(execute_data=[{"id": "cat1"}])
+    mock_db.return_value = recipes
+    mock_service.return_value = service
+    # insert recipe → back-pointer update → favourites lookup
+    recipes.table.side_effect = [recipes, recipes, favs]
+
+    repository.create_recipe(
+        "u1",
+        {"title": "Ribeye", "category": "Beef", "is_public": True,
+         "ingredients": ["1 ribeye"], "instructions": ["Sear it"]},
+    )
+
+    # Donated at create time, de-identified (no user_id / image_url / created_at).
+    donated = service.insert.call_args.args[0]
+    assert donated["title"] == "Ribeye"
+    assert "user_id" not in donated and "image_url" not in donated
+    assert "donated_at" in donated
+    # The twin id is linked back onto the user's own recipe row.
+    update_args = [c.args[0] for c in recipes.update.call_args_list]
+    assert {"catalogue_id": "cat1"} in update_args
+
+
+@patch("app.recipes.repository.get_service_supabase")
+@patch("app.recipes.repository.get_supabase")
+def test_create_private_recipe_is_not_mirrored(mock_db, mock_service):
+    inserted = {"id": "r1", "title": "Secret", "category": "Beef",
+                "is_public": False, "created_at": _iso(0), "catalogue_id": None}
+    recipes = _fluent(execute_data=[inserted])
+    favs = _fluent(execute_data=[])
+    mock_db.return_value = recipes
+    recipes.table.side_effect = [recipes, favs]
+
+    repository.create_recipe("u1", {"title": "Secret", "category": "Beef"})
+
+    mock_service.assert_not_called()
+
+
+@patch("app.recipes.repository.get_service_supabase")
+@patch("app.recipes.repository.get_supabase")
+def test_update_public_recipe_updates_twin_in_place(mock_db, mock_service):
+    updated = {"id": "r1", "title": "New", "category": "Beef", "is_public": True,
+               "created_at": _iso(0), "catalogue_id": "cat1"}
+    recipes = _fluent(execute_data=[updated])
+    favs = _fluent(execute_data=[])
+    service = _fluent()
+    mock_db.return_value = recipes
+    mock_service.return_value = service
+    recipes.table.side_effect = [recipes, favs]
+
+    repository.update_recipe("u1", "r1", {"title": "New", "category": "Beef", "is_public": True})
+
+    # Already linked → the existing twin is updated in place, not re-inserted.
+    service.update.assert_called_once()
+    service.insert.assert_not_called()
+
+
+@patch("app.recipes.repository.get_service_supabase")
+@patch("app.recipes.repository.get_supabase")
+def test_delete_already_mirrored_recipe_skips_safety_net(mock_db, mock_service):
+    db = _fluent(execute_data=[{
+        "id": "r1", "user_id": "u1", "title": "Ribeye", "category": "Beef",
+        "is_public": True, "created_at": _iso(3), "catalogue_id": "cat1",
+    }])
+    mock_db.return_value = db
+
+    repository.delete_recipe("u1", "r1")
+
+    # Twin already exists → keep it, just hard-delete the user row.
+    db.delete.assert_called()
+    mock_service.assert_not_called()
+
+
+def test_donate_public_recipes_skips_already_mirrored():
+    rows = [
+        {"id": "r1", "title": "A", "category": "Beef", "is_public": True,
+         "ingredients": [], "instructions": [], "catalogue_id": None},
+        {"id": "r2", "title": "B", "category": "Beef", "is_public": True,
+         "ingredients": [], "instructions": [], "catalogue_id": "cat2"},
+    ]
+    service = _fluent(execute_data=rows)
+    n = repository.donate_public_recipes(service, "u1")
+    assert n == 1
+    service.insert.assert_called_once()
+
+
+@patch("app.recipes.repository.get_supabase")
+def test_list_recipes_hides_live_public_twin(mock_db):
+    # A live public recipe (r1) already carries its twin id c1; the catalogue's
+    # c1 row must be deduped away, while an orphaned twin (c2) still shows.
+    recipes = _fluent(execute_data=[
+        {"id": "r1", "title": "Live", "category": "Beef",
+         "created_at": _iso(1), "catalogue_id": "c1"}
+    ])
+    favs = _fluent(execute_data=[])
+    catalogue = _fluent(execute_data=[
+        {"id": "c1", "title": "Live", "category": "Beef", "donated_at": "2026-05-01"},
+        {"id": "c2", "title": "Orphan", "category": "Beef", "donated_at": "2026-04-01"},
+    ])
+    mock_db.return_value = recipes
+    recipes.table.side_effect = [recipes, favs, catalogue]
+
+    out = repository.list_recipes("u1")
+    ids = {r["id"] for r in out}
+    assert "r1" in ids          # the live row is shown
+    assert "c1" not in ids      # its twin is deduped away
+    assert "c2" in ids          # an orphaned donated recipe still surfaces
+
+
 @patch("app.recipes.repository.get_supabase")
 def test_list_recipes_includes_donated_catalogue(mock_db):
     recipes = _fluent(

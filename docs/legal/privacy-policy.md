@@ -89,6 +89,15 @@ account (Section 8), we erase your health, diet, body, and account data from our
 systems. Minimal security logs may persist for a short period as required for
 fraud prevention and legal compliance.
 
+**Items you choose to share to the common catalogue** — custom foods and recipes
+you mark as public — are kept as **anonymised facts** (e.g. a product's name,
+brand, and nutrition values, or a recipe's ingredients and steps) for the benefit
+of all users. When you share such an item we make this anonymised copy, stripped
+of any link to you (no user identifier, no timestamps tied to your activity, and
+never a scanned-label image or photo). Because that copy is no longer personal
+data, it is retained even after you delete the item or your account. Anything you
+keep **private** is never copied and is fully erased.
+
 ## 7. International transfers
 
 Where data is transferred outside the EU/EEA (to Railway for API processing and

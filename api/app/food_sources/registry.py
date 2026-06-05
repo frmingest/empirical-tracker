@@ -107,6 +107,17 @@ async def search(
         catalogue_results = results[len(external_tasks)]
         custom_results = results[-1] if custom_task is not None else []
 
+        # A user's own *public* custom food is now mirrored into the anonymous
+        # catalogue at create time (ADR-029), so it would otherwise appear twice
+        # for its owner — once as their own `custom` item and once as the donated
+        # twin. Drop catalogue rows that match one of the user's own items
+        # (same name + brand — the twin is a verbatim copy of those facts). Other
+        # users' donated facts are unaffected and still surface here.
+        own_keys = {(i["name"], i.get("brand")) for i in custom_results}
+        catalogue_results = [
+            i for i in catalogue_results if (i["name"], i.get("brand")) not in own_keys
+        ]
+
         # Preference order: the user's own items, then anonymous donated facts,
         # then the external sources.
         merged: list[FoodItem] = [*custom_results, *catalogue_results]

@@ -11,7 +11,7 @@ NEW_WINDOW_DAYS = 14
 _COLUMNS = (
     "id,user_id,title,category,image_url,serving_size,"
     "calories_kcal,protein_g,fat_g,carbs_g,ingredients,instructions,"
-    "fact,is_public,is_premium,created_at"
+    "fact,is_public,is_premium,created_at,catalogue_id"
 )
 
 # Anonymous donated catalogue (ADR-028). No user_id, no created_at, no image_url
@@ -88,9 +88,10 @@ def donate_to_catalogue(service_db, row: dict) -> None:
 
     Keeps only the factual recipe columns (`_DONATED_FIELDS`), dropping
     `user_id` / `created_at` / `image_url` so the result is anonymous, not merely
-    pseudonymous (GDPR Recital 26). Recipes have no natural unique key, so this is
-    a plain insert — the source row is hard-deleted immediately after, so the same
-    recipe can't be re-donated and rows don't pile up.
+    pseudonymous (GDPR Recital 26). A plain insert — this is the one-shot donate
+    used by the deletion safety net for a recipe that was never mirrored. The
+    proactive create/update path uses `sync_catalogue`, which also records the
+    back-pointer and updates the twin in place.
 
     Runs on the **service-role** client — the one sanctioned service-role data
     path (ADR-026) — because `recipe_catalogue` is writable only by that role.
@@ -100,13 +101,62 @@ def donate_to_catalogue(service_db, row: dict) -> None:
     service_db.table("recipe_catalogue").insert(facts).execute()
 
 
+def sync_catalogue(user_db, user_id: str, row: dict) -> None:
+    """Mirror a *public* recipe into `recipe_catalogue` and keep it in step.
+
+    Proactive donation (ADR-029): called on public create/update so the curated
+    recipe is captured at authoring time, not only if the author later deletes
+    it. The same anonymisation as `donate_to_catalogue` applies (only
+    `_DONATED_FIELDS` survive — `user_id` / `created_at` / `image_url` are never
+    copied), so the catalogue row is anonymous recipe content, not personal data.
+
+    Recipes have no natural key, so the first donation records the twin's id back
+    on `recipes.catalogue_id` and later edits update that row in place rather than
+    inserting a duplicate. The catalogue write runs on the service-role client;
+    the back-pointer write runs on the caller's RLS-scoped `user_db`.
+    No-op for a private recipe — nothing is shared, nothing is retained.
+    """
+    if not row.get("is_public"):
+        return
+    service_db = get_service_supabase()
+    facts = _scrub_for_catalogue(row)
+    catalogue_id = row.get("catalogue_id")
+
+    if catalogue_id:
+        # Update the existing twin in place; keep its original donated_at.
+        service_db.table("recipe_catalogue").update(facts).eq(
+            "id", catalogue_id
+        ).execute()
+        return
+
+    resp = (
+        service_db.table("recipe_catalogue")
+        .insert({**facts, "donated_at": date.today().isoformat()})
+        .execute()
+    )
+    twin_id = (resp.data or [{}])[0].get("id")
+    # Record the de-identified back-pointer (forward-only: lives on the user's
+    # row and dies with it) so edits update this twin and reads can dedupe.
+    if twin_id and row.get("id"):
+        (
+            user_db.table("recipes")
+            .update({"catalogue_id": twin_id})
+            .eq("id", row["id"])
+            .eq("user_id", user_id)
+            .execute()
+        )
+
+
 def donate_public_recipes(service_db, user_id: str) -> int:
-    """Donate every public recipe a user owns before account erasure.
+    """Donate any not-yet-mirrored public recipes before account erasure.
 
     Called from the account-deletion path (which already runs on the service-role
-    client). Private recipes are left untouched here — the caller's explicit
-    `recipes` DELETE hard-erases all of them, public and private alike. Returns
-    the number of rows donated.
+    client). With proactive donation (ADR-029) most public recipes already have a
+    twin (`catalogue_id` set) and are skipped; this is the safety net for recipes
+    authored before ADR-029 or whose proactive donation never landed. Private
+    recipes are left untouched — the caller's explicit `recipes` DELETE
+    hard-erases all of them, public and private alike. Returns the number of rows
+    donated here.
     """
     resp = (
         service_db.table("recipes")
@@ -115,10 +165,13 @@ def donate_public_recipes(service_db, user_id: str) -> int:
         .eq("is_public", True)
         .execute()
     )
-    rows = resp.data or []
-    for row in rows:
+    donated = 0
+    for row in resp.data or []:
+        if row.get("catalogue_id"):
+            continue  # already mirrored proactively
         donate_to_catalogue(service_db, row)
-    return len(rows)
+        donated += 1
+    return donated
 
 
 def _catalogue_row_to_recipe(row: dict) -> dict:
@@ -151,15 +204,29 @@ def _catalogue_row_to_recipe(row: dict) -> dict:
     }
 
 
-def _list_catalogue(db, category: str | None, only_free: bool) -> list[dict]:
-    """Donated catalogue rows visible to everyone, newest donation first."""
+def _list_catalogue(
+    db,
+    category: str | None,
+    only_free: bool,
+    exclude_ids: set[str] | None = None,
+) -> list[dict]:
+    """Donated catalogue rows visible to everyone, newest donation first.
+
+    `exclude_ids` are the twins of recipes that are still live and public
+    (ADR-029): while the author keeps the recipe, the richer live row is shown
+    instead of its anonymous twin, so the twin only surfaces once the source is
+    gone. This keeps a public recipe from appearing twice.
+    """
     query = db.table("recipe_catalogue").select(_CATALOGUE_COLUMNS)
     if category:
         query = query.eq("category", category)
     if only_free:
         query = query.eq("is_premium", False)
     resp = query.order("donated_at", desc=True).execute()
-    return [_catalogue_row_to_recipe(row) for row in (resp.data or [])]
+    rows = resp.data or []
+    if exclude_ids:
+        rows = [row for row in rows if row["id"] not in exclude_ids]
+    return [_catalogue_row_to_recipe(row) for row in rows]
 
 
 def list_recipes(
@@ -188,9 +255,11 @@ def list_recipes(
     rows = resp.data or []
     favorite_ids = _favorite_ids(db, user_id)
     # Own + public recipes first (newest authored wins), then the anonymous
-    # donated catalogue (ADR-028).
+    # donated catalogue (ADR-028) — minus the twins of recipes still live and
+    # public here, which are already shown above (ADR-029 dedupe).
     own = [_decorate(row, favorite_ids) for row in rows]
-    return own + _list_catalogue(db, category, only_free)
+    live_twins = {r["catalogue_id"] for r in rows if r.get("catalogue_id")}
+    return own + _list_catalogue(db, category, only_free, exclude_ids=live_twins)
 
 
 def get_recipe(user_id: str, recipe_id: str) -> dict | None:
@@ -263,7 +332,12 @@ def create_recipe(user_id: str, recipe: dict) -> dict:
     resp = db.table("recipes").insert(row).execute()
     if not resp.data:
         return {}
-    return _decorate(resp.data[0], _favorite_ids(db, user_id))
+    stored = resp.data[0]
+    # Mirror a public recipe into the anonymous catalogue at authoring time so the
+    # curated value is captured up front, not only if it is later deleted (ADR-029).
+    if stored.get("is_public"):
+        sync_catalogue(db, user_id, stored)
+    return _decorate(stored, _favorite_ids(db, user_id))
 
 
 def update_recipe(user_id: str, recipe_id: str, recipe: dict) -> dict | None:
@@ -293,16 +367,21 @@ def update_recipe(user_id: str, recipe_id: str, recipe: dict) -> dict | None:
     )
     if not resp.data:
         return None
-    return _decorate(resp.data[0], _favorite_ids(db, user_id))
+    stored = resp.data[0]
+    # Keep a public recipe's anonymous twin in step with edits (ADR-029).
+    if stored.get("is_public"):
+        sync_catalogue(db, user_id, stored)
+    return _decorate(stored, _favorite_ids(db, user_id))
 
 
 def delete_recipe(user_id: str, recipe_id: str) -> None:
-    """Delete one of the user's own recipes (no-op if it isn't theirs).
+    """Delete one of the user's own recipes; the anonymous twin survives erasure.
 
-    If the recipe was shared into the catalogue (`is_public`), its factual
-    fields are first donated to the anonymous `recipe_catalogue` so the catalogue
-    value survives erasure de-identified (ADR-028); then the user-owned row is
-    hard-deleted.
+    A public recipe is normally already mirrored into `recipe_catalogue` at
+    create/update time (ADR-029), so deletion just hard-deletes the user-owned
+    row and leaves the anonymous twin standing. As a safety net, a public recipe
+    that was never mirrored (`catalogue_id` is NULL — e.g. authored before
+    ADR-029) is donated here before the row goes. No-op if it isn't theirs.
     """
     db = get_supabase()
     resp = (
@@ -315,7 +394,7 @@ def delete_recipe(user_id: str, recipe_id: str) -> None:
     rows = resp.data or []
     if not rows:
         return
-    if rows[0].get("is_public"):
+    if rows[0].get("is_public") and not rows[0].get("catalogue_id"):
         donate_to_catalogue(get_service_supabase(), rows[0])
     (
         db.table("recipes")
