@@ -1,8 +1,29 @@
 # ADR-001: Technology Stack Selection
 
-**Status:** Accepted  
+**Status:** Accepted — partially superseded (see update below)  
 **Date:** 2026-05-31  
 **Author:** Faiz (solo developer)
+
+> **⚠️ 2026-06-05 update — two decisions changed after MVP:**
+>
+> 1. **Frontend: Next.js was retired.** The Next.js / React web client was removed from the
+>    repository after the iOS rewrite was complete (`chore: retire Next.js web app`). The
+>    iOS app is now the only client. The backend (FastAPI + Supabase) is unchanged and
+>    continues to serve it. See `SOLUTION.md` and `IOS_MIGRATION_PLAN.md`.
+>
+> 2. **Mobile path: React Native was never built — the iOS app is Swift / SwiftUI.**
+>    The original plan anticipated a React Native mobile client that would share React
+>    patterns with the web frontend. Instead the mobile client was built as a fully native
+>    **Swift / SwiftUI** app (Xcode 15+, Swift Package Manager modules, Swift Charts).
+>    The rationale at the time was that native tooling gives better access to HealthKit,
+>    VisionKit barcode scanning, and `ASWebAuthenticationSession` (Withings OAuth) than
+>    a cross-platform bridge, and that the backend does all the hard clinical logic anyway
+>    so the client layer is primarily presentation. See [ADR-019](019-ios-food-diary-barcode-scanning.md)
+>    onward for iOS-native decisions, and [ADR-025](025-ios-soft-design-system.md) for the
+>    iOS design system.
+>
+> Everything else in this ADR (Python + FastAPI, Supabase, Railway, RLS boundary) remains
+> accurate and in force.
 
 ---
 
@@ -23,10 +44,10 @@ Key constraints:
 ## Decision
 
 **Backend:** Python + FastAPI  
-**Frontend (web):** Next.js (TypeScript, App Router)  
+**Frontend (web):** ~~Next.js (TypeScript, App Router)~~ *→ retired; see update banner above*  
 **Database / Auth:** Supabase (Postgres + Auth + RLS)  
 **Hosting:** Railway  
-**Mobile path:** React Native (post-MVP, reuses React patterns and shared types)
+**Mobile client (primary):** ~~React Native~~ → **Swift / SwiftUI** (native iOS) *→ see update banner above*
 
 ---
 
