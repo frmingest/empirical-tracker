@@ -15,7 +15,10 @@ def _fluent(execute_data=None):
     """Fluent mock where every chained query method returns self."""
     m = MagicMock()
     m.execute.return_value = MagicMock(data=execute_data)
-    for method in ("table", "select", "eq", "ilike", "delete", "insert", "upsert", "limit"):
+    for method in (
+        "table", "select", "eq", "ilike", "delete",
+        "insert", "update", "upsert", "limit",
+    ):
         getattr(m, method).return_value = m
     return m
 
@@ -136,6 +139,88 @@ def test_donate_public_foods_donates_each_public_row():
     assert ("is_public", True) in eq_calls
 
 
+# ── proactive donation: mirror on create / update (ADR-029) ─────────────────────
+
+@patch("app.food_sources.custom.get_service_supabase")
+@patch("app.food_sources.custom.get_supabase")
+def test_create_public_food_mirrors_to_catalogue(mock_db, mock_service):
+    stored = {**_public_row(), "catalogue_id": None}
+    user_db = _fluent(execute_data=[stored])
+    service_db = _fluent(execute_data=[{"id": "cat1"}])
+    mock_db.return_value = user_db
+    mock_service.return_value = service_db
+
+    custom.create_custom_food(
+        "u1", {"food_name": "Brand X Bar", "barcode": "737", "is_public": True}
+    )
+
+    # Donated to the catalogue at create time (barcode → upsert), de-identified.
+    service_db.upsert.assert_called_once()
+    donated = service_db.upsert.call_args.args[0]
+    assert "user_id" not in donated and "ocr_raw" not in donated
+    # The de-identified back-pointer is recorded on the user's own row.
+    update_args = [c.args[0] for c in user_db.update.call_args_list]
+    assert {"catalogue_id": "cat1"} in update_args
+
+
+@patch("app.food_sources.custom.get_service_supabase")
+@patch("app.food_sources.custom.get_supabase")
+def test_create_private_food_is_not_mirrored(mock_db, mock_service):
+    stored = {**_public_row(), "is_public": False, "catalogue_id": None}
+    user_db = _fluent(execute_data=[stored])
+    mock_db.return_value = user_db
+
+    custom.create_custom_food("u1", {"food_name": "Brand X Bar", "is_public": False})
+
+    # Nothing shared → nothing retained; the service role is never touched.
+    mock_service.assert_not_called()
+
+
+@patch("app.food_sources.custom.get_service_supabase")
+@patch("app.food_sources.custom.get_supabase")
+def test_create_barcodeless_public_food_inserts_and_links(mock_db, mock_service):
+    stored = {**_public_row(), "barcode": None, "catalogue_id": None}
+    user_db = _fluent(execute_data=[stored])
+    service_db = _fluent(execute_data=[{"id": "cat9"}])
+    mock_db.return_value = user_db
+    mock_service.return_value = service_db
+
+    custom.create_custom_food("u1", {"food_name": "Brand X Bar", "is_public": True})
+
+    # No barcode → plain insert, then the twin id is linked back.
+    service_db.insert.assert_called_once()
+    service_db.upsert.assert_not_called()
+    update_args = [c.args[0] for c in user_db.update.call_args_list]
+    assert {"catalogue_id": "cat9"} in update_args
+
+
+@patch("app.food_sources.custom.get_service_supabase")
+@patch("app.food_sources.custom.get_supabase")
+def test_delete_already_mirrored_food_skips_safety_net(mock_db, mock_service):
+    # Mirrored at create time (catalogue_id set) → deletion keeps the anonymous
+    # twin and does NOT re-donate; it just hard-deletes the user row.
+    row = {**_public_row(), "catalogue_id": "cat1"}
+    user_db = _fluent(execute_data=[row])
+    mock_db.return_value = user_db
+
+    custom.delete_custom_food("u1", "f1")
+
+    user_db.delete.assert_called_once()
+    mock_service.assert_not_called()
+
+
+def test_donate_public_foods_skips_already_mirrored():
+    rows = [
+        _public_row(),  # not yet mirrored
+        {**_public_row(), "id": "f2", "barcode": "738", "catalogue_id": "cat2"},  # mirrored
+    ]
+    service = _fluent(execute_data=rows)
+    n = custom.donate_public_foods(service, "u1")
+    # Only the un-mirrored row is donated by the safety net.
+    assert n == 1
+    service.upsert.assert_called_once()
+
+
 # ── read side: anonymous food_catalogue source ──────────────────────────────────
 
 def test_catalogue_row_maps_to_food_item_with_catalogue_source():
@@ -180,6 +265,36 @@ def test_registry_dispatches_catalogue_single_source():
     ):
         out = asyncio.run(registry.search("donated", SOURCE_CATALOGUE))
     assert out[0]["source"] == SOURCE_CATALOGUE
+
+
+def test_registry_all_dedupes_owners_own_twin():
+    from app.food_sources.base import SOURCE_CUSTOM, make_food_item
+
+    own = [make_food_item(source=SOURCE_CUSTOM, name="Brand X Bar", brand="Brand X")]
+    catalogue = [
+        # The owner's own donated twin (ADR-029) — must be hidden for them...
+        make_food_item(source=SOURCE_CATALOGUE, name="Brand X Bar", brand="Brand X"),
+        # ...but another contributor's donated fact still shows.
+        make_food_item(source=SOURCE_CATALOGUE, name="Someone Else Bar", brand="Other"),
+    ]
+    with (
+        patch("app.food_sources.matvaretabellen.search_products", new=AsyncMock(return_value=[])),
+        patch("app.food_sources.usda.search_products", new=AsyncMock(return_value=[])),
+        patch(
+            "app.food_sources.openfoodfacts.search_products", new=AsyncMock(return_value=[])
+        ),
+        patch(
+            "app.food_sources.food_catalogue.search_products",
+            new=AsyncMock(return_value=catalogue),
+        ),
+        patch("app.food_sources.custom.search_with_user", new=AsyncMock(return_value=own)),
+    ):
+        out = asyncio.run(registry.search("bar", registry.SOURCE_ALL, user_id="u1"))
+
+    keyed = [(i["name"], i["source"]) for i in out]
+    assert ("Brand X Bar", SOURCE_CUSTOM) in keyed       # own item shown once
+    assert ("Brand X Bar", SOURCE_CATALOGUE) not in keyed  # own twin deduped away
+    assert ("Someone Else Bar", SOURCE_CATALOGUE) in keyed  # others' facts kept
 
 
 def test_registry_all_includes_catalogue():

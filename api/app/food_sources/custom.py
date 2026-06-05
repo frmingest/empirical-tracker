@@ -111,7 +111,12 @@ async def lookup_barcode_with_user(barcode: str, user_id: str) -> FoodItem | Non
 # ── CRUD ──────────────────────────────────────────────────────────────────────
 
 def create_custom_food(user_id: str, payload: dict) -> dict:
-    """Insert a custom food item and return the full stored row."""
+    """Insert a custom food item and return the full stored row.
+
+    If the item is public, its factual fields are mirrored into the anonymous
+    ``food_catalogue`` straight away (ADR-029) so the curated catalogue value is
+    captured at registration, not only if the user later deletes it.
+    """
     db = get_supabase()
     row = {
         "user_id": user_id,
@@ -129,15 +134,22 @@ def create_custom_food(user_id: str, payload: dict) -> dict:
         "ocr_raw": payload.get("ocr_raw"),
         # The user's explicit, informed "share to the common catalogue" choice.
         # It both publishes the item to other users today and is the consent gate
-        # for anonymised retention on delete (ADR-027); default is private.
+        # for anonymised retention (ADR-027/029); default is private.
         "is_public": bool(payload.get("is_public", False)),
     }
     resp = db.table("custom_foods").insert(row).execute()
-    return resp.data[0] if resp.data else {}
+    stored = resp.data[0] if resp.data else {}
+    if stored.get("is_public"):
+        sync_catalogue(db, user_id, stored)
+    return stored
 
 
 def update_custom_food(user_id: str, food_id: str, payload: dict) -> dict:
-    """Update the user's own custom food. Returns the updated row or {} if not found."""
+    """Update the user's own custom food. Returns the updated row or {} if not found.
+
+    A public item's anonymous twin is kept in step (ADR-029): edits flow through
+    to ``food_catalogue`` so the donated facts don't go stale.
+    """
     db = get_supabase()
     updatable = {
         k: v
@@ -158,16 +170,21 @@ def update_custom_food(user_id: str, food_id: str, payload: dict) -> dict:
         .eq("user_id", user_id)
         .execute()
     )
-    return resp.data[0] if resp.data else {}
+    stored = resp.data[0] if resp.data else {}
+    if stored.get("is_public"):
+        sync_catalogue(db, user_id, stored)
+    return stored
 
 
 def delete_custom_food(user_id: str, food_id: str) -> None:
-    """Delete the user's own custom food, donating it first if it was public.
+    """Delete the user's own custom food; the anonymous twin survives the erasure.
 
-    Donate-then-delete (ADR-027): a row the user shared (``is_public``) has its
-    factual fields copied into the anonymous ``food_catalogue`` before the
-    user-owned row is hard-deleted, so the curated catalogue value survives while
-    the personal data is erased. A private row is deleted with nothing kept.
+    A public item is normally already mirrored into ``food_catalogue`` at
+    create/update time (ADR-029), so deletion just hard-deletes the user-owned
+    row and leaves the (anonymous) twin standing — that is the "keep it even
+    after deletion" behaviour. As a safety net, a public item that was somehow
+    never mirrored (``catalogue_id`` is NULL — e.g. created before ADR-029) is
+    donated here before the row goes. A private row is deleted with nothing kept.
     No-op if the item is not theirs / doesn't exist.
     """
     db = get_supabase()
@@ -182,7 +199,7 @@ def delete_custom_food(user_id: str, food_id: str) -> None:
     rows = resp.data or []
     if not rows:
         return
-    if rows[0].get("is_public"):
+    if rows[0].get("is_public") and not rows[0].get("catalogue_id"):
         donate_to_catalogue(get_service_supabase(), rows[0])
     (
         db.table("custom_foods")
@@ -205,6 +222,10 @@ def donate_to_catalogue(service_db, row: dict) -> None:
     the same product updates its facts instead of piling up duplicates;
     barcodeless rows are simply inserted (NULL barcodes stay distinct).
 
+    This is the one-shot donate used by the deletion safety net (a public row
+    that was never mirrored at create/update time). The proactive create/update
+    path uses :func:`sync_catalogue`, which also records the back-pointer.
+
     Runs on the **service-role** client — the one sanctioned service-role data
     path (ADR-026) — because ``food_catalogue`` is writable only by that role.
     """
@@ -217,13 +238,72 @@ def donate_to_catalogue(service_db, row: dict) -> None:
         table.insert(facts).execute()
 
 
+def sync_catalogue(user_db, user_id: str, row: dict) -> None:
+    """Mirror a *public* custom food into ``food_catalogue`` and keep it in step.
+
+    Proactive donation (ADR-029): called on public create/update so the curated
+    facts are captured at registration. The same anonymisation as
+    :func:`donate_to_catalogue` applies (only ``_CATALOGUE_FIELDS`` survive —
+    ``user_id`` / ``created_at`` / ``ocr_raw`` are never copied), so what lands
+    in the catalogue is anonymous product data, not personal data.
+
+    Dedupe strategy:
+      * **Barcoded** items upsert on ``barcode`` — the same product donated by
+        different users merges into one factual row (cross-user catalogue).
+      * **Barcodeless** items have no natural key, so the first donation records
+        the twin's id back on ``custom_foods.catalogue_id`` and later edits
+        update that row in place instead of piling up duplicates.
+
+    The catalogue write runs on the service-role client; the back-pointer write
+    runs on the caller's RLS-scoped ``user_db`` (it is the user's own row).
+    No-op for a private row — nothing is shared, nothing is retained.
+    """
+    if not row.get("is_public"):
+        return
+    service_db = get_service_supabase()
+    facts = {k: row.get(k) for k in _CATALOGUE_FIELDS}
+    table = service_db.table("food_catalogue")
+    catalogue_id = row.get("catalogue_id")
+
+    if row.get("barcode"):
+        resp = table.upsert(
+            {**facts, "donated_at": date.today().isoformat()},
+            on_conflict="barcode",
+        ).execute()
+        twin_id = (resp.data or [{}])[0].get("id")
+    elif catalogue_id:
+        # Update the existing twin in place; keep its original donated_at.
+        table.update(facts).eq("id", catalogue_id).execute()
+        twin_id = catalogue_id
+    else:
+        resp = table.insert(
+            {**facts, "donated_at": date.today().isoformat()}
+        ).execute()
+        twin_id = (resp.data or [{}])[0].get("id")
+
+    # Record the de-identified back-pointer so future edits update this same twin
+    # and reads can dedupe the live row against it. Forward-only: it lives on the
+    # user's row and dies with it (ADR-029).
+    if twin_id and twin_id != catalogue_id and row.get("id"):
+        (
+            user_db.table("custom_foods")
+            .update({"catalogue_id": twin_id})
+            .eq("id", row["id"])
+            .eq("user_id", user_id)
+            .execute()
+        )
+
+
 def donate_public_foods(service_db, user_id: str) -> int:
-    """Donate every public custom food a user owns before account erasure.
+    """Donate any not-yet-mirrored public custom foods before account erasure.
 
     Called from the account-deletion path (which already runs on the service-role
-    client). Private rows are left untouched here — the caller's explicit
+    client). With proactive donation (ADR-029) most public rows already have a
+    twin (``catalogue_id`` set) and are skipped; this is the safety net that
+    catches public rows created before ADR-029 or whose proactive donation never
+    landed. Private rows are left untouched — the caller's explicit
     ``custom_foods`` DELETE hard-erases all of them, public and private alike.
-    Returns the number of rows donated.
+    Returns the number of rows donated here.
     """
     resp = (
         service_db.table("custom_foods")
@@ -232,7 +312,10 @@ def donate_public_foods(service_db, user_id: str) -> int:
         .eq("is_public", True)
         .execute()
     )
-    rows = resp.data or []
-    for row in rows:
+    donated = 0
+    for row in resp.data or []:
+        if row.get("catalogue_id"):
+            continue  # already mirrored proactively
         donate_to_catalogue(service_db, row)
-    return len(rows)
+        donated += 1
+    return donated
