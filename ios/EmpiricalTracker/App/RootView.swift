@@ -70,6 +70,10 @@ enum AppTab: Int, CaseIterable, Identifiable {
 /// capsule replaces the opaque system bar.
 struct MainTabView: View {
     @State private var selection: AppTab = .home
+    // Tracks which tabs have been visited at least once. A tab is only rendered
+    // after its first selection, preventing all six views from firing their
+    // network tasks simultaneously on launch.
+    @State private var activated: Set<AppTab> = [.home]
 
     var body: some View {
         ZStack {
@@ -83,19 +87,25 @@ struct MainTabView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             FloatingTabBar(selection: $selection)
         }
+        .onChange(of: selection) { _, newTab in
+            activated.insert(newTab)
+        }
     }
 
-    /// Layers one tab's screen, visible only when selected. Hidden screens stay in
-    /// the hierarchy (opacity 0) to preserve state, but ignore touches and drop out
-    /// of the accessibility tree.
+    /// Layers one tab's screen, visible only when selected. Tabs that have never
+    /// been visited are not rendered at all, so their `.task` modifiers don't fire
+    /// until first use. Once rendered, the view stays in the hierarchy (opacity 0)
+    /// so state and scroll position survive tab switches.
     @ViewBuilder
     private func screen<Content: View>(_ tab: AppTab, @ViewBuilder _ content: () -> Content) -> some View {
         let isActive = selection == tab
-        content()
-            .opacity(isActive ? 1 : 0)
-            .allowsHitTesting(isActive)
-            .accessibilityHidden(!isActive)
-            .zIndex(isActive ? 1 : 0)
+        if activated.contains(tab) {
+            content()
+                .opacity(isActive ? 1 : 0)
+                .allowsHitTesting(isActive)
+                .accessibilityHidden(!isActive)
+                .zIndex(isActive ? 1 : 0)
+        }
     }
 }
 
