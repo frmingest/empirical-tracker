@@ -10,11 +10,15 @@ _COLUMNS = "id,measured_on,weight_kg,waist_cm,systolic,diastolic,note,source"
 def list_metrics(user_id: str) -> list[dict]:
     """Return the user's body metrics, oldest first (chart-friendly order)."""
     db = get_supabase()
+    # Supabase/PostgREST defaults to 1 000 rows. Body metrics can exceed that for
+    # users who sync years of Apple Health history (daily readings = ~365/yr).
+    # 10 000 is well above any realistic lifetime count while still being bounded.
     resp = (
         db.table("body_metrics")
         .select(_COLUMNS)
         .eq("user_id", user_id)
         .order("measured_on")
+        .limit(10000)
         .execute()
     )
     return resp.data or []

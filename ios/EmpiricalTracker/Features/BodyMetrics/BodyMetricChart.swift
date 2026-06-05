@@ -12,6 +12,10 @@ import SwiftUI
 /// draws optional **guideline** lines as neutral, dashed, always-labelled references
 /// — pointedly not styled like the Sprint 7 clinical-target line, because these are
 /// general population references, not personalised targets.
+///
+/// For long timeseries (e.g. 5+ years of Apple Health data) the chart exposes a
+/// range selector (3M / 6M / 1Y / All) and overlays a 7-day moving average so the
+/// trend stays readable even with daily, noisy measurements.
 struct BodyMetricChart: View {
 
     struct DataPoint: Identifiable {
@@ -33,11 +37,73 @@ struct BodyMetricChart: View {
         let value: Double
     }
 
+    enum ChartRange: String, CaseIterable {
+        case threeMonths = "3M"
+        case sixMonths   = "6M"
+        case oneYear     = "1Y"
+        case all         = "All"
+
+        func startDate(relativeTo end: Date) -> Date? {
+            let cal = Calendar.current
+            switch self {
+            case .threeMonths: return cal.date(byAdding: .month,  value: -3,  to: end)
+            case .sixMonths:   return cal.date(byAdding: .month,  value: -6,  to: end)
+            case .oneYear:     return cal.date(byAdding: .year,   value: -1,  to: end)
+            case .all:         return nil
+            }
+        }
+    }
+
     let title: String
     let unit: String
     let series: [Series]
     var guidelines: [Guideline] = []
     let events: [DietEvent]
+
+    @State private var selectedRange: ChartRange = .all
+
+    // MARK: - Derived
+
+    private var allPoints: [DataPoint] {
+        series.flatMap(\.points).sorted { $0.date < $1.date }
+    }
+
+    /// Earliest date across all series, used to decide whether range buttons are useful.
+    private var dataStart: Date? { allPoints.first?.date }
+    private var dataEnd:   Date? { allPoints.last?.date }
+
+    /// True when the data spans more than 6 months — only then do we show the picker.
+    private var showsRangePicker: Bool {
+        guard let s = dataStart, let e = dataEnd else { return false }
+        return e.timeIntervalSince(s) > 6 * 30 * 24 * 3600
+    }
+
+    /// The cutoff date for the currently selected range.
+    private var rangeStart: Date? {
+        guard let end = dataEnd else { return nil }
+        return selectedRange.startDate(relativeTo: end)
+    }
+
+    /// Filter a series to the visible range.
+    private func visiblePoints(for s: Series) -> [DataPoint] {
+        guard let cutoff = rangeStart else { return s.points }
+        return s.points.filter { $0.date >= cutoff }
+    }
+
+    /// 7-day rolling average over the visible points of a series.
+    private func movingAverage(for s: Series) -> [DataPoint] {
+        let pts = visiblePoints(for: s)
+        guard pts.count > 7 else { return [] }
+        return pts.map { point in
+            let windowStart = point.date.addingTimeInterval(-7 * 24 * 3600)
+            let window = pts.filter { $0.date >= windowStart && $0.date <= point.date }
+            let avg = window.map(\.value).reduce(0, +) / Double(window.count)
+            return DataPoint(date: point.date, value: avg)
+        }
+    }
+
+    /// Show raw dots only when the range is short enough that they don't clutter.
+    private var showsPoints: Bool { selectedRange == .threeMonths || selectedRange == .sixMonths }
 
     /// A legend is only useful when more than one series is plotted (blood pressure).
     private var showsLegend: Bool { series.count > 1 }
@@ -51,6 +117,8 @@ struct BodyMetricChart: View {
                 Text(unit)
                     .font(.bodySmall)
                     .foregroundStyle(Color.textMuted)
+                Spacer()
+                if showsRangePicker { rangePicker }
             }
 
             chart
@@ -60,24 +128,68 @@ struct BodyMetricChart: View {
         }
     }
 
+    // MARK: - Range picker
+
+    private var rangePicker: some View {
+        HStack(spacing: 4) {
+            ForEach(ChartRange.allCases, id: \.self) { range in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { selectedRange = range }
+                } label: {
+                    Text(range.rawValue)
+                        .font(.labelSmall)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(
+                            selectedRange == range ? Color.accent : Color.bgElevated,
+                            in: Capsule()
+                        )
+                        .foregroundStyle(selectedRange == range ? Color.white : Color.textMuted)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    // MARK: - Chart
+
     private var chart: some View {
         Chart {
+            // Raw data — faded when moving average is present
             ForEach(series) { s in
-                ForEach(s.points) { point in
+                let pts = visiblePoints(for: s)
+                let hasMa = movingAverage(for: s).count > 0
+
+                ForEach(pts) { point in
                     LineMark(
                         x: .value("Date", point.date),
                         y: .value(title, point.value),
                         series: .value("Metric", s.label)
                     )
-                    .foregroundStyle(s.color)
+                    .foregroundStyle(s.color.opacity(hasMa ? 0.25 : 1))
                     .interpolationMethod(.monotone)
+                    .lineStyle(StrokeStyle(lineWidth: hasMa ? 1 : 2))
 
-                    PointMark(
+                    if showsPoints {
+                        PointMark(
+                            x: .value("Date", point.date),
+                            y: .value(title, point.value)
+                        )
+                        .foregroundStyle(s.color.opacity(hasMa ? 0.3 : 1))
+                        .symbolSize(30)
+                    }
+                }
+
+                // 7-day moving average overlay
+                ForEach(movingAverage(for: s)) { point in
+                    LineMark(
                         x: .value("Date", point.date),
-                        y: .value(title, point.value)
+                        y: .value("\(title) avg", point.value),
+                        series: .value("Metric", "\(s.label) avg")
                     )
                     .foregroundStyle(s.color)
-                    .symbolSize(50)
+                    .interpolationMethod(.monotone)
+                    .lineStyle(StrokeStyle(lineWidth: 2.5))
                 }
             }
 
@@ -92,18 +204,34 @@ struct BodyMetricChart: View {
                     }
             }
 
-            DietEventOverlayContent(events: events)
+            DietEventOverlayContent(events: visibleEvents)
         }
         .chartYScale(domain: .automatic(includesZero: false))
         .chartXAxis {
             AxisMarks(values: .automatic(desiredCount: 4)) { _ in
                 AxisGridLine()
-                AxisValueLabel(format: .dateTime.month(.abbreviated).year(.twoDigits))
+                AxisValueLabel(format: axisDateFormat)
             }
         }
         .chartYAxis { AxisMarks(position: .leading) }
         .accessibilityLabel(accessibilityLabel)
     }
+
+    private var axisDateFormat: Date.FormatStyle {
+        switch selectedRange {
+        case .threeMonths, .sixMonths:
+            return .dateTime.month(.abbreviated).day()
+        case .oneYear, .all:
+            return .dateTime.month(.abbreviated).year(.twoDigits)
+        }
+    }
+
+    private var visibleEvents: [DietEvent] {
+        guard let cutoff = rangeStart else { return events }
+        return events.filter { ($0.endedOn ?? $0.startedOn) >= cutoff }
+    }
+
+    // MARK: - Legend
 
     private var legend: some View {
         HStack(spacing: 16) {
