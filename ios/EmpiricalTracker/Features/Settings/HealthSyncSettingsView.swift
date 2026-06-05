@@ -1,4 +1,5 @@
 import Core
+import Foundation
 import HealthSync
 import SwiftUI
 
@@ -8,11 +9,13 @@ import SwiftUI
 struct HealthSyncSettingsView: View {
     @Environment(AppEnvironment.self) private var env
 
-    private var state: HealthSyncState { env.healthSyncState }
+    // Access healthSyncState through env directly rather than declaring a local
+    // computed property with an explicit HealthSyncState type annotation, which
+    // can confuse the compiler when the type is defined in a peer feature folder.
 
     var body: some View {
         List {
-            if state.connection == .unavailable {
+            if env.healthSyncState.connection == .unavailable {
                 unavailableSection
             } else {
                 statusSection
@@ -39,10 +42,10 @@ struct HealthSyncSettingsView: View {
     @ViewBuilder
     private var statusSection: some View {
         Section {
-            switch state.connection {
+            switch env.healthSyncState.connection {
             case .notConnected:
                 Button {
-                    Task { await state.connect() }
+                    Task { await env.healthSyncState.connect() }
                 } label: {
                     Label(String(localized: "healthsync.connect"), systemImage: "heart.text.square")
                         .foregroundStyle(Color.accent)
@@ -55,17 +58,17 @@ struct HealthSyncSettingsView: View {
                         .foregroundStyle(Color.textPrimary)
                 }
                 Button {
-                    Task { await state.syncNow() }
+                    Task { await env.healthSyncState.syncNow() }
                 } label: {
                     Label(
-                        String(localized: state.isSyncing ? "healthsync.syncing" : "healthsync.sync_now"),
+                        String(localized: env.healthSyncState.isSyncing ? "healthsync.syncing" : "healthsync.sync_now"),
                         systemImage: "arrow.triangle.2.circlepath"
                     )
                     .foregroundStyle(Color.accent)
                 }
-                .disabled(state.isSyncing)
+                .disabled(env.healthSyncState.isSyncing)
                 Button(role: .destructive) {
-                    state.disconnect()
+                    env.healthSyncState.disconnect()
                 } label: {
                     Label(String(localized: "healthsync.disconnect"), systemImage: "xmark.circle")
                 }
@@ -73,7 +76,7 @@ struct HealthSyncSettingsView: View {
                 EmptyView()
             }
 
-            if let error = state.errorMessage {
+            if let error = env.healthSyncState.errorMessage {
                 Label(error, systemImage: "exclamationmark.triangle")
                     .font(.bodySmall)
                     .foregroundStyle(Color.outRange)
@@ -81,7 +84,7 @@ struct HealthSyncSettingsView: View {
         } header: {
             Text(String(localized: "healthsync.section.title"))
         } footer: {
-            if state.connection == .connected {
+            if env.healthSyncState.connection == .connected {
                 Text(String(localized: "healthsync.disconnect.hint"))
             }
         }
@@ -95,8 +98,8 @@ struct HealthSyncSettingsView: View {
                 Toggle(
                     label(for: type),
                     isOn: Binding(
-                        get: { state.isEnabled(type) },
-                        set: { state.setEnabled(type, $0) }
+                        get: { env.healthSyncState.isEnabled(type) },
+                        set: { env.healthSyncState.setEnabled(type, $0) }
                     )
                 )
                 .tint(Color.accent)
@@ -129,9 +132,9 @@ struct HealthSyncSettingsView: View {
     }
 
     private var lastSyncText: String {
-        guard let date = state.lastSyncDate else {
+        guard let date = env.healthSyncState.lastSyncDate else {
             return String(localized: "healthsync.never")
         }
-        return date.formatted(.relative(presentation: .named))
+        return date.formatted(Date.RelativeFormatStyle(presentation: .named))
     }
 }
