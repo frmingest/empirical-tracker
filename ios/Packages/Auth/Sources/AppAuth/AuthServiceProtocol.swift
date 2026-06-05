@@ -5,6 +5,14 @@ import Foundation
 public protocol AuthServiceProtocol: Sendable {
     /// Sign in with email + password. Throws `AuthError` on invalid credentials or network failure.
     func signIn(email: String, password: String) async throws -> StoredSession
+    /// Create a new account with email + password and start a session.
+    ///
+    /// Throws `AuthError.emailAlreadyRegistered` if the address is taken,
+    /// `AuthError.weakPassword` if the backend rejects the password, and
+    /// `AuthError.emailConfirmationRequired` when the account was created but the
+    /// project requires the user to confirm their email before a session is issued
+    /// (in that case there is no `StoredSession` to return yet).
+    func signUp(email: String, password: String) async throws -> StoredSession
     /// Sign out and revoke the server-side session. Never throws — failure is swallowed locally.
     func signOut() async throws
     /// Returns a valid session if one exists (in-memory, Keychain restore, or token refresh).

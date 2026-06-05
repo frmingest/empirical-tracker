@@ -42,6 +42,29 @@ public struct SupabaseAuthService: AuthServiceProtocol {
         }
     }
 
+    public func signUp(email: String, password: String) async throws -> StoredSession {
+        do {
+            let response = try await client.auth.signUp(email: email, password: password)
+            // When the project has "Confirm email" enabled, signUp succeeds but no
+            // session is issued until the user clicks the confirmation link. Surface
+            // that as a dedicated flow signal rather than a generic failure.
+            guard let session = response.session else {
+                throw AuthError.emailConfirmationRequired
+            }
+            let stored = StoredSession(
+                accessToken: session.accessToken,
+                userID:      session.user.id.uuidString,
+                email:       session.user.email ?? email
+            )
+            KeychainService.save(session: stored)
+            return stored
+        } catch let error as AuthError {
+            throw error
+        } catch {
+            throw mapSignUpError(error)
+        }
+    }
+
     public func signOut() async throws {
         try await client.auth.signOut()
         KeychainService.deleteSession()
@@ -88,6 +111,28 @@ public struct SupabaseAuthService: AuthServiceProtocol {
         if description.contains("invalid") || description.contains("credentials") ||
            description.contains("password") || description.contains("email") {
             return .invalidCredentials
+        }
+        if description.contains("network") || description.contains("connection") {
+            return .networkError
+        }
+        return .underlying(error)
+    }
+
+    /// Maps sign-up failures. Supabase reports a taken address and a rejected
+    /// password as distinct messages — both deserve their own actionable copy
+    /// rather than the generic "invalid credentials" used on sign-in.
+    private func mapSignUpError(_ error: Error) -> AuthError {
+        let description = error.localizedDescription.lowercased()
+        if description.contains("already registered") ||
+           description.contains("already been registered") ||
+           description.contains("already exists") ||
+           description.contains("user already") {
+            return .emailAlreadyRegistered
+        }
+        if description.contains("password") &&
+           (description.contains("weak") || description.contains("at least") ||
+            description.contains("should be") || description.contains("short")) {
+            return .weakPassword
         }
         if description.contains("network") || description.contains("connection") {
             return .networkError
