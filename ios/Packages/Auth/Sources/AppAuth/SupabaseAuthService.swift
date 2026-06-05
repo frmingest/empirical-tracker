@@ -62,6 +62,25 @@ public struct SupabaseAuthService: AuthServiceProtocol {
         return KeychainService.loadSession()
     }
 
+    public func currentAccessToken() async -> String? {
+        // supabase-swift auto-refreshes the access token when the refresh token is
+        // still valid — this is what keeps a session that's been idle for hours
+        // working on the next request instead of silently failing with a 401.
+        if let session = try? await client.auth.session {
+            let stored = StoredSession(
+                accessToken: session.accessToken,
+                userID:      session.user.id.uuidString,
+                email:       session.user.email ?? ""
+            )
+            KeychainService.save(session: stored)
+            return session.accessToken
+        }
+        // Refresh failed (e.g. transient network blip). Fall back to the last known
+        // token so a brief failure doesn't break the request; a definitive 401 from
+        // the backend is what triggers sign-out (see AuthStore.expireSession()).
+        return KeychainService.loadSession()?.accessToken
+    }
+
     // MARK: - Error mapping
 
     private func mapError(_ error: Error) -> AuthError {

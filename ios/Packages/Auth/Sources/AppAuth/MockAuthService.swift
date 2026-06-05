@@ -25,4 +25,6 @@ public struct MockAuthService: AuthServiceProtocol {
 
     /// Demo mode always starts signed out so the login screen is visible on first launch.
     public func restoreSession() async -> StoredSession? { nil }
+
+    public func currentAccessToken() async -> String? { MockAuthService.demoSession.accessToken }
 }

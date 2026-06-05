@@ -10,4 +10,9 @@ public protocol AuthServiceProtocol: Sendable {
     /// Returns a valid session if one exists (in-memory, Keychain restore, or token refresh).
     /// Returns `nil` when the user has never signed in or the session has expired irreversibly.
     func restoreSession() async -> StoredSession?
+    /// Returns a currently-valid access token, transparently refreshing it via the
+    /// backend if the in-memory token has expired. Returns `nil` when no token can be
+    /// obtained. Called before each authenticated request so a long-idle session keeps
+    /// working without the user noticing.
+    func currentAccessToken() async -> String?
 }

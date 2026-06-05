@@ -8,6 +8,9 @@ later — the field names below match its `metadata/en-US/*.txt` convention).
 
 ## What's here
 
+- [`SUBMISSION_CHECKLIST.md`](SUBMISSION_CHECKLIST.md) — the **go/no-go gate**:
+  source-verified blockers, high-risk items, governance exposures, and the
+  sign-off row. Start here before any submission.
 - [`listing.md`](listing.md) — name, subtitle, promotional text, full
   description, keywords, what's-new, category, URLs, age-rating answers, App
   Privacy nutrition-label summary, and App Review notes.
