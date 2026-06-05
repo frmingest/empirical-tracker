@@ -13,6 +13,11 @@ public final class AuthStore {
     public private(set) var session: StoredSession?
     public private(set) var isLoading = false
     public private(set) var error: AuthError?
+    /// A non-error, informational message to surface to the user — e.g. "check your
+    /// email to confirm your account" after sign-up when the project requires
+    /// email confirmation. Kept separate from `error` so the UI can style it as
+    /// guidance rather than a failure.
+    public private(set) var notice: String?
 
     public var isAuthenticated: Bool { session != nil }
     public var userID: String? { session?.userID }
@@ -43,6 +48,7 @@ public final class AuthStore {
         guard !isLoading else { return }
         isLoading = true
         error = nil
+        notice = nil
         defer { isLoading = false }
         do {
             session = try await service.signIn(email: email, password: password)
@@ -53,6 +59,34 @@ public final class AuthStore {
         }
     }
 
+    /// Create a new account with email + password. On success a session is set and
+    /// the app advances to the consent gate. When the project requires email
+    /// confirmation, no session is issued yet — instead `notice` is set so the UI
+    /// can prompt the user to check their inbox. Sets `error` on genuine failure.
+    public func signUp(email: String, password: String) async {
+        guard !isLoading else { return }
+        isLoading = true
+        error = nil
+        notice = nil
+        defer { isLoading = false }
+        do {
+            session = try await service.signUp(email: email, password: password)
+        } catch AuthError.emailConfirmationRequired {
+            notice = AuthError.emailConfirmationRequired.errorDescription
+        } catch let e as AuthError {
+            error = e
+        } catch {
+            self.error = .underlying(error)
+        }
+    }
+
+    /// Clears any transient error/notice banner — call when the user switches
+    /// between the sign-in and sign-up modes so stale messages don't linger.
+    public func clearMessages() {
+        error = nil
+        notice = nil
+    }
+
     /// Sign out. Clears the session locally even if the remote sign-out call fails —
     /// the user should never be stuck in an authenticated state they can't escape.
     public func signOut() async {
@@ -61,6 +95,7 @@ public final class AuthStore {
         try? await service.signOut()
         session = nil
         error = nil
+        notice = nil
     }
 
     /// Returns a currently-valid bearer token for an API call, transparently
@@ -102,6 +137,13 @@ public enum AuthError: LocalizedError, Sendable {
     case networkError
     /// The session token was rejected by the backend after a period of inactivity.
     case sessionExpired
+    /// Sign-up: the email address already has an account.
+    case emailAlreadyRegistered
+    /// Sign-up: the backend rejected the password (too short / too weak).
+    case weakPassword
+    /// Sign-up: the account was created but the project requires the user to confirm
+    /// their email before a session is issued. Surfaced as a `notice`, not an error.
+    case emailConfirmationRequired
     case underlying(any Error)
 
     public var errorDescription: String? {
@@ -111,6 +153,12 @@ public enum AuthError: LocalizedError, Sendable {
         case .networkError:       return String(localized: "auth.error.network",
                                                 bundle: .main)
         case .sessionExpired:     return String(localized: "auth.error.session_expired",
+                                                bundle: .main)
+        case .emailAlreadyRegistered: return String(localized: "auth.error.email_in_use",
+                                                bundle: .main)
+        case .weakPassword:       return String(localized: "auth.error.weak_password",
+                                                bundle: .main)
+        case .emailConfirmationRequired: return String(localized: "auth.notice.confirm_email",
                                                 bundle: .main)
         case .underlying(let e):  return e.localizedDescription
         }

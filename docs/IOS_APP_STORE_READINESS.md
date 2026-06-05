@@ -79,6 +79,17 @@ contact/email, identifiers) and any required-reason API categories; confirm
 > the user back out; signing out clears local consent so the next user must
 > consent themselves. URLs live in `Config/Legal.swift`.
 >
+> **Update (sign-up flow):** the auth screen now offers **account creation**, not
+> just sign-in. `AuthView` toggles between *Sign In* and *Create account* (email +
+> password + confirm); `AuthStore.signUp` calls `SupabaseAuthService.signUp`, which
+> wraps `supabase-swift`'s `auth.signUp`. New accounts land on the existing
+> `ConsentView` gate before the main app, so health-data consent is captured **at
+> signup** as the README promises. If the Supabase project has *Confirm email*
+> enabled, sign-up returns no session and the screen shows a "check your email"
+> notice instead of an error. **Operator action:** enable email signup in the
+> Supabase dashboard (Authentication → Providers → Email) for this to work in
+> production; with it disabled the backend rejects sign-up attempts.
+>
 > **Still open (tracked in `docs/legal/README.md`):** the policy and terms text
 > are now drafted in `docs/legal/`, but (1) a **hosting domain / public URL** has
 > not been chosen — the in-app links use placeholder `empirical.app` URLs — and

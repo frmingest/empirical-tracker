@@ -98,8 +98,13 @@ struct AuthStoreTests {
 // MARK: - Failing service stub
 
 private struct FailingAuthService: AuthServiceProtocol {
+    let signUpError: AuthError
+    init(signUpError: AuthError = .invalidCredentials) { self.signUpError = signUpError }
     func signIn(email: String, password: String) async throws -> StoredSession {
         throw AuthError.invalidCredentials
+    }
+    func signUp(email: String, password: String) async throws -> StoredSession {
+        throw signUpError
     }
     func signOut() async throws {}
     func restoreSession() async -> StoredSession? { nil }
@@ -118,5 +123,52 @@ struct AuthStoreErrorTests {
         if case .invalidCredentials = store.error { } else {
             Issue.record("Expected .invalidCredentials, got \(String(describing: store.error))")
         }
+    }
+
+    @Test("email-already-registered surfaces as an error, not a session")
+    @MainActor
+    func signUpDuplicateEmail() async {
+        let store = AuthStore(service: FailingAuthService(signUpError: .emailAlreadyRegistered))
+        await store.signUp(email: "taken@x.com", password: "password")
+        #expect(store.isAuthenticated == false)
+        if case .emailAlreadyRegistered = store.error { } else {
+            Issue.record("Expected .emailAlreadyRegistered, got \(String(describing: store.error))")
+        }
+    }
+
+    @Test("email-confirmation-required surfaces as a notice, not an error")
+    @MainActor
+    func signUpConfirmationRequired() async {
+        let store = AuthStore(service: FailingAuthService(signUpError: .emailConfirmationRequired))
+        await store.signUp(email: "new@x.com", password: "password")
+        #expect(store.isAuthenticated == false)
+        #expect(store.error == nil)
+        #expect(store.notice != nil)
+    }
+}
+
+@Suite("AuthStore — sign up")
+struct AuthStoreSignUpTests {
+
+    @Test("successful sign up sets session and isAuthenticated")
+    @MainActor
+    func signUpSuccess() async {
+        let store = AuthStore(service: MockAuthService())
+        await store.signUp(email: "new@x.com", password: "password")
+        #expect(store.isAuthenticated)
+        #expect(store.userID == MockAuthService.demoSession.userID)
+        #expect(store.error == nil)
+        #expect(store.notice == nil)
+    }
+
+    @Test("clearMessages drops a lingering error banner")
+    @MainActor
+    func clearMessages() async {
+        let store = AuthStore(service: FailingAuthService())
+        await store.signIn(email: "bad@x.com", password: "wrong")
+        #expect(store.error != nil)
+        store.clearMessages()
+        #expect(store.error == nil)
+        #expect(store.notice == nil)
     }
 }

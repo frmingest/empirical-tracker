@@ -19,6 +19,12 @@ public struct MockAuthService: AuthServiceProtocol {
         return MockAuthService.demoSession
     }
 
+    public func signUp(email: String, password: String) async throws -> StoredSession {
+        // Demo mode has no real backend — treat sign-up as an immediate sign-in.
+        try await Task.sleep(nanoseconds: 700_000_000)
+        return MockAuthService.demoSession
+    }
+
     public func signOut() async throws {
         try await Task.sleep(nanoseconds: 150_000_000)
     }
