@@ -15,6 +15,9 @@ class BodyMetricIn(BaseModel):
     waist_cm: float | None = None
     systolic: int | None = None
     diastolic: int | None = None
+    heart_rate_bpm: int | None = None
+    resting_heart_rate_bpm: int | None = None
+    hrv_ms: float | None = None
     note: str | None = None
     source: str = "manual"
 
@@ -42,8 +45,11 @@ class BodyMetricIn(BaseModel):
             self.weight_kg is None
             and self.waist_cm is None
             and self.systolic is None
+            and self.heart_rate_bpm is None
+            and self.resting_heart_rate_bpm is None
+            and self.hrv_ms is None
         ):
-            raise ValueError("at least one metric (weight, waist, or blood pressure) is required")
+            raise ValueError("at least one metric is required")
         return self
 
 

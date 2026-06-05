@@ -12,6 +12,9 @@ public struct BodyMetric: Codable, Identifiable, Sendable {
     public let waistCm: Double?
     public let systolic: Int?
     public let diastolic: Int?
+    public let heartRateBpm: Int?
+    public let restingHeartRateBpm: Int?
+    public let hrvMs: Double?
     public let note: String?
     /// `manual` | `healthkit` | `withings`.
     public let source: Source
@@ -29,6 +32,9 @@ public struct BodyMetric: Codable, Identifiable, Sendable {
         waistCm: Double? = nil,
         systolic: Int? = nil,
         diastolic: Int? = nil,
+        heartRateBpm: Int? = nil,
+        restingHeartRateBpm: Int? = nil,
+        hrvMs: Double? = nil,
         note: String? = nil,
         source: Source = .manual
     ) {
@@ -38,20 +44,26 @@ public struct BodyMetric: Codable, Identifiable, Sendable {
         self.waistCm = waistCm
         self.systolic = systolic
         self.diastolic = diastolic
+        self.heartRateBpm = heartRateBpm
+        self.restingHeartRateBpm = restingHeartRateBpm
+        self.hrvMs = hrvMs
         self.note = note
         self.source = source
     }
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        id         = try c.decode(String.self, forKey: .id)
-        measuredOn = try c.decode(Date.self, forKey: .measuredOn)
-        weightKg   = try c.decodeIfPresent(Double.self, forKey: .weightKg)
-        waistCm    = try c.decodeIfPresent(Double.self, forKey: .waistCm)
-        systolic   = try c.decodeIfPresent(Int.self, forKey: .systolic)
-        diastolic  = try c.decodeIfPresent(Int.self, forKey: .diastolic)
-        note       = try c.decodeIfPresent(String.self, forKey: .note)
-        source     = try c.decodeIfPresent(Source.self, forKey: .source) ?? .manual
+        id                   = try c.decode(String.self, forKey: .id)
+        measuredOn           = try c.decode(Date.self, forKey: .measuredOn)
+        weightKg             = try c.decodeIfPresent(Double.self, forKey: .weightKg)
+        waistCm              = try c.decodeIfPresent(Double.self, forKey: .waistCm)
+        systolic             = try c.decodeIfPresent(Int.self, forKey: .systolic)
+        diastolic            = try c.decodeIfPresent(Int.self, forKey: .diastolic)
+        heartRateBpm         = try c.decodeIfPresent(Int.self, forKey: .heartRateBpm)
+        restingHeartRateBpm  = try c.decodeIfPresent(Int.self, forKey: .restingHeartRateBpm)
+        hrvMs                = try c.decodeIfPresent(Double.self, forKey: .hrvMs)
+        note                 = try c.decodeIfPresent(String.self, forKey: .note)
+        source               = try c.decodeIfPresent(Source.self, forKey: .source) ?? .manual
     }
 }
 
@@ -63,10 +75,11 @@ public struct BodyMetricPayload: Encodable, Sendable {
     public let waistCm: Double?
     public let systolic: Int?
     public let diastolic: Int?
+    public let heartRateBpm: Int?
+    public let restingHeartRateBpm: Int?
+    public let hrvMs: Double?
     public let note: String?
-    /// Provenance of the reading. `nil` lets the backend default to `manual`
-    /// (the manual log path), so the JSON key is omitted for hand-entered rows.
-    /// Sprint 9 sets `.healthkit` for Apple Health imports.
+    /// Provenance of the reading. `nil` lets the backend default to `manual`.
     public let source: BodyMetric.Source?
 
     public init(
@@ -75,6 +88,9 @@ public struct BodyMetricPayload: Encodable, Sendable {
         waistCm: Double? = nil,
         systolic: Int? = nil,
         diastolic: Int? = nil,
+        heartRateBpm: Int? = nil,
+        restingHeartRateBpm: Int? = nil,
+        hrvMs: Double? = nil,
         note: String? = nil,
         source: BodyMetric.Source? = nil
     ) {
@@ -83,6 +99,9 @@ public struct BodyMetricPayload: Encodable, Sendable {
         self.waistCm = waistCm
         self.systolic = systolic
         self.diastolic = diastolic
+        self.heartRateBpm = heartRateBpm
+        self.restingHeartRateBpm = restingHeartRateBpm
+        self.hrvMs = hrvMs
         self.note = note
         self.source = source
     }
