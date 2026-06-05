@@ -3,14 +3,26 @@ import Core
 import Foundation
 import Observation
 
+/// Which margin a region's pin is parked in, beside the silhouette. The pin
+/// floats in the open space on this side and a leader line connects it back to
+/// the region's anatomical anchor on the body.
+enum BodySide {
+    case left
+    case right
+}
+
 /// Body-region grouping shown on the Body Map.
 struct BodyRegion: Identifiable {
     let id: String
     let label: String
     let systemImage: String
-    /// Relative position within the body figure (0–1, origin = top-left).
+    /// Anatomical anchor within the body figure (0–1, origin = top-left). This
+    /// is where the leader line points; the pin itself is parked in the margin.
     let relativeX: Double
     let relativeY: Double
+    /// Margin the pin is parked in. Regions are split roughly evenly between the
+    /// two sides so neither column gets crowded.
+    let side: BodySide
     let categories: [BiomarkerCategory]
     var items: [BiomarkerWithSeries] = []
 
@@ -77,6 +89,7 @@ final class BodyMapViewModel {
                 systemImage: "waveform.path.ecg",
                 relativeX: 0.50,
                 relativeY: 0.155,
+                side: .left,
                 categories: [.thyroid]
             ),
             BodyRegion(
@@ -85,6 +98,7 @@ final class BodyMapViewModel {
                 systemImage: "heart.fill",
                 relativeX: 0.36,
                 relativeY: 0.285,
+                side: .left,
                 categories: [.lipids, .cbc]
             ),
             BodyRegion(
@@ -93,6 +107,7 @@ final class BodyMapViewModel {
                 systemImage: "drop.fill",
                 relativeX: 0.64,
                 relativeY: 0.345,
+                side: .right,
                 categories: [.liver]
             ),
             BodyRegion(
@@ -101,6 +116,7 @@ final class BodyMapViewModel {
                 systemImage: "bolt.fill",
                 relativeX: 0.50,
                 relativeY: 0.41,
+                side: .left,
                 categories: [.metabolic]
             ),
             BodyRegion(
@@ -109,6 +125,7 @@ final class BodyMapViewModel {
                 systemImage: "circle.hexagongrid.fill",
                 relativeX: 0.50,
                 relativeY: 0.48,
+                side: .right,
                 categories: [.renal]
             ),
             BodyRegion(
@@ -117,6 +134,7 @@ final class BodyMapViewModel {
                 systemImage: "leaf.fill",
                 relativeX: 0.24,
                 relativeY: 0.38,
+                side: .left,
                 categories: [.nutrients]
             ),
             BodyRegion(
@@ -125,6 +143,7 @@ final class BodyMapViewModel {
                 systemImage: "bolt.heart.fill",
                 relativeX: 0.76,
                 relativeY: 0.46,
+                side: .right,
                 categories: [.electrolytes]
             ),
             BodyRegion(
@@ -133,6 +152,7 @@ final class BodyMapViewModel {
                 systemImage: "ellipsis.circle.fill",
                 relativeX: 0.50,
                 relativeY: 0.82,
+                side: .right,
                 categories: [.other]
             ),
         ]
