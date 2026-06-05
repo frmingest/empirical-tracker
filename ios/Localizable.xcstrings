@@ -6556,6 +6556,40 @@
         }
       }
     },
+    "settings.account.delete.recipes.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recipes you marked as public will be anonymously donated to the app recipe catalogue so other users can benefit from them. Private recipes are permanently deleted."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oppskrifter du har merket som offentlige vil anonymt doneres til appens oppskriftskatalog slik at andre brukere kan dra nytte av dem. Private oppskrifter slettes permanent."
+          }
+        }
+      }
+    },
+    "settings.account.delete.recipes.public" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Public recipes will be anonymously donated to the catalogue."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offentlige oppskrifter doneres anonymt til katalogen."
+          }
+        }
+      }
+    },
     "settings.account.delete.title" : {
       "extractionState" : "manual",
       "localizations" : {

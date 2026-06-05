@@ -26,6 +26,7 @@ struct DeleteAccountView: View {
         NavigationStack {
             List {
                 warningSection
+                recipeDonationSection
                 confirmSection
                 deleteSection
             }
@@ -67,6 +68,23 @@ struct DeleteAccountView: View {
                     .foregroundStyle(Color.outRange)
             }
             .accessibilityElement(children: .combine)
+        }
+    }
+
+    private var recipeDonationSection: some View {
+        Section {
+            Label {
+                Text(String(localized: "settings.account.delete.recipes.public"))
+                    .font(.bodyRegular)
+                    .foregroundStyle(Color.textPrimary)
+            } icon: {
+                Image(systemName: "fork.knife.circle.fill")
+                    .foregroundStyle(Color.accent)
+            }
+            .accessibilityElement(children: .combine)
+        } footer: {
+            Text(String(localized: "settings.account.delete.recipes.footer"))
+                .foregroundStyle(Color.textSecondary)
         }
     }
 
