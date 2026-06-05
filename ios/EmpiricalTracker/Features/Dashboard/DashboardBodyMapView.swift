@@ -119,17 +119,12 @@ struct BodyMetricsStatsPanel: View {
             bmiVal = String(format: "%.1f", kg / (hm * hm))
         }
 
-        var result = [
+        return [
             StatRow(icon: "ruler",         label: "Height", value: heightVal),
             StatRow(icon: "scalemass",      label: "Weight", value: weightVal),
             StatRow(icon: "circle.dashed",  label: "Waist",  value: waistVal),
             StatRow(icon: "figure.stand",   label: "BMI",    value: bmiVal),
         ]
-        if let rhr = metrics.sorted(by: { $0.measuredOn > $1.measuredOn })
-            .first(where: { $0.restingHeartRateBpm != nil })?.restingHeartRateBpm {
-            result.append(StatRow(icon: "heart.fill", label: "Resting HR", value: "\(rhr) BPM"))
-        }
-        return result
     }
 }
 

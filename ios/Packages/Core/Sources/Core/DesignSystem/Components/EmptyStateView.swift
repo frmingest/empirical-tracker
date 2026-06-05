@@ -10,9 +10,9 @@ public struct EmptyStateView: View {
 
     public struct Action: Sendable {
         public let label: String
-        public let handler: @Sendable () -> Void
+        public let handler: @MainActor () -> Void
 
-        public init(label: String, handler: @Sendable @escaping () -> Void) {
+        public init(label: String, handler: @MainActor @escaping () -> Void) {
             self.label = label
             self.handler = handler
         }
@@ -50,7 +50,7 @@ public struct EmptyStateView: View {
             }
 
             if let action {
-                Button(action.label, action: action.handler)
+                Button(action.label) { MainActor.assumeIsolated(action.handler) }
                     .buttonStyle(PrimaryButtonStyle())
             }
         }

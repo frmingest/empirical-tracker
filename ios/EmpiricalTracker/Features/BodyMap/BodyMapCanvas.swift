@@ -96,6 +96,9 @@ struct BodyMapCanvas: View {
                     .position(placement.pin)
                 }
             }
+            // Composite all continuously-animating pin layers into a single
+            // Metal-backed texture, dramatically reducing per-frame CPU/GPU work.
+            .drawingGroup()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
