@@ -1,10 +1,10 @@
 # App Store Submission — Go / No-Go Checklist
 
 **Owner:** Release & Compliance
-**Last reviewed:** 2026-06-04
+**Last reviewed:** 2026-06-05
 **Build under review:** marketing `1.0` (build `1`), bundle `com.FaizMalik.EmpiricalTracker`
-**Current verdict:** 🔴 **NO-GO** — engineering is ready; legal/release artifacts and
-one CI failure are outstanding.
+**Current verdict:** 🔴 **NO-GO** — engineering is ready; legal/release artifacts
+outstanding (real URLs, legal TBD fields, screenshots, reviewer account).
 
 This is the single go/no-go gate for an App Store Connect submission. Each row was
 **verified against source** (code, entitlements, `PrivacyInfo.xcprivacy`, the legal
@@ -33,9 +33,9 @@ to close before scaling.
 | A1 | **Privacy-policy URL is real & reachable** | 🔴 Open | `Config/Legal.swift` ships placeholder `https://empirical.app/privacy`. Choose hosting, publish `docs/legal/privacy-policy.md`, update `Legal.swift`, paste URL into ASC ▸ App Privacy. Mandatory for any app; doubly enforced for HealthKit. |
 | A2 | **Legal docs have no `[TBD]` left + legal review** | 🔴 Open | 10 `[TBD]` in `privacy-policy.md`, 5 in `terms-of-service.md`: controller legal identity, contact email, effective date, minimum age, governing jurisdiction. A policy with no named controller/contact is not GDPR-valid. |
 | A3 | **Support URL is real & reachable** | 🔴 Open | `listing.md` placeholder `https://empirical.app/support`. A support URL is required in ASC. |
-| A4 | **Reviewer demo account provisioned** | 🔴 Open | `listing.md` review notes: `Email/Password: [TBD]`. App is behind a sign-in wall with no in-app signup flow — without working creds App Review cannot enter → automatic rejection. |
-| A5 | **Screenshots captured (per required display size)** | 🔴 Open | None in repo. Capture Dashboard, a biomarker trend, Food diary, Body metrics, doctor-PDF report. |
-| A6 | **Test suite green** | 🔴 Open | `pytest -q` is a gating CI job and currently fails `test_auth_jwt.py::test_es256_no_supabase_url_rejected` (180 passed / 1 failed / 7 skipped). Test expects `401`; `_verify_token_local` returns `None` to fall through to network. Resolve fail-closed-vs-fallback intent and align. |
+| A4 | **Reviewer demo account provisioned** | 🔴 Open | `listing.md` review notes: `Email/Password: [TBD]`. A sign-up flow now exists in-app (`AuthView` Sign Up toggle, `feat(auth): add in-app account creation`), so App Review *could* self-register — but a pre-provisioned account with real panel data seeded is the professional standard. Provision a dedicated `reviewer@...` account and paste creds into `listing.md`. |
+| A5 | **Screenshots captured (per required display size)** | 🔴 Open | None in repo. Capture Dashboard (body map default), a biomarker trend, Food diary, Body metrics, doctor-PDF report. |
+| A6 | **Test suite green** | ✅ Resolved | `fix(auth): fail-closed on ES256 token with no JWKS client` merged (PR #95). `_verify_token_local` now returns `401` when no Supabase URL is configured rather than falling through. `pytest -q` should be clean. |
 
 ---
 
@@ -80,7 +80,7 @@ Verified present in source; listed so reviewers don't re-litigate them.
 | Deployment floor | `IPHONEOS_DEPLOYMENT_TARGET = 18.0` (was 26.4) |
 | Entitlements minimal | Only the two HealthKit keys; empty `application-groups` removed |
 | RLS enforced on live API path (Art. 25) | ADR-026 F1: fail-closed `get_supabase()`; service role reserved for account erasure |
-| Security hardening | F2 rate limits, F3 upload caps + magic-byte/zip-bomb checks, F4 OCR length cap, F5 local JWT verify, F6 device-only Keychain, F9 de-wildcarded CORS |
+| Security hardening | F2 rate limits, F3 upload caps + magic-byte/zip-bomb checks, F4 OCR length cap, F5 local JWT verify (fail-closed on ES256/no-Supabase-URL — A6), F6 device-only Keychain, F9 de-wildcarded CORS |
 | Listing copy drafted | `docs/app-store/listing.md` (name, subtitle, description, keywords, review notes) |
 
 ---

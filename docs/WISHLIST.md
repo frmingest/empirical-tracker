@@ -32,16 +32,20 @@ A clean, modular SwiftUI client over the existing FastAPI + Supabase backend —
   `BiomarkerCategories` (Watch / in-range / out-of-range assessment, trend
   signals, clinical targets).
 
-**Gaps that shape this wishlist:**
+**Items shipped since this wishlist was written:**
 
-- No offline cache yet (SwiftData planned for Sprint 11 — every read currently
-  hits the network).
+- ✅ **Doctor PDF report** (#5) — client-side selectable A4 report (`ReportShare/`).
+- ✅ **Onboarding / first-run** (#12) — profile-setup screen (height, weight, waist, units, or Apple Health sync).
+- ✅ **Body map glanceability** — anatomical silhouette with status pins + health-stats overlay is now the default Home view (ADR-030).
+
+**Still-open gaps:**
+
+- No offline cache (every read hits the network; SwiftData deferred past Sprint 11).
 - No notifications/reminders, no widgets, no Siri/Shortcuts, no Apple Watch, no
   Live Activities.
-- Deferred clinical value: doctor PDF report (Sprint 6), derived ratios TG/HDL &
-  AST:ALT (Sprint 8), daily targets + protein g/kg (Sprint 9),
-  body-metric-on-biomarker-timeline overlay (Sprint 10); HealthKit covers only
-  weight + BP (not body-fat / resting HR / sleep).
+- Deferred clinical value: derived ratios TG/HDL & AST:ALT, daily targets + protein
+  g/kg (body weight now stored — the blocker is removed), body-metric overlay on
+  biomarker charts; HealthKit covers only weight + BP (not body-fat / resting HR / sleep).
 
 ---
 
@@ -80,13 +84,11 @@ timely, which is the whole point of being native.
 
 ## Tier 2 — Complete the deferred clinical value (differentiators)
 
-### 5. Doctor / clinician PDF report (Sprint 6 follow-up)
-- The headline missing feature. A native `PDFKit` report: latest-panel table
-  (value, range, target, Watch state) + trend thumbnails + active diet events,
-  shared via the share sheet.
-- Highly appealing to the target user who wants to bring numbers to their
-  doctor. Can be **100% client-side** (no backend dependency) — the data and
-  charts already render.
+### 5. Doctor / clinician PDF report ✅ Shipped
+~~The headline missing feature.~~ Shipped as a client-side selectable A4 PDF
+(`ReportShare/`): user picks categories and/or individual markers, chooses latest
+values / trend graphs / both, and shares via the system share sheet. Rendered via
+SwiftUI `ImageRenderer` → `CGContext`. Carries disclaimers on every page.
 
 ### 6. Daily targets & protein g/kg (Sprint 9 follow-up)
 - Now that `body_metrics` stores weight, wire intake-vs-target rings into the
@@ -109,9 +111,10 @@ timely, which is the whole point of being native.
 
 ## Tier 3 — Depth & polish
 
-### 9. Offline-first cache (SwiftData — already planned Sprint 11)
-- Worth pulling forward: instant cold-start, tolerant of flaky networks. Also
-  the prerequisite for widgets (#1) to have data without a network round-trip.
+### 9. Offline-first cache (SwiftData)
+- Deferred past Sprint 11 (every read still hits the network). Instant cold-start,
+  flaky-network tolerance, and a **prerequisite for widgets (#1)** to have data
+  without a round-trip. High leverage — unblocks multiple Tier 1 items at once.
 
 ### 10. Richer HealthKit signals
 - Extend beyond weight + BP to body-fat %, lean mass, resting HR, sleep, steps —
@@ -123,18 +126,27 @@ timely, which is the whole point of being native.
   text recognition to pre-fill results would widen adoption substantially — the
   current `.xlsx`-only path is a real ceiling.
 
-### 12. Onboarding + sample-data tour
-- A guided first-run (the demo/mock data already exists) so a new user sees a
-  populated dashboard before they have their own panel — reduces empty-state
-  drop-off.
+### 12. Onboarding ◐ Partially shipped
+- **Profile setup** (height, weight, waist, units choice, optional Apple Health
+  sync) shipped as the first-run gate (`Onboarding/`). Still outstanding: a
+  **sample-data tour** so a brand-new user sees a populated dashboard before their
+  first panel import — currently new accounts land on an empty state.
 
 ---
 
 ## Suggested starting point
 
-**#1 (widgets) + #2 (notifications) + #5 (doctor PDF)** together cover the three
-things this audience wants most — daily glanceability, timely nudges, and
-something to hand their clinician — and lean on infrastructure that already
-exists without requiring backend work. The **doctor PDF report (#5)** is the
-most self-contained place to start (fully client-side) and would make a clean
-first ADR + sprint.
+With #5 (doctor PDF) and first-run onboarding (#12 partial) shipped, the next
+highest-leverage items are:
+
+**#9 (SwiftData offline cache)** first — it unblocks widgets, speeds cold-start,
+and removes the network dependency for every feature. It is self-contained backend
+work that touches no external API.
+
+Then **#1 (WidgetKit)** + **#2 (notifications/reminders)** — they cover the "daily
+glanceability" gap that the body-map dashboard partially addressed for in-app use,
+and extend it to the Home Screen. Both build on the cache from #9.
+
+**#7 (derived ratios TG/HDL + AST:ALT)** is the highest-clinical-value item that
+requires no backend work and no cache — pure client-side computation over data the
+app already holds.

@@ -1,8 +1,15 @@
 # ADR-005: Frontend Architecture
 
-**Status:** Accepted  
+**Status:** Superseded — web frontend retired  
 **Date:** 2026-05-31  
 **Author:** Faiz (solo developer)
+
+> **⚠️ Historical record.** This ADR documents the original **Next.js / React** web
+> client. That client has been removed from the repository (`chore: retire Next.js web
+> app — iOS + Railway/Supabase only`). The iOS app supersedes it entirely; its
+> architecture is documented in [ADR-025](025-ios-soft-design-system.md) (design
+> system), the `IOS_MIGRATION_PLAN.md`, and `SOLUTION.md`. This file is retained as an
+> audit trail of the decisions made during the web phase.
 
 ---
 

@@ -286,9 +286,35 @@ The two GDPR rights that matter most over health data exist as backend endpoints
 **export everything** (`GET /account/export`, JSON or a CSV-per-table zip) and
 **delete your account** (`DELETE /account`, child-first then auth user). The API also
 sends baseline **security headers** (CSP, `X-Frame-Options`, `nosniff`, HSTS,
-`Referrer-Policy`). Surfacing these in the iOS **Account/Settings** UI is the Sprint 11
-slice and is flagged as an App Store submission blocker in
+`Referrer-Policy`). Both rights are now surfaced in the iOS **Settings** tab (Sprint 11):
+a **Danger Zone** section exposes *Delete account* (via `DeleteAccountView` — a full
+sheet with warning, recipe-donation disclosure, and type-to-confirm `DELETE` gate) and
+*Export my data* (format picker → share sheet). See
 [`IOS_APP_STORE_READINESS.md`](IOS_APP_STORE_READINESS.md).
+
+### Body map dashboard (ADR-030)
+
+The **Home tab defaults to an anatomical body-map view** rather than the flat
+biomarker grid. A human silhouette is overlaid with coloured pins, one per
+biomarker category, colour-coded by the worst marker status in that region (in-range
+green / Watch amber / out-of-range red / no-data grey). Tapping a pin opens a
+`BodyRegionSheet` listing the markers in that region; tapping a marker drills into
+`BiomarkerDetailView`. Tapping a region header pushes `CategoryGraphsView` — a
+per-category multi-chart page — directly within the `DashboardView`
+`NavigationStack`. The user can toggle back to the biomarker grid via a toolbar
+segmented picker (`grid` ↔ `bodyMap`); the default is `bodyMap`.
+
+Two overlay panels sit on the canvas:
+
+- **Health stats (top-right):** latest height, weight, waist, derived BMI, and latest
+  BP — sourced from `body_metrics`; shows `--` until data loads to keep the
+  `@Observable` view hierarchy stable.
+- **BP stats (bottom-left):** latest and average blood pressure with colour coding
+  (red at ≥ 130/80 per ACC/AHA guideline; neutral otherwise). Hides when no BP
+  readings exist.
+
+A bottom legend explains the four status colours. Lives in
+`ios/EmpiricalTracker/Features/Dashboard/DashboardBodyMapView.swift`.
 
 ### Doctor PDF report (Sprint 6 follow-up — shipped on iOS)
 
@@ -337,22 +363,26 @@ addressed across a sequence of ADRs.
 
 ## iOS delivery status
 
-The iOS client is built sprint-by-sprint against the migration plan. **Complete:** the
-read path / dashboard, biomarker detail with clinical signals, Excel import & panel
-timeline, diet events, the **food diary with barcode scanning (ADR-019)**, **meal plans
-& calendar (ADR-020)**, **body metrics (ADR-021)**, and the **Apple HealthKit Withings
-bridge (ADR-022)** — weight + BP, deduped by sample UUID. The **doctor PDF report** also
-shipped.
+**Complete:** the read path / dashboard, biomarker detail with clinical signals, Excel
+import & panel timeline, diet events, the **food diary with barcode scanning (ADR-019)**,
+**meal plans & calendar (ADR-020)**, **body metrics (ADR-021)**, the **Apple HealthKit
+Withings bridge (ADR-022)** — weight + BP, deduped by sample UUID, the **doctor PDF
+report**, **account / GDPR surface** (Sprint 11 — Delete account + Export data in
+Settings), **sign-up flow + first-run onboarding**, **custom-food and recipe
+anonymise-on-delete** (ADR-027, ADR-028), **proactive catalogue donation** (ADR-029),
+and the **body-map dashboard** (ADR-030 — anatomical silhouette as default Home view
+with health-stats and BP overlay panels, BMI derivation, and category drill-down).
 
 **In progress:** the **Withings Cloud connection (ADR-023)** — the iOS connect/disconnect/
 "Sync now" flow is shipped and self-gates until the backend `/withings/*` endpoints (OAuth
 token exchange, history pull, `Notify` webhooks) and the `withings_measures` table ship
 (migration plan §4.2–§4.4).
 
-**Outstanding:** the **Account / GDPR surface and settings polish** (Sprint 11) and
-**release hardening** (Sprint 12) — see [`IOS_APP_STORE_READINESS.md`](IOS_APP_STORE_READINESS.md)
-for the submission-blocker list, and [`WISHLIST.md`](WISHLIST.md) for forward-looking
-native features (widgets, notifications, Watch, Siri/App Intents, offline cache).
+**Outstanding:** **release hardening** (Sprint 12) — see
+[`IOS_APP_STORE_READINESS.md`](IOS_APP_STORE_READINESS.md) for remaining items
+(all blockers resolved; external confirmations remain), and [`WISHLIST.md`](WISHLIST.md)
+for forward-looking native features (widgets, notifications, Watch, Siri/App Intents,
+offline cache).
 
 > **ADR sprint numbering:** ADRs 010–018 were authored against the **web** app and carry
 > its sprint numbers; the iOS work re-sequences the same surface per the migration plan
@@ -386,7 +416,9 @@ native features (widgets, notifications, Watch, Siri/App Intents, offline cache)
 | `ios/Packages/Biomarkers/Sources/Biomarkers/` | Ported clinical logic: categories, diet profiles, marker signals |
 | `ios/Packages/Auth/Sources/AppAuth/` | Supabase auth, Keychain session, mock auth for demo mode |
 | `ios/Packages/HealthSync/Sources/HealthSync/` | HealthKit sync + Withings Cloud service |
-| `ios/EmpiricalTracker/Features/Dashboard/` | The biomarker grid, diet filter, sparklines |
+| `ios/EmpiricalTracker/Features/Dashboard/` | Dashboard host: body-map (default) + biomarker grid, diet filter, sparklines, toolbar mode toggle |
+| `ios/EmpiricalTracker/Features/BodyMap/` | Anatomical silhouette, body-region pins, region sheet (ADR-030) |
+| `ios/EmpiricalTracker/Features/CategoryGraphs/` | Per-category multi-chart view, pushed from body map or category header |
 | `ios/EmpiricalTracker/Features/BiomarkerDetail/` | Trend chart, clinical signals, confounder notes, manual entry |
 | `ios/EmpiricalTracker/Features/FoodDiary/` | Diary, multi-source search, barcode scanner |
 | `ios/EmpiricalTracker/Features/MealPlans/` | Weekly calendar + plan management |

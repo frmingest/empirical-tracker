@@ -1,8 +1,13 @@
 # ADR-006: Light/Dark Theme System
 
-**Status:** Accepted  
+**Status:** Superseded — web frontend retired  
 **Date:** 2026-05-31  
 **Author:** Faiz (solo developer)
+
+> **⚠️ Historical record.** This ADR documents the CSS-variable-based dark/light theme
+> system for the retired Next.js web client. The iOS app's theme and design tokens are
+> covered by [ADR-025](025-ios-soft-design-system.md) (`AppColors`, `AppTypography`,
+> `SettingsStore` `AppTheme` enum). This file is retained as an audit trail.
 
 ---
 
