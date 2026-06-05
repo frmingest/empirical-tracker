@@ -32,7 +32,7 @@ struct DashboardView: View {
 
     @State private var viewModel: DashboardViewModel?
     @State private var customMarkerDraft: Set<String> = []
-    @State private var dashboardMode: DashboardViewMode = .grid
+    @State private var dashboardMode: DashboardViewMode = .bodyMap
 
     // Sprint 4 — import & panel timeline state
     @State private var importViewModel: ImportViewModel?
