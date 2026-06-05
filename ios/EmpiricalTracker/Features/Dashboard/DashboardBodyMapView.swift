@@ -117,6 +117,10 @@ struct BodyMetricsStatsPanel: View {
         if let cm = latest?.waistCm {
             rows.append(.init(icon: "circle.dashed", label: "Waist", value: String(format: "%.0f cm", cm)))
         }
+        if let heightM = heightCm.map({ $0 / 100.0 }), let kg = latest?.weightKg {
+            let bmi = kg / (heightM * heightM)
+            rows.append(.init(icon: "figure.stand", label: "BMI", value: String(format: "%.1f", bmi)))
+        }
         if let sys = latest?.systolic, let dia = latest?.diastolic {
             rows.append(.init(icon: "heart.fill", label: "BP", value: "\(sys)/\(dia)"))
         }
