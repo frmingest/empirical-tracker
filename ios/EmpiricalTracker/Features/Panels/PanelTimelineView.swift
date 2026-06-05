@@ -7,6 +7,7 @@ import SwiftUI
 /// Supports swipe-to-delete and a "Delete all" menu action with confirmation.
 struct PanelTimelineView: View {
     @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
     @State private var viewModel: PanelTimelineViewModel?
 
     var body: some View {
@@ -109,6 +110,12 @@ struct PanelTimelineView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        // Explicit way back to the dashboard — the sheet is otherwise only
+        // dismissible by swiping down, which isn't discoverable.
+        ToolbarItem(placement: .cancellationAction) {
+            Button("Done") { dismiss() }
+                .foregroundStyle(Color.accent)
+        }
         ToolbarItem(placement: .topBarTrailing) {
             if let vm = viewModel, !vm.panels.isEmpty {
                 Menu {

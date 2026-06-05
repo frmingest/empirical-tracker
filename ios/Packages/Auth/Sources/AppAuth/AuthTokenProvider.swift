@@ -15,6 +15,9 @@ public final class AuthTokenProvider: TokenProvider, Sendable {
     }
 
     public func currentToken() async -> String? {
-        await MainActor.run { authStore.session?.accessToken }
+        // Routes through AuthStore → auth backend so an access token that expired
+        // while the app was idle is refreshed before the request goes out, rather
+        // than sending a stale token and failing with a 401.
+        await authStore.currentAccessToken()
     }
 }

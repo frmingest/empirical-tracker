@@ -62,6 +62,37 @@ public final class AuthStore {
         session = nil
         error = nil
     }
+
+    /// Returns a currently-valid bearer token for an API call, transparently
+    /// refreshing it through the backend if the in-memory token has expired. Keeps the
+    /// published `session` snapshot in sync when the backend rotates the token. Returns
+    /// `nil` only when there is no session at all.
+    public func currentAccessToken() async -> String? {
+        guard let current = session else { return nil }
+        let token = await service.currentAccessToken()
+        if let token, token != current.accessToken {
+            session = StoredSession(
+                accessToken: token,
+                userID:      current.userID,
+                email:       current.email
+            )
+        }
+        return token ?? current.accessToken
+    }
+
+    /// Called when the backend definitively rejects our token (HTTP 401). Tears the
+    /// session down so the app returns to the sign-in screen with a clear
+    /// "session expired" message, instead of leaving the user in a broken
+    /// authenticated-looking state that only surfaces as cryptic sync errors.
+    ///
+    /// `session` is cleared synchronously (before the first `await`) so concurrent
+    /// 401s from parallel requests collapse into a single expiry.
+    public func expireSession() async {
+        guard session != nil else { return }
+        session = nil
+        error = .sessionExpired
+        try? await service.signOut()
+    }
 }
 
 // MARK: - AuthError
@@ -69,6 +100,8 @@ public final class AuthStore {
 public enum AuthError: LocalizedError, Sendable {
     case invalidCredentials
     case networkError
+    /// The session token was rejected by the backend after a period of inactivity.
+    case sessionExpired
     case underlying(any Error)
 
     public var errorDescription: String? {
@@ -76,6 +109,8 @@ public enum AuthError: LocalizedError, Sendable {
         case .invalidCredentials: return String(localized: "auth.error.invalid_credentials",
                                                 bundle: .main)
         case .networkError:       return String(localized: "auth.error.network",
+                                                bundle: .main)
+        case .sessionExpired:     return String(localized: "auth.error.session_expired",
                                                 bundle: .main)
         case .underlying(let e):  return e.localizedDescription
         }

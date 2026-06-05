@@ -77,7 +77,14 @@ public final class AppEnvironment {
 
         let tokenProvider = AuthTokenProvider(authStore: store)
         let config = APIClient.Configuration.resolved()
-        let apiClient = APIClient(config: config, tokenProvider: tokenProvider)
+        let apiClient = APIClient(
+            config: config,
+            tokenProvider: tokenProvider,
+            // A 401 means our token is no longer accepted: end the session so the app
+            // drops back to the sign-in screen with a clear message rather than leaving
+            // the user "logged in" but hitting sync errors on every screen.
+            onUnauthorized: { await store.expireSession() }
+        )
         self.client = apiClient
 
         biomarkersImport = BiomarkersImportService(

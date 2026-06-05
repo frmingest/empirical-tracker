@@ -207,6 +207,23 @@
         }
       }
     },
+    "auth.error.session_expired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your session expired after a period of inactivity. Please sign in again."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Økten din utløp etter en periode med inaktivitet. Logg inn igjen."
+          }
+        }
+      }
+    },
     "auth.field.email" : {
       "extractionState" : "manual",
       "localizations" : {

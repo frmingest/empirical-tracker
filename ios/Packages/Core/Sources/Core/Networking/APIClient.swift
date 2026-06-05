@@ -38,17 +38,23 @@ public actor APIClient {
     private let config: Configuration
     private let session: URLSession
     private let tokenProvider: any TokenProvider
+    /// Invoked once whenever the backend rejects the bearer token (HTTP 401), so the
+    /// app can sign the user out and surface a clear "session expired" message instead
+    /// of letting every screen fail with an opaque sync error.
+    private let onUnauthorized: (@Sendable () async -> Void)?
 
     // MARK: - Init
 
     public init(
         config: Configuration = .resolved(),
         tokenProvider: any TokenProvider,
-        session: URLSession = .shared
+        session: URLSession = .shared,
+        onUnauthorized: (@Sendable () async -> Void)? = nil
     ) {
         self.config = config
         self.tokenProvider = tokenProvider
         self.session = session
+        self.onUnauthorized = onUnauthorized
     }
 
     // MARK: - Public API
@@ -58,25 +64,48 @@ public actor APIClient {
         _ endpoint: Endpoint,
         as type: T.Type = T.self
     ) async throws -> T {
-        let req = try await buildRequest(for: endpoint)
-        return try await perform(req, decoding: type, retriesLeft: config.maxRetries)
+        do {
+            let req = try await buildRequest(for: endpoint)
+            return try await perform(req, decoding: type, retriesLeft: config.maxRetries)
+        } catch {
+            await notifyIfUnauthorized(error)
+            throw error
+        }
     }
 
     /// Performs a request and discards the response body (DELETE, etc.).
     public func requestEmpty(_ endpoint: Endpoint) async throws {
-        let req = try await buildRequest(for: endpoint)
-        let (data, response) = try await session.data(for: req)
-        try validate(response: response, data: data)
+        do {
+            let req = try await buildRequest(for: endpoint)
+            let (data, response) = try await session.data(for: req)
+            try validate(response: response, data: data)
+        } catch {
+            await notifyIfUnauthorized(error)
+            throw error
+        }
     }
 
     /// Performs a request and returns the raw, undecoded response body.
     /// Used for binary downloads such as the GDPR export (JSON document or CSV zip).
     public func requestData(_ endpoint: Endpoint) async throws -> Data {
-        let req = try await buildRequest(for: endpoint)
-        return try await performData(req, retriesLeft: config.maxRetries)
+        do {
+            let req = try await buildRequest(for: endpoint)
+            return try await performData(req, retriesLeft: config.maxRetries)
+        } catch {
+            await notifyIfUnauthorized(error)
+            throw error
+        }
     }
 
     // MARK: - Private helpers
+
+    /// Fires the `onUnauthorized` hook when (and only when) the request failed with a
+    /// 401, regardless of which entry point or retry path surfaced it.
+    private func notifyIfUnauthorized(_ error: any Error) async {
+        if case APIError.unauthorized = error {
+            await onUnauthorized?()
+        }
+    }
 
     private func buildRequest(for endpoint: Endpoint) async throws -> URLRequest {
         var components = URLComponents(
