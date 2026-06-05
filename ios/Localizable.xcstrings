@@ -4498,6 +4498,57 @@
         }
       }
     },
+    "healthsync.type.heartRate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heart Rate (Daily Average)"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hjertefrekvens (daglig snitt)"
+          }
+        }
+      }
+    },
+    "healthsync.type.heartRateVariability" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heart Rate Variability (HRV)"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hjertefrekvensvariabilitet (HRV)"
+          }
+        }
+      }
+    },
+    "healthsync.type.restingHeartRate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resting Heart Rate"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hvilepuls"
+          }
+        }
+      }
+    },
     "healthsync.type.bloodPressure" : {
       "extractionState" : "manual",
       "localizations" : {

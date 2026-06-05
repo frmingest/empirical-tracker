@@ -120,8 +120,11 @@ struct HealthSyncSettingsView: View {
 
     private func label(for type: HealthMetricType) -> String {
         switch type {
-        case .weight:        return String(localized: "healthsync.type.weight")
-        case .bloodPressure: return String(localized: "healthsync.type.bloodPressure")
+        case .weight:               return String(localized: "healthsync.type.weight")
+        case .bloodPressure:        return String(localized: "healthsync.type.bloodPressure")
+        case .restingHeartRate:     return String(localized: "healthsync.type.restingHeartRate")
+        case .heartRateVariability: return String(localized: "healthsync.type.heartRateVariability")
+        case .heartRate:            return String(localized: "healthsync.type.heartRate")
         }
     }
 
