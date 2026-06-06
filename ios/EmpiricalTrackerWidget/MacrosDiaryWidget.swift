@@ -80,11 +80,13 @@ struct MacrosDiaryWidgetView: View {
 
                 Spacer()
 
-                Text(String(format: "%.0f", m.kcal))
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                + Text(" kcal")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.secondary)
+                HStack(alignment: .lastTextBaseline, spacing: 3) {
+                    Text(String(format: "%.0f", m.kcal))
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                    Text("kcal")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
 
                 Spacer()
             }

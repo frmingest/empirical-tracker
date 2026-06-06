@@ -1,5 +1,6 @@
 import Biomarkers
 import BodyMetrics
+import Core
 import Foundation
 import FoodDiary
 

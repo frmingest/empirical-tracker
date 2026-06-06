@@ -81,11 +81,13 @@ struct WeightTrendWidgetView: View {
 
             Spacer()
 
-            Text(String(format: "%.1f", w.latestKg))
-                .font(.system(size: 34, weight: .bold, design: .rounded))
-                + Text(" kg")
+            HStack(alignment: .lastTextBaseline, spacing: 3) {
+                Text(String(format: "%.1f", w.latestKg))
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                Text("kg")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.secondary)
+            }
 
             HStack(spacing: 4) {
                 trendIcon(w.trend)
@@ -118,11 +120,13 @@ struct WeightTrendWidgetView: View {
 
                 Spacer()
 
-                (Text(String(format: "%.1f", w.latestKg))
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
-                + Text(" kg")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.secondary))
+                HStack(alignment: .lastTextBaseline, spacing: 3) {
+                    Text(String(format: "%.1f", w.latestKg))
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                    Text("kg")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
 
                 HStack(spacing: 4) {
                     trendIcon(w.trend)
