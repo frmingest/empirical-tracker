@@ -58,7 +58,10 @@ struct DashboardBodyMapView: View {
             }
 
             VStack {
-                HStack {
+                HStack(alignment: .top) {
+                    HeartStatsPanel(metrics: env.bodyMetrics.metrics)
+                        .padding(.top, 12)
+                        .padding(.leading, 12)
                     Spacer()
                     BodyMetricsStatsPanel(
                         metrics: env.bodyMetrics.metrics,
@@ -72,18 +75,8 @@ struct DashboardBodyMapView: View {
 
             VStack {
                 Spacer()
-                HStack {
-                    HeartStatsPanel(metrics: env.bodyMetrics.metrics)
-                        .padding(.bottom, 96)
-                        .padding(.leading, 12)
-                    Spacer()
-                }
-            }
-
-            VStack {
-                Spacer()
                 BodyMapLegendView()
-                    .padding(.bottom, 16)
+                    .padding(.bottom, 24)
             }
         }
         .background(Color.bgBase)
@@ -168,7 +161,7 @@ private struct BodyMetricsStatRow: View {
     }
 }
 
-// MARK: - Heart stats panel (bottom-left)
+// MARK: - Heart stats panel (top-left)
 
 /// Compact panel showing latest resting heart rate and HRV from Apple Watch.
 /// Always rendered so @Observable tracking is established on first pass.
