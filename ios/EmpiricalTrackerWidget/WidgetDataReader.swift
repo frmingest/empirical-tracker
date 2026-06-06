@@ -4,7 +4,7 @@ import WidgetKit
 /// Read-only access to the snapshot written by the main app.
 enum WidgetDataReader {
 
-    static let appGroupID  = "group.app.empirical.tracker"
+    static let appGroupID  = "group.com.FaizMalik.EmpiricalTracker"
     static let snapshotKey = "widget_snapshot_v1"
 
     static func snapshot() -> WidgetSnapshot? {
