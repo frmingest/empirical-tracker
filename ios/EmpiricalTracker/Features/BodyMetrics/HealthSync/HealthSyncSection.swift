@@ -129,13 +129,20 @@ struct HealthSyncSection: View {
     }
 
     private func summaryText(_ summary: HealthSyncManager.SyncSummary) -> String {
-        if summary.isEmpty {
+        if summary.isEmpty && summary.uploadsFailed == 0 {
             return String(localized: "healthsync.no_new")
         }
-        return String(
-            format: String(localized: "healthsync.summary"),
-            summary.weight, summary.bloodPressure
-        )
+        var parts: [String] = []
+        if summary.weight > 0        { parts.append("\(summary.weight) weight") }
+        if summary.bloodPressure > 0 { parts.append("\(summary.bloodPressure) BP") }
+        if summary.restingHeartRate > 0 { parts.append("\(summary.restingHeartRate) resting HR") }
+        if summary.heartRateVariability > 0 { parts.append("\(summary.heartRateVariability) HRV") }
+        if summary.heartRate > 0     { parts.append("\(summary.heartRate) avg HR") }
+        var result = parts.isEmpty ? "No new readings" : "Imported: \(parts.joined(separator: ", "))"
+        if summary.uploadsFailed > 0 {
+            result += " · \(summary.uploadsFailed) failed"
+        }
+        return result
     }
 
     private func errorLabel(_ message: String) -> some View {

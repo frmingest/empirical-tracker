@@ -29,6 +29,7 @@ public actor HealthSyncManager {
         public let heartRateVariability: Int
         public let heartRate: Int
         public let duplicatesSkipped: Int
+        public let uploadsFailed: Int
 
         public var imported: Int { weight + bloodPressure + restingHeartRate + heartRateVariability + heartRate }
         public var isEmpty: Bool { imported == 0 }
@@ -39,7 +40,8 @@ public actor HealthSyncManager {
             restingHeartRate: Int = 0,
             heartRateVariability: Int = 0,
             heartRate: Int = 0,
-            duplicatesSkipped: Int
+            duplicatesSkipped: Int,
+            uploadsFailed: Int = 0
         ) {
             self.weight = weight
             self.bloodPressure = bloodPressure
@@ -47,6 +49,7 @@ public actor HealthSyncManager {
             self.heartRateVariability = heartRateVariability
             self.heartRate = heartRate
             self.duplicatesSkipped = duplicatesSkipped
+            self.uploadsFailed = uploadsFailed
         }
     }
 
@@ -112,70 +115,81 @@ public actor HealthSyncManager {
         var hrvCount = 0
         var hrCount = 0
         var skipped = 0
+        var failed = 0
 
         if types.contains(.weight) {
             for reading in try await readWeightSamples(since: since) {
                 if await syncedStore.contains(reading.uuid) { skipped += 1; continue }
-                try await sink.upload(BodyMetricPayload(
-                    measuredOn: Self.dayStart(reading.date),
-                    weightKg: reading.kg,
-                    source: .healthkit
-                ))
-                await syncedStore.insert(reading.uuid)
-                weightCount += 1
+                do {
+                    try await sink.upload(BodyMetricPayload(
+                        measuredOn: Self.dayStart(reading.date),
+                        weightKg: reading.kg,
+                        source: .healthkit
+                    ))
+                    await syncedStore.insert(reading.uuid)
+                    weightCount += 1
+                } catch { failed += 1 }
             }
         }
 
         if types.contains(.bloodPressure) {
             for reading in try await readBloodPressureSamples(since: since) {
                 if await syncedStore.contains(reading.uuid) { skipped += 1; continue }
-                try await sink.upload(BodyMetricPayload(
-                    measuredOn: Self.dayStart(reading.date),
-                    systolic: reading.systolic,
-                    diastolic: reading.diastolic,
-                    source: .healthkit
-                ))
-                await syncedStore.insert(reading.uuid)
-                bpCount += 1
+                do {
+                    try await sink.upload(BodyMetricPayload(
+                        measuredOn: Self.dayStart(reading.date),
+                        systolic: reading.systolic,
+                        diastolic: reading.diastolic,
+                        source: .healthkit
+                    ))
+                    await syncedStore.insert(reading.uuid)
+                    bpCount += 1
+                } catch { failed += 1 }
             }
         }
 
         if types.contains(.restingHeartRate) {
             for reading in try await readRestingHRSamples(since: since) {
                 if await syncedStore.contains(reading.uuid) { skipped += 1; continue }
-                try await sink.upload(BodyMetricPayload(
-                    measuredOn: Self.dayStart(reading.date),
-                    restingHeartRateBpm: reading.bpm,
-                    source: .healthkit
-                ))
-                await syncedStore.insert(reading.uuid)
-                rhrCount += 1
+                do {
+                    try await sink.upload(BodyMetricPayload(
+                        measuredOn: Self.dayStart(reading.date),
+                        restingHeartRateBpm: reading.bpm,
+                        source: .healthkit
+                    ))
+                    await syncedStore.insert(reading.uuid)
+                    rhrCount += 1
+                } catch { failed += 1 }
             }
         }
 
         if types.contains(.heartRateVariability) {
             for reading in try await readHRVSamples(since: since) {
                 if await syncedStore.contains(reading.uuid) { skipped += 1; continue }
-                try await sink.upload(BodyMetricPayload(
-                    measuredOn: Self.dayStart(reading.date),
-                    hrvMs: reading.ms,
-                    source: .healthkit
-                ))
-                await syncedStore.insert(reading.uuid)
-                hrvCount += 1
+                do {
+                    try await sink.upload(BodyMetricPayload(
+                        measuredOn: Self.dayStart(reading.date),
+                        hrvMs: reading.ms,
+                        source: .healthkit
+                    ))
+                    await syncedStore.insert(reading.uuid)
+                    hrvCount += 1
+                } catch { failed += 1 }
             }
         }
 
         if types.contains(.heartRate) {
             for reading in try await readDailyAverageHRSamples(since: since) {
                 if await syncedStore.contains(reading.dedupKey) { skipped += 1; continue }
-                try await sink.upload(BodyMetricPayload(
-                    measuredOn: reading.day,
-                    heartRateBpm: reading.bpm,
-                    source: .healthkit
-                ))
-                await syncedStore.insert(reading.dedupKey)
-                hrCount += 1
+                do {
+                    try await sink.upload(BodyMetricPayload(
+                        measuredOn: reading.day,
+                        heartRateBpm: reading.bpm,
+                        source: .healthkit
+                    ))
+                    await syncedStore.insert(reading.dedupKey)
+                    hrCount += 1
+                } catch { failed += 1 }
             }
         }
 
@@ -185,7 +199,8 @@ public actor HealthSyncManager {
             restingHeartRate: rhrCount,
             heartRateVariability: hrvCount,
             heartRate: hrCount,
-            duplicatesSkipped: skipped
+            duplicatesSkipped: skipped,
+            uploadsFailed: failed
         )
         #else
         throw HealthSyncError.unavailable
