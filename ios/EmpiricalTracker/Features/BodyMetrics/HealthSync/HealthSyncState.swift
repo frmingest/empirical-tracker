@@ -34,6 +34,13 @@ final class HealthSyncState {
     private(set) var lastSummary: HealthSyncManager.SyncSummary?
     var errorMessage: String?
 
+    /// True when the last user-triggered sync returned no data for all enabled types,
+    /// which may indicate revoked permissions in Apple Health.
+    var showPermissionsHint: Bool {
+        guard let summary = lastSummary, !isSyncing, errorMessage == nil else { return false }
+        return summary.isEmpty && !enabledTypes.isEmpty
+    }
+
     private var enabledTypes: Set<HealthMetricType>
 
     // MARK: - Dependencies
@@ -156,7 +163,14 @@ final class HealthSyncState {
     func syncNow(silent: Bool = false) async {
         guard connection == .connected, !isSyncing else { return }
         isSyncing = true
-        if !silent { errorMessage = nil }
+        if !silent {
+            errorMessage = nil
+            // Re-request authorization so HealthKit can re-surface its permission sheet
+            // if the user fully removed the app from Apple Health since the last connect.
+            // For individually toggled types (revoked but not fully removed), this is a
+            // no-op — HealthKit doesn't re-show the sheet for previously-decided types.
+            try? await manager.requestAuthorization(for: enabledTypes)
+        }
         do {
             let summary = try await manager.sync(types: enabledTypes)
             lastSummary = summary

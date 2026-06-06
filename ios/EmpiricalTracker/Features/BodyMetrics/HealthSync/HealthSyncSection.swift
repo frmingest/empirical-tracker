@@ -1,6 +1,7 @@
 import Core
 import HealthSync
 import SwiftUI
+import UIKit
 
 /// The Apple Health card at the top of the Body tab (Sprint 9, ADR-022).
 ///
@@ -111,6 +112,24 @@ struct HealthSyncSection: View {
             Text(summaryText(summary))
                 .font(.bodySmall)
                 .foregroundStyle(Color.textMuted)
+        }
+
+        if state.showPermissionsHint {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(String(localized: "healthsync.permissions.hint"))
+                    .font(.bodySmall)
+                    .foregroundStyle(Color.outRange)
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Label(String(localized: "healthsync.open_health_settings"), systemImage: "gear")
+                        .font(.bodySmall)
+                        .foregroundStyle(Color.accent)
+                }
+            }
+            .padding(.vertical, 2)
         }
 
         if let error = state.errorMessage {
