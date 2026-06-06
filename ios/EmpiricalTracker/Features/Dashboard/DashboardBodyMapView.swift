@@ -57,7 +57,7 @@ struct DashboardBodyMapView: View {
                 selectedRegion = region
             }
 
-            VStack {
+            VStack(spacing: 0) {
                 HStack(alignment: .top) {
                     HeartStatsPanel(metrics: env.bodyMetrics.metrics)
                         .padding(.top, 12)
@@ -71,11 +71,9 @@ struct DashboardBodyMapView: View {
                     .padding(.trailing, 12)
                 }
                 Spacer()
+                BodyMapLegendView()
+                    .padding(.bottom, 20)
             }
-        }
-        .overlay(alignment: .bottom) {
-            BodyMapLegendView()
-                .padding(.bottom, 24)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.bgBase)
