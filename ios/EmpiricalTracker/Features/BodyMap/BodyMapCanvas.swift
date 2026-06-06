@@ -44,29 +44,36 @@ struct BodyMapCanvas: View {
     private let bodyMinY: CGFloat = 0.066
     private let bodyMaxY: CGFloat = 0.934
 
+    // Cache placement math so it only recalculates when canvas size changes.
+    @State private var cachedPlacements: [PinPlacement] = []
+    @State private var cachedSize: CGSize = .zero
+    @State private var cachedBottomReserve: CGFloat = -1
+
     var body: some View {
         GeometryReader { geo in
-            let availableWidth  = max(geo.size.width  - edgeInset * 2, 1)
-            let availableHeight = max(geo.size.height - edgeInset * 2 - bottomReserve, 1)
+            let size = geo.size
 
-            // Aspect-fit: take whichever axis is the binding constraint.
+            // Recompute geometry only when layout inputs change.
+            let availableWidth  = max(size.width  - edgeInset * 2, 1)
+            let availableHeight = max(size.height - edgeInset * 2 - bottomReserve, 1)
             let figureWidth  = min(availableWidth, availableHeight * aspect, maxFigureWidth)
             let figureHeight = figureWidth / aspect
-
-            let originX = (geo.size.width - figureWidth) / 2
-            let originY = max((geo.size.height - bottomReserve - figureHeight) / 2, edgeInset)
-
-            // Pin metrics scale with the *visible body* width (not the padded
-            // frame) so pins stay proportional to the figure on every device.
+            let originX = (size.width  - figureWidth)  / 2
+            let originY = max((size.height - bottomReserve - figureHeight) / 2, edgeInset)
             let bodyWidth   = figureWidth * (bodyMaxX - bodyMinX)
             let pinDiameter = min(max(bodyWidth * 0.11, 11), 22)
 
-            let placements = makePlacements(
-                canvasSize: geo.size,
-                originX: originX, originY: originY,
-                figureWidth: figureWidth, figureHeight: figureHeight,
-                pinDiameter: pinDiameter
-            )
+            let placements: [PinPlacement] = {
+                if size == cachedSize && bottomReserve == cachedBottomReserve && !cachedPlacements.isEmpty {
+                    return cachedPlacements
+                }
+                return makePlacements(
+                    canvasSize: size,
+                    originX: originX, originY: originY,
+                    figureWidth: figureWidth, figureHeight: figureHeight,
+                    pinDiameter: pinDiameter
+                )
+            }()
 
             ZStack(alignment: .topLeading) {
                 Image("BodySilhouette")
@@ -86,7 +93,7 @@ struct BodyMapCanvas: View {
                         drawConnector(&ctx, placement: placement, pinDiameter: pinDiameter)
                     }
                 }
-                .frame(width: geo.size.width, height: geo.size.height)
+                .frame(width: size.width, height: size.height)
                 .allowsHitTesting(false)
 
                 ForEach(placements) { placement in
@@ -96,10 +103,29 @@ struct BodyMapCanvas: View {
                     .position(placement.pin)
                 }
             }
-            // Composite all continuously-animating pin layers into a single
-            // Metal-backed texture, dramatically reducing per-frame CPU/GPU work.
-            .drawingGroup()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onChange(of: size) { _, newSize in
+                cachedSize = newSize
+                cachedBottomReserve = bottomReserve
+                cachedPlacements = makePlacements(
+                    canvasSize: newSize,
+                    originX: originX, originY: originY,
+                    figureWidth: figureWidth, figureHeight: figureHeight,
+                    pinDiameter: pinDiameter
+                )
+            }
+            .onAppear {
+                if cachedPlacements.isEmpty {
+                    cachedSize = size
+                    cachedBottomReserve = bottomReserve
+                    cachedPlacements = makePlacements(
+                        canvasSize: size,
+                        originX: originX, originY: originY,
+                        figureWidth: figureWidth, figureHeight: figureHeight,
+                        pinDiameter: pinDiameter
+                    )
+                }
+            }
         }
     }
 

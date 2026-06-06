@@ -45,29 +45,46 @@ struct DashboardBodyMapView: View {
     // MARK: - Canvas
 
     private func bodyCanvas(_ vm: BodyMapViewModel) -> some View {
-        BodyMapCanvas(
-            regions: vm.regions,
-            silhouetteOpacity: 0.18,
-            bottomReserve: 72
-        ) { region in
-            selectedRegion = region
-        }
-        .overlay(alignment: .topTrailing) {
-            BodyMetricsStatsPanel(
-                metrics: env.bodyMetrics.metrics,
-                heightCm: heightCm > 0 ? heightCm : nil
-            )
-            .padding(.top, 12)
-            .padding(.trailing, 12)
-        }
-        .overlay(alignment: .bottomLeading) {
-            HeartStatsPanel(metrics: env.bodyMetrics.metrics)
-                .padding(.bottom, 96)
-                .padding(.leading, 12)
-        }
-        .overlay(alignment: .bottom) {
-            BodyMapLegendView()
-                .padding(.bottom, 16)
+        // The overlay panels are siblings of BodyMapCanvas via ZStack rather
+        // than children via .overlay — this way @Observable changes to
+        // env.bodyMetrics do not trigger a BodyMapCanvas layout pass.
+        ZStack {
+            BodyMapCanvas(
+                regions: vm.regions,
+                silhouetteOpacity: 0.18,
+                bottomReserve: 72
+            ) { region in
+                selectedRegion = region
+            }
+
+            VStack {
+                HStack {
+                    Spacer()
+                    BodyMetricsStatsPanel(
+                        metrics: env.bodyMetrics.metrics,
+                        heightCm: heightCm > 0 ? heightCm : nil
+                    )
+                    .padding(.top, 12)
+                    .padding(.trailing, 12)
+                }
+                Spacer()
+            }
+
+            VStack {
+                Spacer()
+                HStack {
+                    HeartStatsPanel(metrics: env.bodyMetrics.metrics)
+                        .padding(.bottom, 96)
+                        .padding(.leading, 12)
+                    Spacer()
+                }
+            }
+
+            VStack {
+                Spacer()
+                BodyMapLegendView()
+                    .padding(.bottom, 16)
+            }
         }
         .background(Color.bgBase)
     }

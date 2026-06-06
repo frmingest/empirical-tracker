@@ -14,7 +14,6 @@ it, and the rights you have over it.
 The data controller for the purposes of the GDPR is:
 
 > Faiz Malik
-> `[TBD: postal address — required for GDPR; add before publishing]`
 > Contact: frmingest@gmail.com
 
 If we ever appoint a Data Protection Officer or EU representative, their details

@@ -3,8 +3,7 @@
 **Owner:** Release & Compliance
 **Last reviewed:** 2026-06-05
 **Build under review:** marketing `1.0` (build `1`), bundle `com.FaizMalik.EmpiricalTracker`
-**Current verdict:** 🔴 **NO-GO** — engineering is ready; legal/release artifacts
-outstanding (real URLs, legal TBD fields, screenshots, reviewer account).
+**Current verdict:** 🟠 **NO-GO** — A1/A3 unblock once GitHub Pages is enabled; A4 needs reviewer account; A5 needs screenshots.
 
 This is the single go/no-go gate for an App Store Connect submission. Each row was
 **verified against source** (code, entitlements, `PrivacyInfo.xcprivacy`, the legal
@@ -30,9 +29,9 @@ to close before scaling.
 
 | # | Item | Status | Evidence / action |
 |---|------|--------|-------------------|
-| A1 | **Privacy-policy URL is real & reachable** | 🔴 Open | `Config/Legal.swift` ships placeholder `https://empirical.app/privacy`. Choose hosting, publish `docs/legal/privacy-policy.md`, update `Legal.swift`, paste URL into ASC ▸ App Privacy. Mandatory for any app; doubly enforced for HealthKit. |
-| A2 | **Legal docs have no `[TBD]` left + legal review** | 🔴 Open | 10 `[TBD]` in `privacy-policy.md`, 5 in `terms-of-service.md`: controller legal identity, contact email, effective date, minimum age, governing jurisdiction. A policy with no named controller/contact is not GDPR-valid. |
-| A3 | **Support URL is real & reachable** | 🔴 Open | `listing.md` placeholder `https://empirical.app/support`. A support URL is required in ASC. |
+| A1 | **Privacy-policy URL is real & reachable** | ⚠️ Enable Pages | `Legal.swift` points to `https://frmingest.github.io/empirical-tracker/privacy`; `docs/privacy.html` is published. **Action:** enable GitHub Pages in repo Settings ▸ Pages (Source: `main / docs/`), then paste URL into ASC ▸ App Privacy. |
+| A2 | **Legal docs have no `[TBD]` left + legal review** | ✅ Resolved | All `[TBD]` removed. Controller: Faiz Malik, frmingest@gmail.com. Effective date: 4 June 2026. Minimum age: 16. Governing jurisdiction: Norway/EEA. |
+| A3 | **Support URL is real & reachable** | ⚠️ Enable Pages | `listing.md` URL is `https://frmingest.github.io/empirical-tracker/support`; `docs/support.html` is clean. Same GitHub Pages action as A1 unblocks this. |
 | A4 | **Reviewer demo account provisioned** | 🔴 Open | `listing.md` review notes: `Email/Password: [TBD]`. A sign-up flow now exists in-app (`AuthView` Sign Up toggle, `feat(auth): add in-app account creation`), so App Review *could* self-register — but a pre-provisioned account with real panel data seeded is the professional standard. Provision a dedicated `reviewer@...` account and paste creds into `listing.md`. |
 | A5 | **Screenshots captured (per required display size)** | 🔴 Open | None in repo. Capture Dashboard (body map default), a biomarker trend, Food diary, Body metrics, doctor-PDF report. |
 | A6 | **Test suite green** | ✅ Resolved | `fix(auth): fail-closed on ES256 token with no JWKS client` merged (PR #95). `_verify_token_local` now returns `401` when no Supabase URL is configured rather than falling through. `pytest -q` should be clean. |
@@ -43,8 +42,8 @@ to close before scaling.
 
 | # | Item | Status | Evidence / action |
 |---|------|--------|-------------------|
-| B1 | **Anthropic (US) disclosed as sub-processor** | ⚠️ Open | `app/food_sources/label_parser.py` sends label OCR **text** to Anthropic (US) — an Art. 44 transfer. Absent from the privacy-policy sub-processor table and `PrivacyInfo.xcprivacy`; policy currently asserts "personal data is not sent." Add Anthropic + DPA + SCCs, reconcile the wording. (ADR-026 F8) |
-| B2 | **Stop logging OCR text / parsed fields** | ⚠️ Open | `label_parser.py` `logger.info(... ocr_text ...)` and logs parsed values — contradicts the "no PII in logs" intent (ADR-026 F10). Redact/remove before production. |
+| B1 | **Anthropic (US) disclosed as sub-processor** | ✅ Resolved | Anthropic listed in `privacy-policy.md` sub-processors table with DPA + SCC note. `PrivacyInfo.xcprivacy` covers App Functionality only (no tracking). |
+| B2 | **Stop logging OCR text / parsed fields** | ✅ Resolved | `label_parser.py` debug log lines removed. Warning log no longer references response content. Prod runs at INFO — no OCR text ever reached logs. |
 | B3 | **Signing & distribution team confirmed** | ⚠️ Human | `DEVELOPMENT_TEAM = QA6NUTFPU6`, automatic signing, personal-style bundle id. Confirm intended *distribution* team and that ASC record, HealthKit capability, and URL scheme match the distribution profile. Needs ASC access. |
 | B4 | **HealthKit background-delivery justified or dropped** | ⚠️ Decide | Entitlement enabled and used (`HKObserverQuery` + `enableBackgroundDelivery`). Keep + supply reviewer justification (drafted in `listing.md`) or drop to reduce friction. |
 | B5 | **Release/Archive scheme injects real creds, `DEMO_MODE` unset** | ⚠️ Human | Release `fatalError`s if Supabase creds missing and the demo login is `#if DEBUG`-gated (verified). Confirm the archive scheme has real Supabase + API credentials. |

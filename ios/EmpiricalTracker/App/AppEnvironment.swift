@@ -10,6 +10,7 @@ import Account
 import HealthSync
 import Foundation
 import Observation
+import WidgetKit
 
 /// Single app-wide environment object injected into the SwiftUI environment.
 /// Owns all repositories and the shared `APIClient`.
@@ -60,6 +61,8 @@ public final class AppEnvironment {
     /// Shared Withings Cloud connection state, app-internal like `healthSyncState`,
     /// so the Body tab and Settings reflect one connection.
     let withingsCloudState: WithingsCloudState
+
+    let widgetStore = WidgetDataStore()
 
     // MARK: - Convenience passthrough
 
@@ -136,5 +139,20 @@ public final class AppEnvironment {
         async let _ = biomarkers.loadResults()
         async let _ = dietEvents.load()
         async let _ = account.loadSettings()
+        await writeWidgetSnapshot()
+    }
+
+    /// Writes the latest snapshot to the App Group container and reloads widget timelines.
+    public func writeWidgetSnapshot() async {
+        await bodyMetrics.load()
+        let todayEntries = foodDiary.entries.filter {
+            Calendar.current.isDateInToday($0.loggedOn)
+        }
+        widgetStore.write(
+            biomarkerResults: biomarkers.results,
+            bodyMetrics: bodyMetrics.metrics,
+            foodEntries: todayEntries
+        )
+        WidgetCenter.shared.reloadAllTimelines()
     }
 }
