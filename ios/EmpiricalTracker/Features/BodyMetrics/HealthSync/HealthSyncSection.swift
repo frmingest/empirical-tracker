@@ -1,6 +1,7 @@
 import Core
 import HealthSync
 import SwiftUI
+import UIKit
 
 /// The Apple Health card at the top of the Body tab (Sprint 9, ADR-022).
 ///
@@ -113,6 +114,24 @@ struct HealthSyncSection: View {
                 .foregroundStyle(Color.textMuted)
         }
 
+        if state.showPermissionsHint {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(String(localized: "healthsync.permissions.hint"))
+                    .font(.bodySmall)
+                    .foregroundStyle(Color.outRange)
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Label(String(localized: "healthsync.open_health_settings"), systemImage: "gear")
+                        .font(.bodySmall)
+                        .foregroundStyle(Color.accent)
+                }
+            }
+            .padding(.vertical, 2)
+        }
+
         if let error = state.errorMessage {
             errorLabel(error)
         }
@@ -129,13 +148,20 @@ struct HealthSyncSection: View {
     }
 
     private func summaryText(_ summary: HealthSyncManager.SyncSummary) -> String {
-        if summary.isEmpty {
+        if summary.isEmpty && summary.uploadsFailed == 0 {
             return String(localized: "healthsync.no_new")
         }
-        return String(
-            format: String(localized: "healthsync.summary"),
-            summary.weight, summary.bloodPressure
-        )
+        var parts: [String] = []
+        if summary.weight > 0        { parts.append("\(summary.weight) weight") }
+        if summary.bloodPressure > 0 { parts.append("\(summary.bloodPressure) BP") }
+        if summary.restingHeartRate > 0 { parts.append("\(summary.restingHeartRate) resting HR") }
+        if summary.heartRateVariability > 0 { parts.append("\(summary.heartRateVariability) HRV") }
+        if summary.heartRate > 0     { parts.append("\(summary.heartRate) avg HR") }
+        var result = parts.isEmpty ? "No new readings" : "Imported: \(parts.joined(separator: ", "))"
+        if summary.uploadsFailed > 0 {
+            result += " · \(summary.uploadsFailed) failed"
+        }
+        return result
     }
 
     private func errorLabel(_ message: String) -> some View {

@@ -72,13 +72,12 @@ struct DashboardBodyMapView: View {
                 }
                 Spacer()
             }
-
-            VStack {
-                Spacer()
-                BodyMapLegendView()
-                    .padding(.bottom, 24)
-            }
         }
+        .overlay(alignment: .bottom) {
+            BodyMapLegendView()
+                .padding(.bottom, 24)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.bgBase)
     }
 }

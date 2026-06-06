@@ -2,12 +2,14 @@ import Core
 import Foundation
 import HealthSync
 import SwiftUI
+import UIKit
 
 /// Settings ▸ Apple Health (Sprint 9, ADR-022). Granular per-type import toggles,
 /// connection management, and the disconnect/revoke guidance. Mirrors the Body-tab
 /// card's connection state (both read the single `AppEnvironment.healthSyncState`).
 struct HealthSyncSettingsView: View {
     @Environment(AppEnvironment.self) private var env
+    @State private var showingDisconnectConfirmation = false
 
     // Access healthSyncState through env directly rather than declaring a local
     // computed property with an explicit HealthSyncState type annotation, which
@@ -67,10 +69,48 @@ struct HealthSyncSettingsView: View {
                     .foregroundStyle(Color.accent)
                 }
                 .disabled(env.healthSyncState.isSyncing)
+
+                if let summary = env.healthSyncState.lastSummary, !env.healthSyncState.isSyncing,
+                   env.healthSyncState.errorMessage == nil {
+                    Text(summaryText(summary))
+                        .font(.bodySmall)
+                        .foregroundStyle(Color.textMuted)
+                }
+
+                if env.healthSyncState.showPermissionsHint {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(String(localized: "healthsync.permissions.hint"))
+                            .font(.bodySmall)
+                            .foregroundStyle(Color.outRange)
+                        Button {
+                            if let url = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            Label(String(localized: "healthsync.open_health_settings"), systemImage: "gear")
+                                .font(.bodySmall)
+                                .foregroundStyle(Color.accent)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+
                 Button(role: .destructive) {
-                    env.healthSyncState.disconnect()
+                    showingDisconnectConfirmation = true
                 } label: {
                     Label(String(localized: "healthsync.disconnect"), systemImage: "xmark.circle")
+                }
+                .confirmationDialog(
+                    String(localized: "healthsync.disconnect.confirm.title"),
+                    isPresented: $showingDisconnectConfirmation,
+                    titleVisibility: .visible
+                ) {
+                    Button(String(localized: "healthsync.disconnect"), role: .destructive) {
+                        env.healthSyncState.disconnect()
+                    }
+                    Button(String(localized: "Cancel"), role: .cancel) {}
+                } message: {
+                    Text(String(localized: "healthsync.disconnect.confirm.message"))
                 }
             case .unavailable:
                 EmptyView()
@@ -120,6 +160,21 @@ struct HealthSyncSettingsView: View {
     }
 
     // MARK: - Helpers
+
+    private func summaryText(_ summary: HealthSyncManager.SyncSummary) -> String {
+        if summary.isEmpty && summary.uploadsFailed == 0 {
+            return String(localized: "healthsync.no_new")
+        }
+        var parts: [String] = []
+        if summary.weight > 0              { parts.append("\(summary.weight) weight") }
+        if summary.bloodPressure > 0       { parts.append("\(summary.bloodPressure) BP") }
+        if summary.restingHeartRate > 0    { parts.append("\(summary.restingHeartRate) resting HR") }
+        if summary.heartRateVariability > 0 { parts.append("\(summary.heartRateVariability) HRV") }
+        if summary.heartRate > 0           { parts.append("\(summary.heartRate) avg HR") }
+        var result = parts.isEmpty ? "No new readings" : "Imported: \(parts.joined(separator: ", "))"
+        if summary.uploadsFailed > 0 { result += " · \(summary.uploadsFailed) failed" }
+        return result
+    }
 
     private func label(for type: HealthMetricType) -> String {
         switch type {

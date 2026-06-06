@@ -11,12 +11,12 @@ import FoodDiary
 /// load in `AppEnvironment`. The widget extension uses `WidgetDataStore.read()`
 /// to load the last-saved snapshot.
 ///
-/// App Group ID: `group.app.empirical.tracker`
+/// App Group ID: `group.com.FaizMalik.EmpiricalTracker`
 /// This must be added to both the app and widget targets in Xcode:
-///   Signing & Capabilities → + Capability → App Groups → group.app.empirical.tracker
+///   Signing & Capabilities → + Capability → App Groups → group.com.FaizMalik.EmpiricalTracker
 final class WidgetDataStore {
 
-    static let appGroupID = "group.app.empirical.tracker"
+    static let appGroupID = "group.com.FaizMalik.EmpiricalTracker"
     static let snapshotKey = "widget_snapshot_v1"
 
     // MARK: - Write (called from app)
