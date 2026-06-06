@@ -1,9 +1,9 @@
 # App Store Submission — Go / No-Go Checklist
 
 **Owner:** Release & Compliance
-**Last reviewed:** 2026-06-05
+**Last reviewed:** 2026-06-06
 **Build under review:** marketing `1.0` (build `1`), bundle `com.FaizMalik.EmpiricalTracker`
-**Current verdict:** 🟠 **NO-GO** — A1/A3 unblock once GitHub Pages is enabled; A4 needs reviewer account; A5 needs screenshots.
+**Current verdict:** 🟠 **NO-GO** — A4 needs reviewer account credentials in `listing.md`; A5 needs screenshots uploaded to ASC.
 
 This is the single go/no-go gate for an App Store Connect submission. Each row was
 **verified against source** (code, entitlements, `PrivacyInfo.xcprivacy`, the legal
@@ -29,9 +29,9 @@ to close before scaling.
 
 | # | Item | Status | Evidence / action |
 |---|------|--------|-------------------|
-| A1 | **Privacy-policy URL is real & reachable** | ⚠️ Enable Pages | `Legal.swift` points to `https://frmingest.github.io/empirical-tracker/privacy`; `docs/privacy.html` is published. **Action:** enable GitHub Pages in repo Settings ▸ Pages (Source: `main / docs/`), then paste URL into ASC ▸ App Privacy. |
+| A1 | **Privacy-policy URL is real & reachable** | ✅ Resolved | `https://frmingest.github.io/empirical-tracker/privacy` returns HTTP 200; GitHub Pages is live (Source: `main / docs/`). Paste URL into ASC ▸ App Privacy if not already set. |
 | A2 | **Legal docs have no `[TBD]` left + legal review** | ✅ Resolved | All `[TBD]` removed. Controller: Faiz Malik, frmingest@gmail.com. Effective date: 4 June 2026. Minimum age: 16. Governing jurisdiction: Norway/EEA. |
-| A3 | **Support URL is real & reachable** | ⚠️ Enable Pages | `listing.md` URL is `https://frmingest.github.io/empirical-tracker/support`; `docs/support.html` is clean. Same GitHub Pages action as A1 unblocks this. |
+| A3 | **Support URL is real & reachable** | ✅ Resolved | `https://frmingest.github.io/empirical-tracker/support` returns HTTP 200; GitHub Pages is live. Paste URL into ASC ▸ App Information if not already set. |
 | A4 | **Reviewer demo account provisioned** | 🔴 Open | `listing.md` review notes: `Email/Password: [TBD]`. A sign-up flow now exists in-app (`AuthView` Sign Up toggle, `feat(auth): add in-app account creation`), so App Review *could* self-register — but a pre-provisioned account with real panel data seeded is the professional standard. Provision a dedicated `reviewer@...` account and paste creds into `listing.md`. |
 | A5 | **Screenshots captured (per required display size)** | 🔴 Open | None in repo. Capture Dashboard (body map default), a biomarker trend, Food diary, Body metrics, doctor-PDF report. |
 | A6 | **Test suite green** | ✅ Resolved | `fix(auth): fail-closed on ES256 token with no JWKS client` merged (PR #95). `_verify_token_local` now returns `401` when no Supabase URL is configured rather than falling through. `pytest -q` should be clean. |
