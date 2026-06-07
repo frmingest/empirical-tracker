@@ -96,4 +96,35 @@ struct HealthSyncTests {
         // the sink contract are what we assert here.
         #expect(await sink.uploaded.isEmpty)
     }
+
+    /// The default `uploadBatch` falls back to per-item `upload`, so in-memory/test
+    /// sinks that only implement `upload` keep working unchanged.
+    @Test func defaultUploadBatchFallsBackToPerItemUpload() async throws {
+        let sink = CapturingSink()
+        try await sink.uploadBatch([
+            BodyMetricPayload(weightKg: 80.1, source: .healthkit),
+            BodyMetricPayload(weightKg: 80.2, source: .healthkit),
+        ])
+        #expect(await sink.count == 2)
+    }
+
+    /// A sink that overrides `uploadBatch` (like the real `/body-metrics/batch`-backed
+    /// one) receives whole batches in a single call rather than item-by-item.
+    actor BatchSink: BodyMetricSyncSink {
+        private(set) var batches: [[BodyMetricPayload]] = []
+        func upload(_ payload: BodyMetricPayload) async throws { batches.append([payload]) }
+        func uploadBatch(_ payloads: [BodyMetricPayload]) async throws { batches.append(payloads) }
+        var batchCount: Int { batches.count }
+    }
+
+    @Test func overriddenUploadBatchReceivesOneCallPerBatch() async throws {
+        let sink = BatchSink()
+        try await sink.uploadBatch([
+            BodyMetricPayload(weightKg: 80.1, source: .healthkit),
+            BodyMetricPayload(weightKg: 80.2, source: .healthkit),
+            BodyMetricPayload(weightKg: 80.3, source: .healthkit),
+        ])
+        #expect(await sink.batchCount == 1)
+        #expect(await sink.batches.first?.count == 3)
+    }
 }

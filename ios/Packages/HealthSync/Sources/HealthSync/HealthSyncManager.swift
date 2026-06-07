@@ -53,6 +53,50 @@ public actor HealthSyncManager {
         }
     }
 
+    // MARK: - Upload batching
+
+    /// One reading mapped and ready to send, paired with the dedup key that is
+    /// recorded only once its batch lands successfully.
+    private struct PendingUpload: Sendable {
+        let key: String
+        let payload: BodyMetricPayload
+    }
+
+    private struct Counts: Sendable { var uploaded = 0; var skipped = 0; var failed = 0 }
+
+    /// Matches the backend's `/body-metrics/batch` cap (router.py). Each batch is one
+    /// network round-trip, so a 6-year history of ~daily readings is a handful of
+    /// requests rather than thousands.
+    private static let maxBatchSize = 500
+
+    /// Filters out already-synced readings, then uploads the rest in `maxBatchSize`
+    /// chunks. A chunk's dedup keys are recorded only after its batch upload succeeds,
+    /// so a failed chunk is retried on the next sync (never silently dropped, never
+    /// double-inserted). Keys are inserted in memory only here — `sync()` flushes the
+    /// store once at the end.
+    private func uploadPending(_ readings: [PendingUpload]) async -> Counts {
+        var c = Counts()
+        var pending: [PendingUpload] = []
+        pending.reserveCapacity(readings.count)
+        for reading in readings {
+            if await syncedStore.contains(reading.key) { c.skipped += 1 } else { pending.append(reading) }
+        }
+
+        var index = 0
+        while index < pending.count {
+            let chunk = Array(pending[index..<min(index + Self.maxBatchSize, pending.count)])
+            index += Self.maxBatchSize
+            do {
+                try await sink.uploadBatch(chunk.map(\.payload))
+                for reading in chunk { await syncedStore.insert(reading.key) }
+                c.uploaded += chunk.count
+            } catch {
+                c.failed += chunk.count
+            }
+        }
+        return c
+    }
+
     // MARK: - Dependencies
 
     private let sink: any BodyMetricSyncSink
@@ -105,14 +149,14 @@ public actor HealthSyncManager {
     ///
     /// - Parameter since: optional lower bound; `nil` imports the full history.
     ///
-    /// All metric types are queried concurrently via a task group. The dedup store
-    /// is flushed once at the end to avoid thousands of UserDefaults writes.
+    /// All metric types are queried concurrently via a task group, and each type's new
+    /// readings are uploaded in batches (≤500, the backend's `/body-metrics/batch`
+    /// limit) rather than one request per reading. The dedup store is flushed once at
+    /// the end to avoid thousands of UserDefaults writes.
     @discardableResult
     public func sync(types: Set<HealthMetricType>, since: Date? = nil) async throws -> SyncSummary {
         #if canImport(HealthKit)
         guard HKHealthStore.isHealthDataAvailable() else { throw HealthSyncError.unavailable }
-
-        struct Counts: Sendable { var uploaded = 0; var skipped = 0; var failed = 0 }
 
         var weightCount = 0, bpCount = 0, rhrCount = 0, hrvCount = 0, hrCount = 0
         var totalSkipped = 0, totalFailed = 0
@@ -125,97 +169,67 @@ public actor HealthSyncManager {
         try await withThrowingTaskGroup(of: (HealthMetricType, Counts).self) { group in
             if types.contains(.weight) {
                 group.addTask {
-                    var c = Counts()
-                    for reading in try await self.readWeightSamples(since: since) {
-                        if await self.syncedStore.contains(reading.uuid) { c.skipped += 1; continue }
-                        do {
-                            try await self.sink.upload(BodyMetricPayload(
-                                measuredOn: Self.dayStart(reading.date),
-                                weightKg: reading.kg,
-                                source: .healthkit
-                            ))
-                            await self.syncedStore.insert(reading.uuid)
-                            c.uploaded += 1
-                        } catch { c.failed += 1 }
+                    let pending = try await self.readWeightSamples(since: since).map {
+                        PendingUpload(key: $0.uuid, payload: BodyMetricPayload(
+                            measuredOn: Self.dayStart($0.date),
+                            weightKg: $0.kg,
+                            source: .healthkit
+                        ))
                     }
-                    return (.weight, c)
+                    return (.weight, await self.uploadPending(pending))
                 }
             }
 
             if types.contains(.bloodPressure) {
                 group.addTask {
-                    var c = Counts()
-                    for reading in try await self.readBloodPressureSamples(since: since) {
-                        if await self.syncedStore.contains(reading.uuid) { c.skipped += 1; continue }
-                        do {
-                            try await self.sink.upload(BodyMetricPayload(
-                                measuredOn: Self.dayStart(reading.date),
-                                systolic: reading.systolic,
-                                diastolic: reading.diastolic,
-                                source: .healthkit
-                            ))
-                            await self.syncedStore.insert(reading.uuid)
-                            c.uploaded += 1
-                        } catch { c.failed += 1 }
+                    let pending = try await self.readBloodPressureSamples(since: since).map {
+                        PendingUpload(key: $0.uuid, payload: BodyMetricPayload(
+                            measuredOn: Self.dayStart($0.date),
+                            systolic: $0.systolic,
+                            diastolic: $0.diastolic,
+                            source: .healthkit
+                        ))
                     }
-                    return (.bloodPressure, c)
+                    return (.bloodPressure, await self.uploadPending(pending))
                 }
             }
 
             if types.contains(.restingHeartRate) {
                 group.addTask {
-                    var c = Counts()
-                    for reading in try await self.readRestingHRSamples(since: since) {
-                        if await self.syncedStore.contains(reading.uuid) { c.skipped += 1; continue }
-                        do {
-                            try await self.sink.upload(BodyMetricPayload(
-                                measuredOn: Self.dayStart(reading.date),
-                                restingHeartRateBpm: reading.bpm,
-                                source: .healthkit
-                            ))
-                            await self.syncedStore.insert(reading.uuid)
-                            c.uploaded += 1
-                        } catch { c.failed += 1 }
+                    let pending = try await self.readRestingHRSamples(since: since).map {
+                        PendingUpload(key: $0.uuid, payload: BodyMetricPayload(
+                            measuredOn: Self.dayStart($0.date),
+                            restingHeartRateBpm: $0.bpm,
+                            source: .healthkit
+                        ))
                     }
-                    return (.restingHeartRate, c)
+                    return (.restingHeartRate, await self.uploadPending(pending))
                 }
             }
 
             if types.contains(.heartRateVariability) {
                 group.addTask {
-                    var c = Counts()
-                    for reading in try await self.readHRVSamples(since: since) {
-                        if await self.syncedStore.contains(reading.uuid) { c.skipped += 1; continue }
-                        do {
-                            try await self.sink.upload(BodyMetricPayload(
-                                measuredOn: Self.dayStart(reading.date),
-                                hrvMs: reading.ms,
-                                source: .healthkit
-                            ))
-                            await self.syncedStore.insert(reading.uuid)
-                            c.uploaded += 1
-                        } catch { c.failed += 1 }
+                    let pending = try await self.readHRVSamples(since: since).map {
+                        PendingUpload(key: $0.uuid, payload: BodyMetricPayload(
+                            measuredOn: Self.dayStart($0.date),
+                            hrvMs: $0.ms,
+                            source: .healthkit
+                        ))
                     }
-                    return (.heartRateVariability, c)
+                    return (.heartRateVariability, await self.uploadPending(pending))
                 }
             }
 
             if types.contains(.heartRate) {
                 group.addTask {
-                    var c = Counts()
-                    for reading in try await self.readDailyAverageHRSamples(since: since) {
-                        if await self.syncedStore.contains(reading.dedupKey) { c.skipped += 1; continue }
-                        do {
-                            try await self.sink.upload(BodyMetricPayload(
-                                measuredOn: reading.day,
-                                heartRateBpm: reading.bpm,
-                                source: .healthkit
-                            ))
-                            await self.syncedStore.insert(reading.dedupKey)
-                            c.uploaded += 1
-                        } catch { c.failed += 1 }
+                    let pending = try await self.readDailyAverageHRSamples(since: since).map {
+                        PendingUpload(key: $0.dedupKey, payload: BodyMetricPayload(
+                            measuredOn: $0.day,
+                            heartRateBpm: $0.bpm,
+                            source: .healthkit
+                        ))
                     }
-                    return (.heartRate, c)
+                    return (.heartRate, await self.uploadPending(pending))
                 }
             }
 
