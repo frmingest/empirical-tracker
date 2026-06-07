@@ -28,6 +28,7 @@ struct AddCustomFoodView: View {
     @State private var satFatText: String
     @State private var sodiumText: String
     @State private var servingText: String
+    @State private var ingredientsText: String
     /// Explicit opt-in to share this food into the common catalogue. Off by
     /// default — sharing is a deliberate choice and the consent basis for keeping
     /// the item (anonymised) after deletion (ADR-027).
@@ -61,6 +62,7 @@ struct AddCustomFoodView: View {
         _satFatText  = State(initialValue: Self.fmt(parsedLabel?.saturatedFat100g))
         _sodiumText  = State(initialValue: Self.fmt(parsedLabel?.sodiumMg100g))
         _servingText = State(initialValue: "100")
+        _ingredientsText = State(initialValue: parsedLabel?.ingredients ?? "")
     }
 
     var body: some View {
@@ -68,6 +70,7 @@ struct AddCustomFoodView: View {
             Form {
                 identitySection
                 nutrientsSection
+                ingredientsSection
                 sharingSection
                 ocrHintSection
             }
@@ -134,6 +137,22 @@ struct AddCustomFoodView: View {
             Text(String(localized: "food.custom.section.nutrients"))
         } footer: {
             Text(String(localized: "food.custom.nutrients.footer"))
+        }
+    }
+
+    private var ingredientsSection: some View {
+        Section {
+            TextField(
+                String(localized: "food.custom.ingredients.placeholder"),
+                text: $ingredientsText,
+                axis: .vertical
+            )
+            .lineLimit(3...8)
+            .foregroundStyle(Color.textPrimary)
+        } header: {
+            Text(String(localized: "food.custom.section.ingredients"))
+        } footer: {
+            Text(String(localized: "food.custom.ingredients.footer"))
         }
     }
 
@@ -206,6 +225,7 @@ struct AddCustomFoodView: View {
             saturatedFatG: parse(satFatText),
             sodiumMg: parse(sodiumText),
             servingG: parse(servingText),
+            ingredients: ingredientsText.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
             isPublic: shareToCatalogue
         )
         print("🔍 OCR-DEBUG payload energy=\(payload.energyKcal as Any) carbs=\(payload.carbsG as Any) protein=\(payload.proteinG as Any) fat=\(payload.fatG as Any)")

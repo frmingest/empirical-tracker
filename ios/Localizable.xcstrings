@@ -3161,6 +3161,40 @@
         }
       }
     },
+    "food.custom.ingredients.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pre-filled from the label scan when found. Edit or leave blank if not listed."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forhåndsutfylt fra etikettskanningen når funnet. Rediger eller la stå blankt hvis ikke oppgitt."
+          }
+        }
+      }
+    },
+    "food.custom.ingredients.placeholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "e.g. water, sugar, salt…"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "f.eks. vann, sukker, salt…"
+          }
+        }
+      }
+    },
     "food.custom.nutrients.footer" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3208,6 +3242,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Lagre"
+          }
+        }
+      }
+    },
+    "food.custom.section.ingredients" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingredients"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingredienser"
           }
         }
       }
@@ -3774,6 +3825,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Valgfritt notat…"
+          }
+        }
+      }
+    },
+    "food.log.ingredients" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingredients"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingredienser"
           }
         }
       }

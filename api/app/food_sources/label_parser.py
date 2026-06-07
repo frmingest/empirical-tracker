@@ -106,7 +106,16 @@ def parse_label(ocr_text: str) -> FoodItem:
         fat_100g=_to_float(parsed.get("fat_100g")),
         saturated_fat_100g=_to_float(parsed.get("saturated_fat_100g")),
         sodium_mg_100g=_to_float(parsed.get("sodium_mg_100g")),
+        ingredients=_clean_str(parsed.get("ingredients")),
     ), parsed  # also return the raw parsed dict so the router can persist it
+
+
+def _clean_str(value: object) -> str | None:
+    """Normalise an extracted free-text field — empty / whitespace becomes None."""
+    if not isinstance(value, str):
+        return None
+    stripped = value.strip()
+    return stripped or None
 
 
 def _to_float(value: object) -> float | None:

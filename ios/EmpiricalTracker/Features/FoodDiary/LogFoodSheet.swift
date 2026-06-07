@@ -48,6 +48,7 @@ struct LogFoodSheet: View {
                 quantitySection
                 if item != nil {
                     nutritionPreviewSection
+                    ingredientsSection
                 } else {
                     freeTextNutritionSection
                 }
@@ -147,6 +148,19 @@ struct LogFoodSheet: View {
             Text(String(localized: "food.log.nutrition"))
         } footer: {
             Text(String(localized: "food.log.nutrition.optional"))
+        }
+    }
+
+    /// Read-only ingredients list, shown only when the product carries one.
+    @ViewBuilder
+    private var ingredientsSection: some View {
+        if let ingredients = item?.ingredients,
+           !ingredients.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            Section(String(localized: "food.log.ingredients")) {
+                Text(ingredients)
+                    .font(.bodySmall)
+                    .foregroundStyle(Color.textSecondary)
+            }
         }
     }
 
