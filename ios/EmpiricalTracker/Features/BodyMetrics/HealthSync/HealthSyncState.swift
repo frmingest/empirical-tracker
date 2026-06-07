@@ -101,9 +101,12 @@ final class HealthSyncState {
     // MARK: - Lifecycle
 
     /// Called when the Body tab appears: silently top-up and ensure observation.
+    /// Skips the sync if one ran within the last 5 minutes to avoid re-querying
+    /// all of HealthKit history on every tab switch.
     func refreshOnAppear() async {
         guard connection == .connected else { return }
         await ensureObserving()
+        if let last = lastSyncDate, Date().timeIntervalSince(last) < 300 { return }
         await syncNow(silent: true)
     }
 
@@ -172,7 +175,12 @@ final class HealthSyncState {
             try? await manager.requestAuthorization(for: enabledTypes)
         }
         do {
-            let summary = try await manager.sync(types: enabledTypes)
+            // Incremental sync: query only since the last sync minus a 7-day buffer to
+            // catch samples the user entered with a backdated date. UUID dedup ensures
+            // the overlap window never double-uploads samples already on the backend.
+            // `nil` on first sync → full history import.
+            let since = lastSyncDate.map { $0.addingTimeInterval(-7 * 24 * 3600) }
+            let summary = try await manager.sync(types: enabledTypes, since: since)
             lastSummary = summary
             let now = Date()
             lastSyncDate = now

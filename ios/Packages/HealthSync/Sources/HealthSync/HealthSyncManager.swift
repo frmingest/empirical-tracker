@@ -104,94 +104,136 @@ public actor HealthSyncManager {
     /// UUIDs it successfully uploaded. Returns a count summary.
     ///
     /// - Parameter since: optional lower bound; `nil` imports the full history.
+    ///
+    /// All metric types are queried concurrently via a task group. The dedup store
+    /// is flushed once at the end to avoid thousands of UserDefaults writes.
     @discardableResult
     public func sync(types: Set<HealthMetricType>, since: Date? = nil) async throws -> SyncSummary {
         #if canImport(HealthKit)
         guard HKHealthStore.isHealthDataAvailable() else { throw HealthSyncError.unavailable }
 
-        var weightCount = 0
-        var bpCount = 0
-        var rhrCount = 0
-        var hrvCount = 0
-        var hrCount = 0
-        var skipped = 0
-        var failed = 0
+        struct Counts: Sendable { var uploaded = 0; var skipped = 0; var failed = 0 }
 
-        if types.contains(.weight) {
-            for reading in try await readWeightSamples(since: since) {
-                if await syncedStore.contains(reading.uuid) { skipped += 1; continue }
-                do {
-                    try await sink.upload(BodyMetricPayload(
-                        measuredOn: Self.dayStart(reading.date),
-                        weightKg: reading.kg,
-                        source: .healthkit
-                    ))
-                    await syncedStore.insert(reading.uuid)
-                    weightCount += 1
-                } catch { failed += 1 }
+        var weightCount = 0, bpCount = 0, rhrCount = 0, hrvCount = 0, hrCount = 0
+        var totalSkipped = 0, totalFailed = 0
+
+        // Capture any task-group error so we can flush the dedup store before
+        // rethrowing — partial progress (UUIDs of already-uploaded samples) should
+        // be persisted even when one metric type's query fails.
+        var groupError: Error?
+        do {
+        try await withThrowingTaskGroup(of: (HealthMetricType, Counts).self) { group in
+            if types.contains(.weight) {
+                group.addTask {
+                    var c = Counts()
+                    for reading in try await self.readWeightSamples(since: since) {
+                        if await self.syncedStore.contains(reading.uuid) { c.skipped += 1; continue }
+                        do {
+                            try await self.sink.upload(BodyMetricPayload(
+                                measuredOn: Self.dayStart(reading.date),
+                                weightKg: reading.kg,
+                                source: .healthkit
+                            ))
+                            await self.syncedStore.insert(reading.uuid)
+                            c.uploaded += 1
+                        } catch { c.failed += 1 }
+                    }
+                    return (.weight, c)
+                }
+            }
+
+            if types.contains(.bloodPressure) {
+                group.addTask {
+                    var c = Counts()
+                    for reading in try await self.readBloodPressureSamples(since: since) {
+                        if await self.syncedStore.contains(reading.uuid) { c.skipped += 1; continue }
+                        do {
+                            try await self.sink.upload(BodyMetricPayload(
+                                measuredOn: Self.dayStart(reading.date),
+                                systolic: reading.systolic,
+                                diastolic: reading.diastolic,
+                                source: .healthkit
+                            ))
+                            await self.syncedStore.insert(reading.uuid)
+                            c.uploaded += 1
+                        } catch { c.failed += 1 }
+                    }
+                    return (.bloodPressure, c)
+                }
+            }
+
+            if types.contains(.restingHeartRate) {
+                group.addTask {
+                    var c = Counts()
+                    for reading in try await self.readRestingHRSamples(since: since) {
+                        if await self.syncedStore.contains(reading.uuid) { c.skipped += 1; continue }
+                        do {
+                            try await self.sink.upload(BodyMetricPayload(
+                                measuredOn: Self.dayStart(reading.date),
+                                restingHeartRateBpm: reading.bpm,
+                                source: .healthkit
+                            ))
+                            await self.syncedStore.insert(reading.uuid)
+                            c.uploaded += 1
+                        } catch { c.failed += 1 }
+                    }
+                    return (.restingHeartRate, c)
+                }
+            }
+
+            if types.contains(.heartRateVariability) {
+                group.addTask {
+                    var c = Counts()
+                    for reading in try await self.readHRVSamples(since: since) {
+                        if await self.syncedStore.contains(reading.uuid) { c.skipped += 1; continue }
+                        do {
+                            try await self.sink.upload(BodyMetricPayload(
+                                measuredOn: Self.dayStart(reading.date),
+                                hrvMs: reading.ms,
+                                source: .healthkit
+                            ))
+                            await self.syncedStore.insert(reading.uuid)
+                            c.uploaded += 1
+                        } catch { c.failed += 1 }
+                    }
+                    return (.heartRateVariability, c)
+                }
+            }
+
+            if types.contains(.heartRate) {
+                group.addTask {
+                    var c = Counts()
+                    for reading in try await self.readDailyAverageHRSamples(since: since) {
+                        if await self.syncedStore.contains(reading.dedupKey) { c.skipped += 1; continue }
+                        do {
+                            try await self.sink.upload(BodyMetricPayload(
+                                measuredOn: reading.day,
+                                heartRateBpm: reading.bpm,
+                                source: .healthkit
+                            ))
+                            await self.syncedStore.insert(reading.dedupKey)
+                            c.uploaded += 1
+                        } catch { c.failed += 1 }
+                    }
+                    return (.heartRate, c)
+                }
+            }
+
+            for try await (type, c) in group {
+                totalSkipped += c.skipped
+                totalFailed += c.failed
+                switch type {
+                case .weight:               weightCount = c.uploaded
+                case .bloodPressure:        bpCount     = c.uploaded
+                case .restingHeartRate:     rhrCount    = c.uploaded
+                case .heartRateVariability: hrvCount    = c.uploaded
+                case .heartRate:            hrCount     = c.uploaded
+                }
             }
         }
-
-        if types.contains(.bloodPressure) {
-            for reading in try await readBloodPressureSamples(since: since) {
-                if await syncedStore.contains(reading.uuid) { skipped += 1; continue }
-                do {
-                    try await sink.upload(BodyMetricPayload(
-                        measuredOn: Self.dayStart(reading.date),
-                        systolic: reading.systolic,
-                        diastolic: reading.diastolic,
-                        source: .healthkit
-                    ))
-                    await syncedStore.insert(reading.uuid)
-                    bpCount += 1
-                } catch { failed += 1 }
-            }
-        }
-
-        if types.contains(.restingHeartRate) {
-            for reading in try await readRestingHRSamples(since: since) {
-                if await syncedStore.contains(reading.uuid) { skipped += 1; continue }
-                do {
-                    try await sink.upload(BodyMetricPayload(
-                        measuredOn: Self.dayStart(reading.date),
-                        restingHeartRateBpm: reading.bpm,
-                        source: .healthkit
-                    ))
-                    await syncedStore.insert(reading.uuid)
-                    rhrCount += 1
-                } catch { failed += 1 }
-            }
-        }
-
-        if types.contains(.heartRateVariability) {
-            for reading in try await readHRVSamples(since: since) {
-                if await syncedStore.contains(reading.uuid) { skipped += 1; continue }
-                do {
-                    try await sink.upload(BodyMetricPayload(
-                        measuredOn: Self.dayStart(reading.date),
-                        hrvMs: reading.ms,
-                        source: .healthkit
-                    ))
-                    await syncedStore.insert(reading.uuid)
-                    hrvCount += 1
-                } catch { failed += 1 }
-            }
-        }
-
-        if types.contains(.heartRate) {
-            for reading in try await readDailyAverageHRSamples(since: since) {
-                if await syncedStore.contains(reading.dedupKey) { skipped += 1; continue }
-                do {
-                    try await sink.upload(BodyMetricPayload(
-                        measuredOn: reading.day,
-                        heartRateBpm: reading.bpm,
-                        source: .healthkit
-                    ))
-                    await syncedStore.insert(reading.dedupKey)
-                    hrCount += 1
-                } catch { failed += 1 }
-            }
-        }
+        } catch { groupError = error }
+        await syncedStore.flush()
+        if let groupError { throw groupError }
 
         return SyncSummary(
             weight: weightCount,
@@ -199,8 +241,8 @@ public actor HealthSyncManager {
             restingHeartRate: rhrCount,
             heartRateVariability: hrvCount,
             heartRate: hrCount,
-            duplicatesSkipped: skipped,
-            uploadsFailed: failed
+            duplicatesSkipped: totalSkipped,
+            uploadsFailed: totalFailed
         )
         #else
         throw HealthSyncError.unavailable
@@ -320,33 +362,46 @@ public actor HealthSyncManager {
         }
     }
 
+    /// Uses `HKStatisticsCollectionQuery` to compute daily averages inside HealthKit's
+    /// own process rather than loading every raw HR sample (potentially 1M+ readings
+    /// for Watch users). HealthKit returns one `HKStatistics` per calendar day with
+    /// `averageQuantity()` already computed.
     private func readDailyAverageHRSamples(since: Date?) async throws -> [DailyAvgHRReading] {
-        let rawSamples: [HRReading] = try await query(
-            type: HKQuantityType(.heartRate), since: since
-        ) { sample in
-            guard let q = sample as? HKQuantitySample else { return nil }
-            let unit = HKUnit.count().unitDivided(by: .minute())
-            let bpm = q.quantity.doubleValue(for: unit)
-            guard bpm > 0 else { return nil }
-            return HRReading(uuid: q.uuid.uuidString, date: q.endDate, bpm: Int(bpm.rounded()))
+        let type = HKQuantityType(.heartRate)
+        let predicate = since.map {
+            HKQuery.predicateForSamples(withStart: $0, end: nil, options: .strictStartDate)
         }
-        // Group by calendar day and average. Dedup key is date-based so re-syncs skip
-        // days that were already stored, without re-using individual sample UUIDs.
-        let cal = Calendar.current
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withFullDate]
-        var byDay: [Date: [Int]] = [:]
-        for s in rawSamples {
-            let day = cal.startOfDay(for: s.date)
-            byDay[day, default: []].append(s.bpm)
+        let anchorDate = Calendar.current.startOfDay(for: Date())
+        let interval = DateComponents(day: 1)
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let statsQuery = HKStatisticsCollectionQuery(
+                quantityType: type,
+                quantitySamplePredicate: predicate,
+                options: .discreteAverage,
+                anchorDate: anchorDate,
+                intervalComponents: interval
+            )
+            statsQuery.initialResultsHandler = { _, collection, error in
+                if let error {
+                    continuation.resume(throwing: HealthSyncError.query(error.localizedDescription))
+                    return
+                }
+                let unit = HKUnit.count().unitDivided(by: .minute())
+                let formatter = ISO8601DateFormatter()
+                formatter.formatOptions = [.withFullDate]
+                let readings: [DailyAvgHRReading] = (collection?.statistics() ?? []).compactMap { stat in
+                    guard let avg = stat.averageQuantity() else { return nil }
+                    let bpm = avg.doubleValue(for: unit)
+                    guard bpm > 0 else { return nil }
+                    let day = stat.startDate
+                    let key = "avg-hr-\(formatter.string(from: day))"
+                    return DailyAvgHRReading(dedupKey: key, day: day, bpm: Int(bpm.rounded()))
+                }
+                continuation.resume(returning: readings.sorted { $0.day < $1.day })
+            }
+            store.execute(statsQuery)
         }
-        var result: [DailyAvgHRReading] = []
-        for (day, values) in byDay {
-            let avg = values.reduce(0, +) / values.count
-            let key = "avg-hr-\(formatter.string(from: day))"
-            result.append(DailyAvgHRReading(dedupKey: key, day: day, bpm: avg))
-        }
-        return result.sorted { $0.day < $1.day }
     }
 
     private func readBloodPressureSamples(since: Date?) async throws -> [BPReading] {
