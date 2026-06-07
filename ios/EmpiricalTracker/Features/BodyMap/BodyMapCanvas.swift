@@ -88,17 +88,22 @@ struct BodyMapCanvas: View {
                     )
 
                 // Leader lines + anatomical anchor dots, drawn behind the pins.
+                // Use live region lookup so year-filter changes (which mutate region
+                // items/assessments without changing canvas geometry) are reflected
+                // immediately without invalidating the placement cache.
                 Canvas { ctx, _ in
                     for placement in placements {
-                        drawConnector(&ctx, placement: placement, pinDiameter: pinDiameter)
+                        let live = regions.first { $0.id == placement.region.id } ?? placement.region
+                        drawConnector(&ctx, placement: placement, liveRegion: live, pinDiameter: pinDiameter)
                     }
                 }
                 .frame(width: size.width, height: size.height)
                 .allowsHitTesting(false)
 
                 ForEach(placements) { placement in
-                    BodyMapHotspotPin(region: placement.region, diameter: pinDiameter) {
-                        onSelect(placement.region)
+                    let live = regions.first { $0.id == placement.region.id } ?? placement.region
+                    BodyMapHotspotPin(region: live, diameter: pinDiameter) {
+                        onSelect(live)
                     }
                     .position(placement.pin)
                 }
@@ -204,10 +209,12 @@ struct BodyMapCanvas: View {
     }
 
     /// Draw a dashed leader line from the pin's edge to a status-coloured dot at
-    /// the anatomical anchor.
+    /// the anatomical anchor. Accepts the live region so colour reflects the
+    /// current filter state rather than whatever was cached in the placement.
     private func drawConnector(
         _ ctx: inout GraphicsContext,
         placement: PinPlacement,
+        liveRegion: BodyRegion,
         pinDiameter: CGFloat
     ) {
         let pin = placement.pin
@@ -233,7 +240,7 @@ struct BodyMapCanvas: View {
             style: StrokeStyle(lineWidth: 1, lineCap: .round, dash: [3, 3])
         )
 
-        let color = placement.region.worstAssessment.pinColor
+        let color = liveRegion.worstAssessment.pinColor
         let dotRect = CGRect(x: anchor.x - dotRadius, y: anchor.y - dotRadius,
                              width: dotRadius * 2, height: dotRadius * 2)
         ctx.fill(Path(ellipseIn: dotRect), with: .color(color))

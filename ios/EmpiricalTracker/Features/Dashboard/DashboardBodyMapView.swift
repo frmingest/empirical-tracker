@@ -46,23 +46,23 @@ struct DashboardBodyMapView: View {
 
     private func bodyCanvas(_ vm: BodyMapViewModel) -> some View {
         // Stats panels are ZStack siblings so @Observable env.bodyMetrics updates
-        // don't invalidate the BodyMapCanvas layout pass. The legend, year filter,
-        // and sync text live in an explicit bottom-pinned VStack rather than as an
-        // .overlay on BodyMapCanvas (a GeometryReader) — overlays on GeometryReader
-        // can silently vanish in certain NavigationStack contexts.
+        // don't invalidate the BodyMapCanvas layout pass. The legend and sync text
+        // live in an explicit bottom-pinned VStack rather than as an .overlay on
+        // BodyMapCanvas (a GeometryReader) — overlays on GeometryReader can silently
+        // vanish in certain NavigationStack contexts.
+        // Year filter sits at the top so it doesn't compete with the bottom legend.
         let hasYearFilter = vm.availableYears.count > 1
-        let bottomReserve: CGFloat = hasYearFilter ? 116 : 80
 
         return ZStack {
             BodyMapCanvas(
                 regions: vm.regions,
                 silhouetteOpacity: 0.18,
-                bottomReserve: bottomReserve
+                bottomReserve: 80
             ) { region in
                 selectedRegion = region
             }
 
-            // Top-corner stat panels
+            // Top-corner stat panels + compact year filter chips below them
             VStack(spacing: 0) {
                 HStack(alignment: .top) {
                     HeartStatsPanel(metrics: env.bodyMetrics.metrics)
@@ -76,17 +76,18 @@ struct DashboardBodyMapView: View {
                     .padding(.top, 12)
                     .padding(.trailing, 12)
                 }
+                if hasYearFilter {
+                    yearFilterRow(vm)
+                        .padding(.top, 8)
+                }
                 Spacer()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            // Bottom legend group — year filter (when >1 year), colour legend, sync time
+            // Bottom legend + sync time — use an inner bottom spacer (not
+            // .padding after .frame) so the content stays within the ZStack bounds.
             VStack(spacing: 0) {
                 Spacer()
-                if hasYearFilter {
-                    yearFilterRow(vm)
-                        .padding(.bottom, 8)
-                }
                 BodyMapLegendView()
                 if let date = env.healthSyncState.lastSyncDate {
                     Text("Synced \(date.formatted(.relative(presentation: .named)))")
@@ -94,9 +95,9 @@ struct DashboardBodyMapView: View {
                         .foregroundStyle(Color.textMuted)
                         .padding(.top, 4)
                 }
+                Spacer().frame(height: 14)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.bottom, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.bgBase)
@@ -104,17 +105,18 @@ struct DashboardBodyMapView: View {
 
     private func yearFilterRow(_ vm: BodyMapViewModel) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                PillChip("All", isSelected: vm.filterYear == nil) {
+            HStack(spacing: 6) {
+                BodyMapYearChip(label: "All", isSelected: vm.filterYear == nil) {
                     vm.setFilterYear(nil)
                 }
                 ForEach(vm.availableYears, id: \.self) { year in
-                    PillChip("\(year)", isSelected: vm.filterYear == year) {
+                    BodyMapYearChip(label: "\(year)", isSelected: vm.filterYear == year) {
                         vm.setFilterYear(year)
                     }
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 2)
         }
     }
 }
@@ -320,6 +322,39 @@ private struct HeartMetricsInfoSheet: View {
         }
         .padding(24)
         .background(Color.bgBase)
+    }
+}
+
+// MARK: - Year chip (compact variant used only on the body-map canvas)
+
+/// Smaller than the full PillChip — uses labelSmall font + tighter padding so
+/// the row sits neatly between the stat panels without dominating the canvas.
+private struct BodyMapYearChip: View {
+    let label: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(.labelSmall)
+                .fontWeight(.semibold)
+                .foregroundStyle(isSelected ? Color.accent : Color.textSecondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(
+                    isSelected ? Color.accent.opacity(0.13) : Color.bgCard.opacity(0.75),
+                    in: Capsule()
+                )
+                .overlay(
+                    Capsule().strokeBorder(
+                        isSelected ? Color.accent.opacity(0.8) : Color.borderCard,
+                        lineWidth: isSelected ? 1.5 : 1
+                    )
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 }
 
