@@ -45,18 +45,23 @@ struct DashboardBodyMapView: View {
     // MARK: - Canvas
 
     private func bodyCanvas(_ vm: BodyMapViewModel) -> some View {
-        // The overlay panels are siblings of BodyMapCanvas via ZStack rather
-        // than children via .overlay — this way @Observable changes to
-        // env.bodyMetrics do not trigger a BodyMapCanvas layout pass.
-        ZStack {
+        // All overlay elements are explicit ZStack siblings rather than .overlay
+        // children of BodyMapCanvas (a GeometryReader). Overlays on GeometryReader
+        // can silently fail to render inside NavigationStack. Siblings avoid that
+        // and also prevent @Observable bodyMetrics updates from triggering a canvas
+        // layout pass.
+        let hasYearFilter = vm.availableYears.count > 1
+
+        return ZStack {
             BodyMapCanvas(
                 regions: vm.regions,
                 silhouetteOpacity: 0.18,
-                bottomReserve: 72
+                bottomReserve: 80
             ) { region in
                 selectedRegion = region
             }
 
+            // Top: stat panels + compact year-filter chips below them
             VStack(spacing: 0) {
                 HStack(alignment: .top) {
                     HeartStatsPanel(metrics: env.bodyMetrics.metrics)
@@ -70,13 +75,48 @@ struct DashboardBodyMapView: View {
                     .padding(.top, 12)
                     .padding(.trailing, 12)
                 }
+                if hasYearFilter {
+                    yearFilterRow(vm).padding(.top, 8)
+                }
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            // Bottom: colour legend + last-sync caption.
+            // Uses an inner Spacer for bottom inset — .padding after
+            // .frame(maxHeight: .infinity) would push content outside the ZStack.
+            VStack(spacing: 0) {
                 Spacer()
                 BodyMapLegendView()
-                    .padding(.bottom, 20)
+                if let date = env.healthSyncState.lastSyncDate {
+                    Text("Synced \(date.formatted(.relative(presentation: .named)))")
+                        .font(.labelSmall)
+                        .foregroundStyle(Color.textMuted)
+                        .padding(.top, 4)
+                }
+                Spacer().frame(height: 14)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.bgBase)
+    }
+
+    private func yearFilterRow(_ vm: BodyMapViewModel) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                BodyMapYearChip(label: "All", isSelected: vm.filterYear == nil) {
+                    vm.setFilterYear(nil)
+                }
+                ForEach(vm.availableYears, id: \.self) { year in
+                    BodyMapYearChip(label: "\(year)", isSelected: vm.filterYear == year) {
+                        vm.setFilterYear(year)
+                    }
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 2)
+        }
     }
 }
 
@@ -223,6 +263,39 @@ private struct HeartRow: View {
                     .foregroundStyle(Color.textPrimary)
             }
         }
+    }
+}
+
+// MARK: - Compact year chip
+
+/// Smaller than the full PillChip — uses labelSmall + tighter padding so the
+/// row fits neatly below the top stat panels without dominating the canvas.
+private struct BodyMapYearChip: View {
+    let label: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(.labelSmall)
+                .fontWeight(.semibold)
+                .foregroundStyle(isSelected ? Color.accent : Color.textSecondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(
+                    isSelected ? Color.accent.opacity(0.13) : Color.bgCard.opacity(0.75),
+                    in: Capsule()
+                )
+                .overlay(
+                    Capsule().strokeBorder(
+                        isSelected ? Color.accent.opacity(0.8) : Color.borderCard,
+                        lineWidth: isSelected ? 1.5 : 1
+                    )
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 }
 
