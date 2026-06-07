@@ -55,10 +55,13 @@ public actor HealthSyncManager {
 
     // MARK: - Upload batching
 
-    /// One reading mapped and ready to send, paired with the dedup key that is
-    /// recorded only once its batch lands successfully.
+    /// One day's worth of readings, ready to upload as a single merged payload.
+    ///
+    /// `keys` holds all HealthKit sample UUIDs that contributed to this payload
+    /// (one per metric type). All keys are recorded in the dedup store only once
+    /// the batch upload succeeds — so a partial failure retries the whole day.
     private struct PendingUpload: Sendable {
-        let key: String
+        let keys: [String]
         let payload: BodyMetricPayload
     }
 
@@ -68,6 +71,55 @@ public actor HealthSyncManager {
     /// network round-trip, so a 6-year history of ~daily readings is a handful of
     /// requests rather than thousands.
     private static let maxBatchSize = 500
+
+    /// Groups single-metric readings from multiple types by calendar day and merges
+    /// them into one `PendingUpload` per day.
+    ///
+    /// Without merging, five concurrent HealthKit queries (weight, BP, resting HR,
+    /// HRV, avg HR) each create their own payload for the same day, resulting in up
+    /// to 5 rows per day in `body_metrics`. Over 7 years that inflates the table to
+    /// 12 000+ rows — exceeding the list endpoint cap and silently cutting off the
+    /// most-recent data. Merging here collapses all same-day payloads into one row.
+    private static func mergeByDay(_ readings: [PendingUpload]) -> [PendingUpload] {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+
+        var byDay: [(dayKey: String, date: Date, keys: [String], payload: BodyMetricPayload)] = []
+        var indexByDay: [String: Int] = [:]
+
+        for reading in readings {
+            let dayKey = formatter.string(from: reading.payload.measuredOn)
+            if let idx = indexByDay[dayKey] {
+                // Merge: keep non-nil values from the existing entry, fill in
+                // any nil fields from the incoming reading.
+                let existing = byDay[idx]
+                let p = existing.payload, q = reading.payload
+                byDay[idx] = (
+                    dayKey: dayKey,
+                    date: existing.date,
+                    keys: existing.keys + reading.keys,
+                    payload: BodyMetricPayload(
+                        measuredOn:            p.measuredOn,
+                        weightKg:              p.weightKg              ?? q.weightKg,
+                        waistCm:               p.waistCm               ?? q.waistCm,
+                        systolic:              p.systolic               ?? q.systolic,
+                        diastolic:             p.diastolic              ?? q.diastolic,
+                        heartRateBpm:          p.heartRateBpm          ?? q.heartRateBpm,
+                        restingHeartRateBpm:   p.restingHeartRateBpm   ?? q.restingHeartRateBpm,
+                        hrvMs:                 p.hrvMs                 ?? q.hrvMs,
+                        note:                  p.note                  ?? q.note,
+                        source:                p.source                ?? q.source
+                    )
+                )
+            } else {
+                indexByDay[dayKey] = byDay.count
+                byDay.append((dayKey: dayKey, date: reading.payload.measuredOn, keys: reading.keys, payload: reading.payload))
+            }
+        }
+
+        return byDay.map { PendingUpload(keys: $0.keys, payload: $0.payload) }
+    }
 
     /// Filters out already-synced readings, then uploads the rest in `maxBatchSize`
     /// chunks. A chunk's dedup keys are recorded only after its batch upload succeeds,
@@ -79,7 +131,13 @@ public actor HealthSyncManager {
         var pending: [PendingUpload] = []
         pending.reserveCapacity(readings.count)
         for reading in readings {
-            if await syncedStore.contains(reading.key) { c.skipped += 1 } else { pending.append(reading) }
+            // A day is considered already-synced when ALL its contributing sample
+            // keys are in the dedup store (i.e. it was fully uploaded before).
+            var allSynced = true
+            for key in reading.keys {
+                if await !syncedStore.contains(key) { allSynced = false; break }
+            }
+            if allSynced { c.skipped += 1 } else { pending.append(reading) }
         }
 
         var index = 0
@@ -88,7 +146,9 @@ public actor HealthSyncManager {
             index += Self.maxBatchSize
             do {
                 try await sink.uploadBatch(chunk.map(\.payload))
-                for reading in chunk { await syncedStore.insert(reading.key) }
+                for reading in chunk {
+                    for key in reading.keys { await syncedStore.insert(key) }
+                }
                 c.uploaded += chunk.count
             } catch {
                 c.failed += chunk.count
@@ -158,103 +218,95 @@ public actor HealthSyncManager {
         #if canImport(HealthKit)
         guard HKHealthStore.isHealthDataAvailable() else { throw HealthSyncError.unavailable }
 
-        var weightCount = 0, bpCount = 0, rhrCount = 0, hrvCount = 0, hrCount = 0
-        var totalSkipped = 0, totalFailed = 0
+        var totalSkipped = 0, totalFailed = 0, totalUploaded = 0
 
-        // Capture any task-group error so we can flush the dedup store before
-        // rethrowing — partial progress (UUIDs of already-uploaded samples) should
-        // be persisted even when one metric type's query fails.
+        // Phase 1: query all metric types concurrently, collecting raw single-field
+        // PendingUploads. We do NOT upload yet — merging by day happens next.
+        var allPending: [PendingUpload] = []
         var groupError: Error?
         do {
-        try await withThrowingTaskGroup(of: (HealthMetricType, Counts).self) { group in
+        try await withThrowingTaskGroup(of: [PendingUpload].self) { group in
             if types.contains(.weight) {
                 group.addTask {
-                    let pending = try await self.readWeightSamples(since: since).map {
-                        PendingUpload(key: $0.uuid, payload: BodyMetricPayload(
+                    try await self.readWeightSamples(since: since).map {
+                        PendingUpload(keys: [$0.uuid], payload: BodyMetricPayload(
                             measuredOn: Self.dayStart($0.date),
                             weightKg: $0.kg,
                             source: .healthkit
                         ))
                     }
-                    return (.weight, await self.uploadPending(pending))
                 }
             }
-
             if types.contains(.bloodPressure) {
                 group.addTask {
-                    let pending = try await self.readBloodPressureSamples(since: since).map {
-                        PendingUpload(key: $0.uuid, payload: BodyMetricPayload(
+                    try await self.readBloodPressureSamples(since: since).map {
+                        PendingUpload(keys: [$0.uuid], payload: BodyMetricPayload(
                             measuredOn: Self.dayStart($0.date),
                             systolic: $0.systolic,
                             diastolic: $0.diastolic,
                             source: .healthkit
                         ))
                     }
-                    return (.bloodPressure, await self.uploadPending(pending))
                 }
             }
-
             if types.contains(.restingHeartRate) {
                 group.addTask {
-                    let pending = try await self.readRestingHRSamples(since: since).map {
-                        PendingUpload(key: $0.uuid, payload: BodyMetricPayload(
+                    try await self.readRestingHRSamples(since: since).map {
+                        PendingUpload(keys: [$0.uuid], payload: BodyMetricPayload(
                             measuredOn: Self.dayStart($0.date),
                             restingHeartRateBpm: $0.bpm,
                             source: .healthkit
                         ))
                     }
-                    return (.restingHeartRate, await self.uploadPending(pending))
                 }
             }
-
             if types.contains(.heartRateVariability) {
                 group.addTask {
-                    let pending = try await self.readHRVSamples(since: since).map {
-                        PendingUpload(key: $0.uuid, payload: BodyMetricPayload(
+                    try await self.readHRVSamples(since: since).map {
+                        PendingUpload(keys: [$0.uuid], payload: BodyMetricPayload(
                             measuredOn: Self.dayStart($0.date),
                             hrvMs: $0.ms,
                             source: .healthkit
                         ))
                     }
-                    return (.heartRateVariability, await self.uploadPending(pending))
                 }
             }
-
             if types.contains(.heartRate) {
                 group.addTask {
-                    let pending = try await self.readDailyAverageHRSamples(since: since).map {
-                        PendingUpload(key: $0.dedupKey, payload: BodyMetricPayload(
+                    try await self.readDailyAverageHRSamples(since: since).map {
+                        PendingUpload(keys: [$0.dedupKey], payload: BodyMetricPayload(
                             measuredOn: $0.day,
                             heartRateBpm: $0.bpm,
                             source: .healthkit
                         ))
                     }
-                    return (.heartRate, await self.uploadPending(pending))
                 }
             }
-
-            for try await (type, c) in group {
-                totalSkipped += c.skipped
-                totalFailed += c.failed
-                switch type {
-                case .weight:               weightCount = c.uploaded
-                case .bloodPressure:        bpCount     = c.uploaded
-                case .restingHeartRate:     rhrCount    = c.uploaded
-                case .heartRateVariability: hrvCount    = c.uploaded
-                case .heartRate:            hrCount     = c.uploaded
-                }
-            }
+            for try await batch in group { allPending.append(contentsOf: batch) }
         }
         } catch { groupError = error }
+
+        // Phase 2: merge all same-day readings across metric types into one payload
+        // per day, then upload. This prevents the N-rows-per-day table inflation that
+        // would silently truncate recent data under the list endpoint's row cap.
+        let merged = Self.mergeByDay(allPending)
+        let c = await uploadPending(merged)
+        totalUploaded = c.uploaded
+        totalSkipped  = c.skipped
+        totalFailed   = c.failed
+
         await syncedStore.flush()
         if let groupError { throw groupError }
 
+        // Per-type counts are no longer meaningful after day-merging (one uploaded
+        // row may contain weight + HR + HRV). Report the total in `weight` so the
+        // summary line shows "Imported: N readings" rather than all zeros.
         return SyncSummary(
-            weight: weightCount,
-            bloodPressure: bpCount,
-            restingHeartRate: rhrCount,
-            heartRateVariability: hrvCount,
-            heartRate: hrCount,
+            weight: totalUploaded,
+            bloodPressure: 0,
+            restingHeartRate: 0,
+            heartRateVariability: 0,
+            heartRate: 0,
             duplicatesSkipped: totalSkipped,
             uploadsFailed: totalFailed
         )
