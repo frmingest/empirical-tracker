@@ -57,6 +57,8 @@ struct DashboardBodyMapView: View {
                 selectedRegion = region
             }
 
+            // Stats panels sit in the ZStack so @Observable updates to
+            // env.bodyMetrics don't trigger a BodyMapCanvas layout pass.
             VStack(spacing: 0) {
                 HStack(alignment: .top) {
                     HeartStatsPanel(metrics: env.bodyMetrics.metrics)
@@ -71,10 +73,12 @@ struct DashboardBodyMapView: View {
                     .padding(.trailing, 12)
                 }
                 Spacer()
-                BodyMapLegendView()
-                    .padding(.bottom, 20)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .overlay(alignment: .bottom) {
+            BodyMapLegendView()
+                .padding(.bottom, 20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.bgBase)
