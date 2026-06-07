@@ -1,0 +1,60 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "NSCameraUsageDescription" : {
+      "comment" : "System permission prompt shown before the app accesses the camera.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biotrack uses the camera to scan food barcodes and photograph nutrition labels. Barcode data is looked up online; label photos are processed for text only and never stored on our servers."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biotrack bruker kameraet til å skanne strekkoder på mat og fotografere næringsinnholdsetiketter. Strekkodedata slås opp på nettet, og etikettbilder behandles kun for tekst og lagres aldri på serverne våre."
+          }
+        }
+      }
+    },
+    "NSHealthShareUsageDescription" : {
+      "comment" : "System permission prompt shown before the app reads data from Apple Health.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biotrack reads your weight and blood pressure from Apple Health — including readings your Withings devices write there via Health Mate — so it can chart them alongside your blood biomarkers and diet events. It only reads the data types you enable, and never writes to Apple Health."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biotrack leser vekt og blodtrykk fra Apple Helse – inkludert målinger som Withings-enhetene dine skriver dit via Health Mate – slik at de kan vises sammen med blodbiomarkørene og kostholdshendelsene dine. Appen leser bare datatypene du aktiverer, og skriver aldri til Apple Helse."
+          }
+        }
+      }
+    },
+    "NSPhotoLibraryUsageDescription" : {
+      "comment" : "System permission prompt shown before the app reads a photo from the photo library.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biotrack can read a nutrition label photo from your library to extract nutrition facts for your diary. The photo is processed for text only and never stored."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biotrack kan lese et bilde av en næringsinnholdsetikett fra biblioteket ditt for å hente næringsinnhold til dagboken din. Bildet behandles kun for tekst og lagres aldri."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

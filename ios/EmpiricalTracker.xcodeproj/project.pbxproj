@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		B134048C2FCE0EE30012EB6E /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = B13404792FCE0EE30012EB6E /* Localizable.xcstrings */; };
+		B134048D2FCE0EE30012EB6E /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = B134047A2FCE0EE30012EB6E /* InfoPlist.xcstrings */; };
 		B13404982FCE16CB0012EB6E /* Core in Frameworks */ = {isa = PBXBuildFile; productRef = B13404972FCE16CB0012EB6E /* Core */; };
 		B134049A2FCE16CF0012EB6E /* Biomarkers in Frameworks */ = {isa = PBXBuildFile; productRef = B13404992FCE16CF0012EB6E /* Biomarkers */; };
 		B134049C2FCE16D50012EB6E /* DietEvents in Frameworks */ = {isa = PBXBuildFile; productRef = B134049B2FCE16D50012EB6E /* DietEvents */; };
@@ -42,6 +43,7 @@
 		B13404432FCE0D910012EB6E /* EmpiricalTrackerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EmpiricalTrackerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B134044D2FCE0D910012EB6E /* EmpiricalTrackerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EmpiricalTrackerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B13404792FCE0EE30012EB6E /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		B134047A2FCE0EE30012EB6E /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -114,6 +116,7 @@
 			isa = PBXGroup;
 			children = (
 				B13404792FCE0EE30012EB6E /* Localizable.xcstrings */,
+				B134047A2FCE0EE30012EB6E /* InfoPlist.xcstrings */,
 				B13404382FCE0D8E0012EB6E /* EmpiricalTracker */,
 				B13404462FCE0D910012EB6E /* EmpiricalTrackerTests */,
 				B13404502FCE0D910012EB6E /* EmpiricalTrackerUITests */,
@@ -283,6 +286,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B134048C2FCE0EE30012EB6E /* Localizable.xcstrings in Resources */,
+				B134048D2FCE0EE30012EB6E /* InfoPlist.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

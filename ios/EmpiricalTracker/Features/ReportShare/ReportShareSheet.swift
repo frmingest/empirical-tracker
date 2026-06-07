@@ -181,7 +181,7 @@ struct ReportShareSheet: View {
     private func bottomBar(_ vm: ReportShareViewModel) -> some View {
         VStack(spacing: 10) {
             HStack {
-                Text(vm.hasSelection ? "\(vm.selectedCount) result\(vm.selectedCount == 1 ? "" : "s") selected"
+                Text(vm.hasSelection ? "\(vm.selectedCount) results selected"
                                      : "No results selected")
                     .font(.labelLarge)
                     .foregroundStyle(vm.hasSelection ? Color.textSecondary : Color.outRange)
