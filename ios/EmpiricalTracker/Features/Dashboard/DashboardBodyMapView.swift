@@ -13,6 +13,9 @@ struct DashboardBodyMapView: View {
 
     @State private var viewModel: BodyMapViewModel?
     @State private var selectedRegion: BodyRegion?
+    /// Spotlight selection from the status-summary row, identified by
+    /// `Assessment.legendOrder`. `nil` = show every pin at full strength.
+    @State private var spotlightOrder: Int?
     /// Same key as BodyMetricsView so the user only sets height once.
     @AppStorage("body.heightCm") private var heightCm: Double = 0
 
@@ -45,27 +48,43 @@ struct DashboardBodyMapView: View {
     // MARK: - Canvas
 
     private func bodyCanvas(_ vm: BodyMapViewModel) -> some View {
-        // The legend and year-filter are placed OUTSIDE the ZStack in a VStack
-        // wrapper so they are never subject to ZStack height-resolution failures
-        // (GeometryReader + NavigationStack can silently clip sibling overlays).
+        // Layout philosophy (the reason this finally stops getting clipped):
+        // the contested bottom strip now carries ONLY the year filter. The colour
+        // key became a live status-summary row anchored to the TOP safe area — the
+        // one place the nav bar guarantees space — and data-freshness moved onto
+        // the card whose data it describes. Nothing new competes for the home-
+        // indicator band, so there is nothing left to squeeze off-screen.
         let hasYearFilter = vm.availableYears.count > 1
 
         return VStack(spacing: 0) {
+            // ── Live status summary (replaces the old colour legend) ─────────
+            BodyMapStatusSummary(
+                regions: vm.regions,
+                spotlightOrder: $spotlightOrder
+            )
+            .padding(.top, 6)
+            .padding(.bottom, 2)
+
             // ── Silhouette canvas (takes all remaining vertical space) ──────
             ZStack(alignment: .top) {
                 BodyMapCanvas(
                     regions: vm.regions,
                     silhouetteOpacity: 0.18,
-                    bottomReserve: 0
+                    bottomReserve: 0,
+                    highlightedAssessment: spotlightOrder.flatMap(assessment(forOrder:))
                 ) { region in
                     selectedRegion = region
                 }
 
                 // Stat panels overlaid at the top of the canvas only
                 HStack(alignment: .top) {
-                    HeartStatsPanel(metrics: env.bodyMetrics.metrics)
-                        .padding(.top, 12)
-                        .padding(.leading, 12)
+                    HeartStatsPanel(
+                        metrics: env.bodyMetrics.metrics,
+                        lastSyncDate: env.healthSyncState.lastSyncDate,
+                        isSyncing: env.healthSyncState.isSyncing
+                    )
+                    .padding(.top, 12)
+                    .padding(.leading, 12)
                     Spacer()
                     BodyMetricsStatsPanel(
                         metrics: env.bodyMetrics.metrics,
@@ -78,28 +97,22 @@ struct DashboardBodyMapView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            // ── Year filter — always below the canvas, never overlapping ────
+            // ── Year filter — now the sole occupant of the bottom strip ──────
             if hasYearFilter {
                 yearFilterRow(vm)
                     .padding(.top, 6)
-                    .padding(.bottom, 4)
+                    .padding(.bottom, 8)
+            } else {
+                Spacer().frame(height: 12)
             }
-
-            // ── Colour legend — always visible at the bottom ─────────────────
-            BodyMapLegendView()
-                .padding(.top, hasYearFilter ? 2 : 8)
-
-            if let date = env.healthSyncState.lastSyncDate {
-                Text("Synced \(date.formatted(.relative(presentation: .named)))")
-                    .font(.labelSmall)
-                    .foregroundStyle(Color.textMuted)
-                    .padding(.top, 4)
-            }
-
-            Spacer().frame(height: 12)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.bgBase)
+    }
+
+    /// Maps a stored `legendOrder` back to its `Assessment` for the canvas.
+    private func assessment(forOrder order: Int) -> MarkerSignals.Assessment? {
+        MarkerSignals.Assessment.legendOrdered.first { $0.legendOrder == order }
     }
 
     private func yearFilterRow(_ vm: BodyMapViewModel) -> some View {
@@ -204,6 +217,11 @@ private struct BodyMetricsStatRow: View {
 /// Tapping the card opens a plain-language explanation of both metrics.
 struct HeartStatsPanel: View {
     let metrics: [BodyMetric]
+    /// Freshness of the HealthKit-sourced data this card shows. Lives here — on
+    /// the card it actually describes — instead of as an orphan label adrift in
+    /// the bottom strip.
+    var lastSyncDate: Date? = nil
+    var isSyncing: Bool = false
 
     @State private var showInfo = false
 
@@ -238,6 +256,11 @@ struct HeartStatsPanel: View {
                     value: latestHRV.map { String(format: "%.0f ms", $0) } ?? "--",
                     color: .accent
                 )
+
+                if isSyncing || lastSyncDate != nil {
+                    SyncFreshnessLabel(date: lastSyncDate, isSyncing: isSyncing)
+                        .padding(.top, 1)
+                }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
@@ -357,31 +380,182 @@ private struct HeartMetricsInfoSheet: View {
     }
 }
 
-// MARK: - Legend
+// MARK: - Status summary (replaces the old colour legend)
 
-struct BodyMapLegendView: View {
+/// A live, top-anchored summary of how many body regions sit in each status.
+///
+/// This is the redesign of the old passive colour legend. Instead of a static
+/// "what the colours mean" capsule jammed into the crowded bottom strip, it is a
+/// genuinely useful headline — "12 in range, 1 out of range" — that teaches the
+/// colour code as a side effect (dot + icon + word per status). Each chip is a
+/// spotlight toggle: tap it to fade every pin on the body except that status.
+/// A trailing info button opens the full key with plain-language definitions, so
+/// nothing reference-only needs to live permanently on screen.
+struct BodyMapStatusSummary: View {
+    let regions: [BodyRegion]
+    @Binding var spotlightOrder: Int?
+
+    @State private var isKeyPresented = false
+
+    /// Only statuses that actually occur are shown, so a healthy user sees a calm
+    /// single chip rather than four — but a present status is never hidden.
+    private var visibleStatuses: [MarkerSignals.Assessment] {
+        MarkerSignals.Assessment.legendOrdered.filter { count(for: $0) > 0 }
+    }
+
+    private func count(for assessment: MarkerSignals.Assessment) -> Int {
+        regions.filter { $0.worstAssessment.legendOrder == assessment.legendOrder }.count
+    }
+
     var body: some View {
-        HStack(spacing: 14) {
-            BodyMapLegendItem(color: .inRange,      label: "In range")
-            BodyMapLegendItem(color: .orange,       label: "Watch")
-            BodyMapLegendItem(color: .outRange,     label: "Out of range")
-            BodyMapLegendItem(color: Color.textMuted, label: "No data")
+        HStack(spacing: 8) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 7) {
+                    ForEach(visibleStatuses, id: \.legendOrder) { status in
+                        StatusCountChip(
+                            assessment: status,
+                            count: count(for: status),
+                            isSelected: spotlightOrder == status.legendOrder,
+                            isDimmed: spotlightOrder != nil && spotlightOrder != status.legendOrder
+                        ) {
+                            toggle(status)
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 2)
+            }
+
+            Button { isKeyPresented = true } label: {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color.textMuted)
+                    .frame(width: 30, height: 30)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("What the colours mean")
+            .padding(.trailing, 12)
+            .popover(isPresented: $isKeyPresented) {
+                BodyMapKeySheet()
+                    .presentationCompactAdaptation(.popover)
+            }
         }
-        .font(.labelSmall)
-        .padding(.horizontal, 18)
-        .padding(.vertical, 11)
-        .background(.ultraThinMaterial, in: Capsule())
+        .animation(.snappy(duration: 0.22), value: spotlightOrder)
+    }
+
+    private func toggle(_ status: MarkerSignals.Assessment) {
+        spotlightOrder = (spotlightOrder == status.legendOrder) ? nil : status.legendOrder
     }
 }
 
-private struct BodyMapLegendItem: View {
-    let color: Color
-    let label: String
+private struct StatusCountChip: View {
+    let assessment: MarkerSignals.Assessment
+    let count: Int
+    let isSelected: Bool
+    let isDimmed: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: assessment.legendIcon)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(assessment.pinColor)
+                Text("\(count)")
+                    .font(.headlineSmall)
+                    .monospacedDigit()
+                    .foregroundStyle(Color.textPrimary)
+                Text(assessment.legendLabel)
+                    .font(.labelSmall)
+                    .foregroundStyle(Color.textSecondary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                isSelected ? assessment.pinColor.opacity(0.15) : Color.bgCard.opacity(0.7),
+                in: Capsule()
+            )
+            .overlay(
+                Capsule().strokeBorder(
+                    isSelected ? assessment.pinColor.opacity(0.85) : Color.borderSubtle.opacity(0.6),
+                    lineWidth: isSelected ? 1.5 : 0.5
+                )
+            )
+            .opacity(isDimmed ? 0.5 : 1)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(count) \(assessment.legendLabel)")
+        .accessibilityHint("Tap to highlight these on the body")
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+}
+
+// MARK: - Sync freshness (replaces the orphan "Synced X ago" label)
+
+/// Compact data-freshness indicator that lives inside the HR/HRV card. Calm grey
+/// when recent, amber "Stale" past a day so it only draws the eye when it should.
+private struct SyncFreshnessLabel: View {
+    let date: Date?
+    let isSyncing: Bool
+
+    private var isStale: Bool {
+        guard let date else { return false }
+        return Date().timeIntervalSince(date) > 24 * 3600
+    }
+
+    private var text: String {
+        if isSyncing { return "Syncing…" }
+        guard let date else { return "Not synced" }
+        let relative = date.formatted(.relative(presentation: .named))
+        return isStale ? "Stale · \(relative)" : "Synced \(relative)"
+    }
 
     var body: some View {
         HStack(spacing: 4) {
-            Circle().fill(color).frame(width: 8, height: 8)
-            Text(label).foregroundStyle(Color.textSecondary)
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .font(.system(size: 9, weight: .semibold))
+                .symbolEffect(.rotate, isActive: isSyncing)
+            Text(text)
+                .font(.labelSmall)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
+        .foregroundStyle(isStale ? Color.orange : Color.textMuted)
+        .accessibilityLabel(isSyncing ? "Syncing health data" : "Health data \(text)")
+    }
+}
+
+// MARK: - On-demand status key
+
+/// The full colour key with plain-language meanings, shown only when the user
+/// taps the info button — so reference material never occupies permanent space.
+private struct BodyMapKeySheet: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("What the colours mean")
+                .font(.headlineSmall)
+                .foregroundStyle(Color.textPrimary)
+
+            ForEach(MarkerSignals.Assessment.legendOrdered, id: \.legendOrder) { status in
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: status.legendIcon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(status.pinColor)
+                        .frame(width: 18)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(status.legendLabel)
+                            .font(.headlineSmall)
+                            .foregroundStyle(Color.textPrimary)
+                        Text(status.legendDescription)
+                            .font(.bodySmall)
+                            .foregroundStyle(Color.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+        }
+        .padding(18)
+        .frame(width: 280)
     }
 }

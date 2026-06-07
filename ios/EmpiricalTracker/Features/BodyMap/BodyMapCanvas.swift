@@ -25,6 +25,10 @@ struct BodyMapCanvas: View {
     /// Vertical space to reserve at the bottom (e.g. for a legend overlay) so
     /// the figure is centred in the *remaining* area and never overlaps it.
     var bottomReserve: CGFloat = 0
+    /// When set, only regions whose status matches stay fully opaque; the rest
+    /// dim back. Driven by the dashboard's status-summary chips so tapping a
+    /// status spotlights exactly those pins on the body.
+    var highlightedAssessment: MarkerSignals.Assessment? = nil
     var onSelect: (BodyRegion) -> Void
 
     /// Native aspect ratio (width ÷ height) of the BodySilhouette asset (1381×2000).
@@ -94,7 +98,8 @@ struct BodyMapCanvas: View {
                 Canvas { ctx, _ in
                     for placement in placements {
                         let live = regions.first { $0.id == placement.region.id } ?? placement.region
-                        drawConnector(&ctx, placement: placement, liveRegion: live, pinDiameter: pinDiameter)
+                        drawConnector(&ctx, placement: placement, liveRegion: live,
+                                      pinDiameter: pinDiameter, dimmed: isDimmed(live))
                     }
                 }
                 .frame(width: size.width, height: size.height)
@@ -102,10 +107,13 @@ struct BodyMapCanvas: View {
 
                 ForEach(placements) { placement in
                     let live = regions.first { $0.id == placement.region.id } ?? placement.region
+                    let dimmed = isDimmed(live)
                     BodyMapHotspotPin(region: live, diameter: pinDiameter) {
                         onSelect(live)
                     }
                     .position(placement.pin)
+                    .opacity(dimmed ? 0.22 : 1)
+                    .animation(.easeInOut(duration: 0.2), value: dimmed)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -132,6 +140,12 @@ struct BodyMapCanvas: View {
                 }
             }
         }
+    }
+
+    /// A region dims when a status is spotlighted and it isn't that status.
+    private func isDimmed(_ region: BodyRegion) -> Bool {
+        guard let highlighted = highlightedAssessment else { return false }
+        return region.worstAssessment.legendOrder != highlighted.legendOrder
     }
 
     // MARK: - Placement
@@ -215,8 +229,10 @@ struct BodyMapCanvas: View {
         _ ctx: inout GraphicsContext,
         placement: PinPlacement,
         liveRegion: BodyRegion,
-        pinDiameter: CGFloat
+        pinDiameter: CGFloat,
+        dimmed: Bool = false
     ) {
+        let alpha = dimmed ? 0.22 : 1.0
         let pin = placement.pin
         let anchor = placement.anchor
         let dx = anchor.x - pin.x
@@ -236,15 +252,15 @@ struct BodyMapCanvas: View {
         line.addLine(to: end)
         ctx.stroke(
             line,
-            with: .color(Color.textMuted.opacity(0.45)),
+            with: .color(Color.textMuted.opacity(0.45 * alpha)),
             style: StrokeStyle(lineWidth: 1, lineCap: .round, dash: [3, 3])
         )
 
         let color = liveRegion.worstAssessment.pinColor
         let dotRect = CGRect(x: anchor.x - dotRadius, y: anchor.y - dotRadius,
                              width: dotRadius * 2, height: dotRadius * 2)
-        ctx.fill(Path(ellipseIn: dotRect), with: .color(color))
-        ctx.stroke(Path(ellipseIn: dotRect), with: .color(.white.opacity(0.65)), lineWidth: 0.5)
+        ctx.fill(Path(ellipseIn: dotRect), with: .color(color.opacity(alpha)))
+        ctx.stroke(Path(ellipseIn: dotRect), with: .color(.white.opacity(0.65 * alpha)), lineWidth: 0.5)
     }
 }
 
@@ -315,6 +331,56 @@ extension MarkerSignals.Assessment {
         case .watch:      return .orange
         case .inRange:    return .inRange
         case .unknown:    return Color.textMuted
+        }
+    }
+
+    // MARK: - Status legend metadata
+    //
+    // Single source of truth for how each status presents itself across the
+    // dashboard: the live status-summary chips, the on-demand key popover, and
+    // the spotlight-dimming all read from here so colour, icon and wording can
+    // never drift apart. Colour is always paired with an icon + label (the
+    // design-system rule that colour is never the only signal).
+
+    /// Calm → attention ordering used for the summary row and key list, and as a
+    /// stable identity for the spotlight selection.
+    static let legendOrdered: [MarkerSignals.Assessment] = [.inRange, .watch, .outOfRange, .unknown]
+
+    var legendOrder: Int {
+        switch self {
+        case .inRange:    return 0
+        case .watch:      return 1
+        case .outOfRange: return 2
+        case .unknown:    return 3
+        }
+    }
+
+    var legendLabel: String {
+        switch self {
+        case .inRange:    return "In range"
+        case .watch:      return "Watch"
+        case .outOfRange: return "Out of range"
+        case .unknown:    return "No data"
+        }
+    }
+
+    /// Filled SF Symbol that reads at small sizes inside a status chip.
+    var legendIcon: String {
+        switch self {
+        case .inRange:    return "checkmark.circle.fill"
+        case .watch:      return "exclamationmark.circle.fill"
+        case .outOfRange: return "xmark.circle.fill"
+        case .unknown:    return "minus.circle.fill"
+        }
+    }
+
+    /// One-line plain-language meaning shown in the on-demand key popover.
+    var legendDescription: String {
+        switch self {
+        case .inRange:    return "Within the healthy reference range."
+        case .watch:      return "Near a limit or trending the wrong way."
+        case .outOfRange: return "Outside the reference range — worth a look."
+        case .unknown:    return "No recent results for this area yet."
         }
     }
 }
