@@ -50,6 +50,11 @@ final class HealthSyncState {
     private let defaults: UserDefaults
     private var isObserving = false
 
+    /// Coalesces rapid observer firings (HealthKit fires one query per metric type
+    /// nearly simultaneously) into a single deferred sync. Any new firing within the
+    /// debounce window cancels the previous pending task.
+    private var pendingObserverSync: Task<Void, Never>?
+
     private enum Key {
         static let connected = "healthsync.connected"
         static let lastSync = "healthsync.lastSync"
@@ -199,11 +204,31 @@ final class HealthSyncState {
         guard connection == .connected, !isObserving, !enabledTypes.isEmpty else { return }
         do {
             try await manager.startObserving(types: enabledTypes) { [weak self] in
-                await self?.syncNow(silent: true)
+                await self?.scheduleObserverSync()
             }
             isObserving = true
         } catch {
             // Background delivery is best-effort; "Sync now" remains the fallback.
+        }
+    }
+
+    /// Debounces the raw HealthKit observer callbacks.
+    ///
+    /// HealthKit fires one `HKObserverQuery` callback per registered sample type
+    /// nearly simultaneously (up to 5 for the enabled set). Without coalescing each
+    /// would enqueue a separate `syncNow` task, producing N sequential full syncs.
+    /// This method cancels any previously scheduled task and schedules a new one
+    /// 3 seconds out — so a burst of N firings collapses into a single sync once
+    /// the burst settles.
+    private func scheduleObserverSync() {
+        pendingObserverSync?.cancel()
+        pendingObserverSync = Task { [weak self] in
+            do {
+                try await Task.sleep(for: .seconds(3))
+            } catch {
+                return // cancelled — a newer firing took over
+            }
+            await self?.syncNow(silent: true)
         }
     }
 }
