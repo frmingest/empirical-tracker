@@ -140,6 +140,14 @@ public final class BodyMetricsRepository {
         metrics.sort { $0.measuredOn < $1.measuredOn }
     }
 
+    /// Inserts multiple readings in a single POST. Used by the HealthKit sync path
+    /// to replace thousands of per-sample requests with batches of up to 200.
+    public func createBatch(_ payloads: [BodyMetricPayload]) async throws {
+        let created: [BodyMetric] = try await client.request(.post("/body-metrics/batch", body: payloads))
+        metrics.append(contentsOf: created)
+        metrics.sort { $0.measuredOn < $1.measuredOn }
+    }
+
     public func delete(id: String) async throws {
         try await client.requestEmpty(.delete("/body-metrics/\(id)"))
         metrics.removeAll { $0.id == id }

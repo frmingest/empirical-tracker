@@ -44,6 +44,31 @@ def create_metric(user_id: str, metric: dict) -> dict:
     return resp.data[0] if resp.data else {}
 
 
+def create_metrics_batch(user_id: str, metrics: list[dict]) -> list[dict]:
+    """Insert multiple body-metric measurements in a single Supabase call."""
+    if not metrics:
+        return []
+    db = get_supabase()
+    rows = [
+        {
+            "user_id": user_id,
+            "measured_on": m["measured_on"],
+            "weight_kg": m.get("weight_kg"),
+            "waist_cm": m.get("waist_cm"),
+            "systolic": m.get("systolic"),
+            "diastolic": m.get("diastolic"),
+            "heart_rate_bpm": m.get("heart_rate_bpm"),
+            "resting_heart_rate_bpm": m.get("resting_heart_rate_bpm"),
+            "hrv_ms": m.get("hrv_ms"),
+            "note": m.get("note"),
+            "source": m.get("source", "manual"),
+        }
+        for m in metrics
+    ]
+    resp = db.table("body_metrics").insert(rows).execute()
+    return resp.data or []
+
+
 def delete_metric(user_id: str, metric_id: str) -> None:
     """Delete one of the user's body metrics (no-op if it isn't theirs)."""
     db = get_supabase()

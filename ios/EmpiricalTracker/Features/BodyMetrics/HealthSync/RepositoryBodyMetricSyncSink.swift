@@ -17,4 +17,8 @@ final class RepositoryBodyMetricSyncSink: BodyMetricSyncSink {
     func upload(_ payload: BodyMetricPayload) async throws {
         try await repository.create(payload)
     }
+
+    func uploadBatch(_ payloads: [BodyMetricPayload]) async throws {
+        try await repository.createBatch(payloads)
+    }
 }

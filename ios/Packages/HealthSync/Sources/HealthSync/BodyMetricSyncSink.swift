@@ -12,4 +12,14 @@ public protocol BodyMetricSyncSink: Sendable {
     /// Persist one HealthKit-sourced reading. Throwing aborts that reading's sync
     /// (its sample UUID is *not* recorded, so a later sync retries it).
     func upload(_ payload: BodyMetricPayload) async throws
+
+    /// Persist multiple readings in a single round-trip. The default implementation
+    /// falls back to serial `upload` calls so test sinks only need to implement one.
+    func uploadBatch(_ payloads: [BodyMetricPayload]) async throws
+}
+
+public extension BodyMetricSyncSink {
+    func uploadBatch(_ payloads: [BodyMetricPayload]) async throws {
+        for payload in payloads { try await upload(payload) }
+    }
 }

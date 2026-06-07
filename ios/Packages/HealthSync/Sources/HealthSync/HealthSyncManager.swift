@@ -112,108 +112,110 @@ public actor HealthSyncManager {
         #if canImport(HealthKit)
         guard HKHealthStore.isHealthDataAvailable() else { throw HealthSyncError.unavailable }
 
-        struct Counts: Sendable { var uploaded = 0; var skipped = 0; var failed = 0 }
-
         var weightCount = 0, bpCount = 0, rhrCount = 0, hrvCount = 0, hrCount = 0
         var totalSkipped = 0, totalFailed = 0
 
-        // Capture any task-group error so we can flush the dedup store before
-        // rethrowing — partial progress (UUIDs of already-uploaded samples) should
-        // be persisted even when one metric type's query fails.
+        // Capture any task-group error so we flush the dedup store before rethrowing —
+        // partial progress (UUIDs of successfully-uploaded samples) must be persisted.
         var groupError: Error?
         do {
-        try await withThrowingTaskGroup(of: (HealthMetricType, Counts).self) { group in
+        try await withThrowingTaskGroup(of: (HealthMetricType, SyncCounts).self) { group in
             if types.contains(.weight) {
                 group.addTask {
-                    var c = Counts()
-                    for reading in try await self.readWeightSamples(since: since) {
-                        if await self.syncedStore.contains(reading.uuid) { c.skipped += 1; continue }
-                        do {
-                            try await self.sink.upload(BodyMetricPayload(
-                                measuredOn: Self.dayStart(reading.date),
-                                weightKg: reading.kg,
-                                source: .healthkit
-                            ))
-                            await self.syncedStore.insert(reading.uuid)
-                            c.uploaded += 1
-                        } catch { c.failed += 1 }
-                    }
+                    let c = try await self.syncPaged(
+                        type: HKQuantityType(.bodyMass), since: since,
+                        transform: { sample in
+                            guard let q = sample as? HKQuantitySample else { return nil }
+                            let kg = q.quantity.doubleValue(for: .gramUnit(with: .kilo))
+                            guard kg > 0 else { return nil }
+                            return WeightReading(uuid: q.uuid.uuidString, date: q.endDate, kg: kg)
+                        },
+                        key: { $0.uuid },
+                        payload: { BodyMetricPayload(measuredOn: Self.dayStart($0.date), weightKg: $0.kg, source: .healthkit) }
+                    )
                     return (.weight, c)
                 }
             }
 
             if types.contains(.bloodPressure) {
                 group.addTask {
-                    var c = Counts()
-                    for reading in try await self.readBloodPressureSamples(since: since) {
-                        if await self.syncedStore.contains(reading.uuid) { c.skipped += 1; continue }
-                        do {
-                            try await self.sink.upload(BodyMetricPayload(
-                                measuredOn: Self.dayStart(reading.date),
-                                systolic: reading.systolic,
-                                diastolic: reading.diastolic,
-                                source: .healthkit
-                            ))
-                            await self.syncedStore.insert(reading.uuid)
-                            c.uploaded += 1
-                        } catch { c.failed += 1 }
-                    }
+                    let c = try await self.syncPaged(
+                        type: HKCorrelationType(.bloodPressure), since: since,
+                        transform: { sample in
+                            guard let correlation = sample as? HKCorrelation else { return nil }
+                            let unit = HKUnit.millimeterOfMercury()
+                            guard
+                                let sys = correlation.objects(for: HKQuantityType(.bloodPressureSystolic)).first as? HKQuantitySample,
+                                let dia = correlation.objects(for: HKQuantityType(.bloodPressureDiastolic)).first as? HKQuantitySample
+                            else { return nil }
+                            return BPReading(
+                                uuid: correlation.uuid.uuidString,
+                                date: correlation.endDate,
+                                systolic: Int(sys.quantity.doubleValue(for: unit).rounded()),
+                                diastolic: Int(dia.quantity.doubleValue(for: unit).rounded())
+                            )
+                        },
+                        key: { $0.uuid },
+                        payload: { BodyMetricPayload(measuredOn: Self.dayStart($0.date), systolic: $0.systolic, diastolic: $0.diastolic, source: .healthkit) }
+                    )
                     return (.bloodPressure, c)
                 }
             }
 
             if types.contains(.restingHeartRate) {
                 group.addTask {
-                    var c = Counts()
-                    for reading in try await self.readRestingHRSamples(since: since) {
-                        if await self.syncedStore.contains(reading.uuid) { c.skipped += 1; continue }
-                        do {
-                            try await self.sink.upload(BodyMetricPayload(
-                                measuredOn: Self.dayStart(reading.date),
-                                restingHeartRateBpm: reading.bpm,
-                                source: .healthkit
-                            ))
-                            await self.syncedStore.insert(reading.uuid)
-                            c.uploaded += 1
-                        } catch { c.failed += 1 }
-                    }
+                    let c = try await self.syncPaged(
+                        type: HKQuantityType(.restingHeartRate), since: since,
+                        transform: { sample in
+                            guard let q = sample as? HKQuantitySample else { return nil }
+                            let unit = HKUnit.count().unitDivided(by: .minute())
+                            let bpm = q.quantity.doubleValue(for: unit)
+                            guard bpm > 0 else { return nil }
+                            return HRReading(uuid: q.uuid.uuidString, date: q.endDate, bpm: Int(bpm.rounded()))
+                        },
+                        key: { $0.uuid },
+                        payload: { BodyMetricPayload(measuredOn: Self.dayStart($0.date), restingHeartRateBpm: $0.bpm, source: .healthkit) }
+                    )
                     return (.restingHeartRate, c)
                 }
             }
 
             if types.contains(.heartRateVariability) {
                 group.addTask {
-                    var c = Counts()
-                    for reading in try await self.readHRVSamples(since: since) {
-                        if await self.syncedStore.contains(reading.uuid) { c.skipped += 1; continue }
-                        do {
-                            try await self.sink.upload(BodyMetricPayload(
-                                measuredOn: Self.dayStart(reading.date),
-                                hrvMs: reading.ms,
-                                source: .healthkit
-                            ))
-                            await self.syncedStore.insert(reading.uuid)
-                            c.uploaded += 1
-                        } catch { c.failed += 1 }
-                    }
+                    let c = try await self.syncPaged(
+                        type: HKQuantityType(.heartRateVariabilitySDNN), since: since,
+                        transform: { sample in
+                            guard let q = sample as? HKQuantitySample else { return nil }
+                            let ms = q.quantity.doubleValue(for: .secondUnit(with: .milli))
+                            guard ms > 0 else { return nil }
+                            return HRVReading(uuid: q.uuid.uuidString, date: q.endDate, ms: ms)
+                        },
+                        key: { $0.uuid },
+                        payload: { BodyMetricPayload(measuredOn: Self.dayStart($0.date), hrvMs: $0.ms, source: .healthkit) }
+                    )
                     return (.heartRateVariability, c)
                 }
             }
 
             if types.contains(.heartRate) {
+                // Daily avg HR uses HKStatisticsCollectionQuery (pre-aggregated by HealthKit).
+                // Max ~2 200 items for 6 years — small enough to batch-upload in one call.
                 group.addTask {
-                    var c = Counts()
-                    for reading in try await self.readDailyAverageHRSamples(since: since) {
+                    var c = SyncCounts()
+                    let readings = try await self.readDailyAverageHRSamples(since: since)
+                    var payloads: [BodyMetricPayload] = []
+                    var keys: [String] = []
+                    for reading in readings {
                         if await self.syncedStore.contains(reading.dedupKey) { c.skipped += 1; continue }
+                        payloads.append(BodyMetricPayload(measuredOn: reading.day, heartRateBpm: reading.bpm, source: .healthkit))
+                        keys.append(reading.dedupKey)
+                    }
+                    if !payloads.isEmpty {
                         do {
-                            try await self.sink.upload(BodyMetricPayload(
-                                measuredOn: reading.day,
-                                heartRateBpm: reading.bpm,
-                                source: .healthkit
-                            ))
-                            await self.syncedStore.insert(reading.dedupKey)
-                            c.uploaded += 1
-                        } catch { c.failed += 1 }
+                            try await self.sink.uploadBatch(payloads)
+                            for k in keys { await self.syncedStore.insert(k) }
+                            c.uploaded += keys.count
+                        } catch { c.failed += keys.count }
                     }
                     return (.heartRate, c)
                 }
@@ -297,75 +299,103 @@ public actor HealthSyncManager {
     // MARK: - HealthKit internals
 
     #if canImport(HealthKit)
-    private struct WeightReading: Sendable {
-        let uuid: String
-        let date: Date
-        let kg: Double
-    }
 
-    private struct BPReading: Sendable {
-        let uuid: String
-        let date: Date
-        let systolic: Int
-        let diastolic: Int
-    }
+    // MARK: Sample value types (Sendable so they cross actor boundaries safely)
 
-    private struct HRReading: Sendable {
-        let uuid: String
-        let date: Date
-        let bpm: Int
-    }
+    private struct WeightReading: Sendable { let uuid: String; let date: Date; let kg: Double }
+    private struct BPReading: Sendable { let uuid: String; let date: Date; let systolic: Int; let diastolic: Int }
+    private struct HRReading: Sendable { let uuid: String; let date: Date; let bpm: Int }
+    private struct HRVReading: Sendable { let uuid: String; let date: Date; let ms: Double }
+    private struct DailyAvgHRReading: Sendable { let dedupKey: String; let day: Date; let bpm: Int }
 
-    private struct HRVReading: Sendable {
-        let uuid: String
-        let date: Date
-        let ms: Double
-    }
+    /// Counters accumulated by each concurrent metric-type task.
+    private struct SyncCounts: Sendable { var uploaded = 0; var skipped = 0; var failed = 0 }
 
-    private struct DailyAvgHRReading: Sendable {
-        let dedupKey: String
-        let day: Date
-        let bpm: Int
-    }
+    /// HealthKit fetch page size. 500 samples ≈ 1–2 years of daily readings at once,
+    /// keeping per-page memory bounded during large initial imports.
+    private static let pageSize = 500
 
     private func stopObservingInternal() {
         for query in observerQueries { store.stop(query) }
         observerQueries.removeAll()
     }
 
-    private func readWeightSamples(since: Date?) async throws -> [WeightReading] {
-        try await query(type: HKQuantityType(.bodyMass), since: since) { sample in
-            guard let q = sample as? HKQuantitySample else { return nil }
-            let kg = q.quantity.doubleValue(for: .gramUnit(with: .kilo))
-            guard kg > 0 else { return nil }
-            return WeightReading(uuid: q.uuid.uuidString, date: q.endDate, kg: kg)
+    // MARK: - Paged query + batch upload helpers
+
+    /// Fetches one page of up to `pageSize` samples via `HKAnchoredObjectQuery`.
+    /// The `transform` closure runs inside HealthKit's callback so non-Sendable HK
+    /// objects never cross the continuation boundary.
+    private func anchoredPage<T: Sendable>(
+        type: HKSampleType,
+        anchor: HKQueryAnchor?,
+        since: Date?,
+        transform: @escaping @Sendable (HKSample) -> T?
+    ) async throws -> (samples: [T], nextAnchor: HKQueryAnchor?, hasMore: Bool) {
+        let predicate = since.map {
+            HKQuery.predicateForSamples(withStart: $0, end: nil, options: .strictStartDate)
+        }
+        return try await withCheckedThrowingContinuation { continuation in
+            let q = HKAnchoredObjectQuery(
+                type: type,
+                predicate: predicate,
+                anchor: anchor,
+                limit: Self.pageSize
+            ) { _, samplesOrNil, _, newAnchor, error in
+                if let error {
+                    continuation.resume(throwing: HealthSyncError.query(error.localizedDescription))
+                    return
+                }
+                let mapped = (samplesOrNil ?? []).compactMap(transform)
+                let hasMore = (samplesOrNil?.count ?? 0) >= Self.pageSize
+                continuation.resume(returning: (mapped, newAnchor, hasMore))
+            }
+            store.execute(q)
         }
     }
 
-    private func readRestingHRSamples(since: Date?) async throws -> [HRReading] {
-        try await query(type: HKQuantityType(.restingHeartRate), since: since) { sample in
-            guard let q = sample as? HKQuantitySample else { return nil }
-            // Build unit inside the @Sendable closure — HKUnit isn't Sendable.
-            let unit = HKUnit.count().unitDivided(by: .minute())
-            let bpm = q.quantity.doubleValue(for: unit)
-            guard bpm > 0 else { return nil }
-            return HRReading(uuid: q.uuid.uuidString, date: q.endDate, bpm: Int(bpm.rounded()))
+    /// Pages through all matching samples of `type`, deduplicates via the sync store,
+    /// and uploads new samples in one batch POST per page. Memory usage is bounded to
+    /// one page of samples at a time; network calls are bounded to one per page.
+    private func syncPaged<T: Sendable>(
+        type: HKSampleType,
+        since: Date?,
+        transform: @escaping @Sendable (HKSample) -> T?,
+        key: @Sendable (T) -> String,
+        payload: @Sendable (T) -> BodyMetricPayload
+    ) async throws -> SyncCounts {
+        var c = SyncCounts()
+        var anchor: HKQueryAnchor? = nil
+        var hasMore = true
+
+        while hasMore {
+            let page = try await anchoredPage(type: type, anchor: anchor, since: since, transform: transform)
+            anchor = page.nextAnchor
+            hasMore = page.hasMore
+
+            var payloads: [BodyMetricPayload] = []
+            var keys: [String] = []
+            for item in page.samples {
+                let k = key(item)
+                if await syncedStore.contains(k) { c.skipped += 1; continue }
+                payloads.append(payload(item))
+                keys.append(k)
+            }
+            guard !payloads.isEmpty else { continue }
+            do {
+                try await sink.uploadBatch(payloads)
+                for k in keys { await syncedStore.insert(k) }
+                c.uploaded += keys.count
+            } catch {
+                c.failed += keys.count
+            }
         }
+        return c
     }
 
-    private func readHRVSamples(since: Date?) async throws -> [HRVReading] {
-        try await query(type: HKQuantityType(.heartRateVariabilitySDNN), since: since) { sample in
-            guard let q = sample as? HKQuantitySample else { return nil }
-            let ms = q.quantity.doubleValue(for: .secondUnit(with: .milli))
-            guard ms > 0 else { return nil }
-            return HRVReading(uuid: q.uuid.uuidString, date: q.endDate, ms: ms)
-        }
-    }
+    // MARK: - Daily average HR (HKStatisticsCollectionQuery — no raw sample paging needed)
 
-    /// Uses `HKStatisticsCollectionQuery` to compute daily averages inside HealthKit's
-    /// own process rather than loading every raw HR sample (potentially 1M+ readings
-    /// for Watch users). HealthKit returns one `HKStatistics` per calendar day with
-    /// `averageQuantity()` already computed.
+    /// Uses `HKStatisticsCollectionQuery` so HealthKit computes daily averages
+    /// internally. Returns one result per calendar day (~2 200 max for 6 years).
     private func readDailyAverageHRSamples(since: Date?) async throws -> [DailyAvgHRReading] {
         let type = HKQuantityType(.heartRate)
         let predicate = since.map {
@@ -401,55 +431,6 @@ public actor HealthSyncManager {
                 continuation.resume(returning: readings.sorted { $0.day < $1.day })
             }
             store.execute(statsQuery)
-        }
-    }
-
-    private func readBloodPressureSamples(since: Date?) async throws -> [BPReading] {
-        // HealthKit type/unit objects aren't `Sendable`, so build them inside the
-        // `@Sendable` transform rather than capturing them.
-        try await query(type: HKCorrelationType(.bloodPressure), since: since) { sample in
-            guard let correlation = sample as? HKCorrelation else { return nil }
-            let unit = HKUnit.millimeterOfMercury()
-            guard
-                let sys = correlation.objects(for: HKQuantityType(.bloodPressureSystolic)).first as? HKQuantitySample,
-                let dia = correlation.objects(for: HKQuantityType(.bloodPressureDiastolic)).first as? HKQuantitySample
-            else { return nil }
-            return BPReading(
-                uuid: correlation.uuid.uuidString,
-                date: correlation.endDate,
-                systolic: Int(sys.quantity.doubleValue(for: unit).rounded()),
-                diastolic: Int(dia.quantity.doubleValue(for: unit).rounded())
-            )
-        }
-    }
-
-    /// Bridges the completion-based `HKSampleQuery` into async/await. The `transform`
-    /// runs **inside** the result handler so only the mapped `Sendable` values cross
-    /// the continuation boundary (HealthKit samples themselves aren't `Sendable`).
-    /// Ascending by end date so charts and history see oldest-first order.
-    private func query<T: Sendable>(
-        type: HKSampleType,
-        since: Date?,
-        transform: @escaping @Sendable (HKSample) -> T?
-    ) async throws -> [T] {
-        let predicate = since.map {
-            HKQuery.predicateForSamples(withStart: $0, end: nil, options: .strictStartDate)
-        }
-        let sort = [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: true)]
-        return try await withCheckedThrowingContinuation { continuation in
-            let query = HKSampleQuery(
-                sampleType: type,
-                predicate: predicate,
-                limit: HKObjectQueryNoLimit,
-                sortDescriptors: sort
-            ) { _, samples, error in
-                if let error {
-                    continuation.resume(throwing: HealthSyncError.query(error.localizedDescription))
-                } else {
-                    continuation.resume(returning: (samples ?? []).compactMap(transform))
-                }
-            }
-            store.execute(query)
         }
     }
 
