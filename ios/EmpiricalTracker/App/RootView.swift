@@ -54,7 +54,7 @@ enum AppTab: Int, CaseIterable, Identifiable {
 
     var icon: String {
         switch self {
-        case .home:     return "chart.line.uptrend.xyaxis"
+        case .home:     return "house.fill"
         case .diary:    return "fork.knife"
         case .plan:     return "calendar"
         case .recipes:  return "frying.pan"
@@ -130,7 +130,7 @@ private struct FloatingTabBar: View {
                             .font(.system(size: 10, weight: .medium))
                             .lineLimit(1)
                     }
-                    .foregroundStyle(selection == tab ? Color.accent : Color.textMuted)
+                    .foregroundStyle(selection == tab && tab != .home ? Color.accent : Color.textMuted)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
                     .contentShape(Rectangle())

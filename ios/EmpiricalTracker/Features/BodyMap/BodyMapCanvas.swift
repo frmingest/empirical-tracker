@@ -334,53 +334,13 @@ extension MarkerSignals.Assessment {
         }
     }
 
-    // MARK: - Status legend metadata
-    //
-    // Single source of truth for how each status presents itself across the
-    // dashboard: the live status-summary chips, the on-demand key popover, and
-    // the spotlight-dimming all read from here so colour, icon and wording can
-    // never drift apart. Colour is always paired with an icon + label (the
-    // design-system rule that colour is never the only signal).
-
-    /// Calm → attention ordering used for the summary row and key list, and as a
-    /// stable identity for the spotlight selection.
-    static let legendOrdered: [MarkerSignals.Assessment] = [.inRange, .watch, .outOfRange, .unknown]
-
+    /// Stable rank used to compare statuses for spotlight-dimming.
     var legendOrder: Int {
         switch self {
         case .inRange:    return 0
         case .watch:      return 1
         case .outOfRange: return 2
         case .unknown:    return 3
-        }
-    }
-
-    var legendLabel: String {
-        switch self {
-        case .inRange:    return "In range"
-        case .watch:      return "Watch"
-        case .outOfRange: return "Out of range"
-        case .unknown:    return "No data"
-        }
-    }
-
-    /// Filled SF Symbol that reads at small sizes inside a status chip.
-    var legendIcon: String {
-        switch self {
-        case .inRange:    return "checkmark.circle.fill"
-        case .watch:      return "exclamationmark.circle.fill"
-        case .outOfRange: return "xmark.circle.fill"
-        case .unknown:    return "minus.circle.fill"
-        }
-    }
-
-    /// One-line plain-language meaning shown in the on-demand key popover.
-    var legendDescription: String {
-        switch self {
-        case .inRange:    return "Within the healthy reference range."
-        case .watch:      return "Near a limit or trending the wrong way."
-        case .outOfRange: return "Outside the reference range — worth a look."
-        case .unknown:    return "No recent results for this area yet."
         }
     }
 }
