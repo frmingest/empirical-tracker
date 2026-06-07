@@ -57,7 +57,7 @@ final class BodyMapViewModel {
         self.biomarkersRepo = biomarkersRepo
     }
 
-    /// Calendar years present in the loaded data, newest first.
+    /// Years that appear in the loaded data, newest first. Empty when no data.
     var availableYears: [Int] {
         let cal = Calendar.current
         let years = Set(

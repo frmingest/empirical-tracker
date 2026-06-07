@@ -4314,6 +4314,40 @@
         }
       }
     },
+    "healthsync.disconnect.confirm.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This app will stop syncing data from Apple Health. To fully revoke access, also go to the Apple Health app → Browse → Apps → this app and turn off data sharing there."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appen slutter å synkronisere data fra Apple Helse. For å trekke tilbake tilgang fullstendig, gå til Apple Helse-appen → Bla gjennom → Apper → denne appen og skru av datadeling der."
+          }
+        }
+      }
+    },
+    "healthsync.disconnect.confirm.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disconnect Apple Health?"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Koble fra Apple Helse?"
+          }
+        }
+      }
+    },
     "healthsync.disconnect.hint" : {
       "comment" : "A hint text displayed below the \"Disconnect\" button in the",
       "extractionState" : "manual",
@@ -4384,6 +4418,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ingen nye data"
+          }
+        }
+      }
+    },
+    "healthsync.open_health_settings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åpne innstillinger"
+          }
+        }
+      }
+    },
+    "healthsync.permissions.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No new data found. If you recently changed permissions in Apple Health, open Settings to review access for this app."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen nye data funnet. Hvis du nylig endret tillatelser i Apple Helse, åpne Innstillinger for å gjennomgå tilgang for denne appen."
           }
         }
       }
@@ -4498,6 +4566,23 @@
         }
       }
     },
+    "healthsync.type.bloodPressure" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blood Pressure"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blodtrykk"
+          }
+        }
+      }
+    },
     "healthsync.type.heartRate" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4545,23 +4630,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hvilepuls"
-          }
-        }
-      }
-    },
-    "healthsync.type.bloodPressure" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Blood Pressure"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Blodtrykk"
           }
         }
       }
@@ -4621,73 +4689,9 @@
         }
       }
     },
-    "healthsync.permissions.hint" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No new data found. If you recently changed permissions in Apple Health, open Settings to review access for this app."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ingen nye data funnet. Hvis du nylig endret tillatelser i Apple Helse, åpne Innstillinger for å gjennomgå tilgang for denne appen."
-          }
-        }
-      }
-    },
-    "healthsync.open_health_settings" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open Settings"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Åpne innstillinger"
-          }
-        }
-      }
-    },
-    "healthsync.disconnect.confirm.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Disconnect Apple Health?"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Koble fra Apple Helse?"
-          }
-        }
-      }
-    },
-    "healthsync.disconnect.confirm.message" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This app will stop syncing data from Apple Health. To fully revoke access, also go to the Apple Health app → Browse → Apps → this app and turn off data sharing there."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Appen slutter å synkronisere data fra Apple Helse. For å trekke tilbake tilgang fullstendig, gå til Apple Helse-appen → Bla gjennom → Apper → denne appen og skru av datadeling der."
-          }
-        }
-      }
+    "Heart Rate Variability (HRV)" : {
+      "comment" : "A label for the Heart Rate Variability (HRV) section of the Heart metrics info sheet.",
+      "isCommentAutoGenerated" : true
     },
     "Height" : {
       "comment" : "A label displayed above the user's height.",
@@ -4695,6 +4699,10 @@
     },
     "High" : {
       "comment" : "Visual representation of a reference range (e.g. \"Normal\" range) shown as a shaded band on a sparkline.",
+      "isCommentAutoGenerated" : true
+    },
+    "HRV measures the tiny variation in time between each heartbeat. Counterintuitively, **more variation is better** — it means your nervous system is flexible and recovering well. A higher HRV typically signals good sleep, low stress, and solid fitness. A low or falling HRV often appears before you feel run-down. HRV is highly personal, so trends over time matter more than any single number." : {
+      "comment" : "An explanation of what HRV is and why it's important.",
       "isCommentAutoGenerated" : true
     },
     "Import a lab report" : {
@@ -6516,6 +6524,10 @@
       "comment" : "The title of an alert that appears when there is an error generating the report.",
       "isCommentAutoGenerated" : true
     },
+    "Resting Heart Rate" : {
+      "comment" : "A heading for the resting heart rate section of the heart metrics info sheet.",
+      "isCommentAutoGenerated" : true
+    },
     "Result" : {
 
     },
@@ -7390,6 +7402,10 @@
     },
     "The server is parsing your lab report. This usually takes a few seconds." : {
 
+    },
+    "This is how many times your heart beats per minute when you're completely at rest — sitting still or lying down. A lower number generally means your heart is working more efficiently. Most healthy adults fall between **60 and 100 BPM**. Athletes often run lower. A high resting HR over time can be a sign of stress, poor sleep, or that your body is fighting something off." : {
+      "comment" : "A description of resting heart rate.",
+      "isCommentAutoGenerated" : true
     },
     "This will permanently remove all %lld panels and every result they contain. This cannot be undone." : {
       "comment" : "A confirmation dialog message for deleting all blood test panels.",

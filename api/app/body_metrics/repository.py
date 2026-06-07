@@ -13,12 +13,14 @@ def list_metrics(user_id: str) -> list[dict]:
     # Supabase/PostgREST defaults to 1 000 rows. Body metrics can exceed that for
     # users who sync years of Apple Health history (daily readings = ~365/yr).
     # 10 000 is well above any realistic lifetime count while still being bounded.
+    # 50 000 is well above any realistic lifetime count even for users who sync
+    # years of Apple Health history across multiple metric types.
     resp = (
         db.table("body_metrics")
         .select(_COLUMNS)
         .eq("user_id", user_id)
         .order("measured_on")
-        .limit(10000)
+        .limit(50000)
         .execute()
     )
     return resp.data or []
@@ -45,13 +47,26 @@ def create_metric(user_id: str, metric: dict) -> dict:
 
 
 def create_metrics_batch(user_id: str, metrics: list[dict]) -> list[dict]:
-    """Insert multiple body-metric measurements in a single Supabase call."""
+    """Upsert multiple body-metric measurements via a single COALESCE-merge RPC call.
+
+    Delegates to the ``upsert_body_metrics_batch`` Postgres function which uses
+    ``ON CONFLICT (user_id, measured_on) DO UPDATE SET … COALESCE(…)`` so that:
+    - a new day is inserted normally, and
+    - an existing day is updated only for the non-NULL fields in this payload,
+      never overwriting an existing value with NULL.
+
+    This handles the HealthKit case where weight, BP, resting HR, HRV, and avg
+    HR each arrive as separate single-field payloads for the same calendar day —
+    they get merged into one row rather than creating five duplicate rows.
+    The whole batch is sent in one round-trip (no N+1).
+    """
     if not metrics:
         return []
     db = get_supabase()
+    # Build a JSON-serialisable list; omit None values so the Postgres function
+    # receives actual NULLs via JSONB (absent keys cast to NULL).
     rows = [
-        {
-            "user_id": user_id,
+        {k: v for k, v in {
             "measured_on": m["measured_on"],
             "weight_kg": m.get("weight_kg"),
             "waist_cm": m.get("waist_cm"),
@@ -62,11 +77,14 @@ def create_metrics_batch(user_id: str, metrics: list[dict]) -> list[dict]:
             "hrv_ms": m.get("hrv_ms"),
             "note": m.get("note"),
             "source": m.get("source", "manual"),
-        }
+        }.items() if v is not None}
         for m in metrics
     ]
-    resp = db.table("body_metrics").insert(rows).execute()
-    return resp.data or []
+    db.rpc(
+        "upsert_body_metrics_batch",
+        {"p_user_id": user_id, "p_rows": rows},
+    ).execute()
+    return [{"measured_on": m["measured_on"]} for m in metrics]
 
 
 def delete_metric(user_id: str, metric_id: str) -> None:
