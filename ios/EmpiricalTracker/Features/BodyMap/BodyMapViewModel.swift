@@ -48,24 +48,15 @@ private extension MarkerSignals.Assessment {
 final class BodyMapViewModel {
     private(set) var regions: [BodyRegion] = BodyMapViewModel.makeRegions()
     private(set) var isLoading = false
-    private(set) var filterYear: Int? = nil
+    /// When `true`, each marker is judged on its single most recent result only —
+    /// the simplest possible read of "where do things stand right now".
+    private(set) var showLatestOnly = false
     var errorMessage: String?
 
     private let biomarkersRepo: BiomarkersRepository
 
     init(biomarkersRepo: BiomarkersRepository) {
         self.biomarkersRepo = biomarkersRepo
-    }
-
-    /// Years that appear in the loaded data, newest first. Empty when no data.
-    var availableYears: [Int] {
-        let cal = Calendar.current
-        let years = Set(
-            biomarkersRepo.results
-                .flatMap { $0.series }
-                .map { cal.component(.year, from: $0.testedAt) }
-        )
-        return years.sorted(by: >)
     }
 
     func load() async {
@@ -81,20 +72,33 @@ final class BodyMapViewModel {
         distribute(biomarkersRepo.results)
     }
 
-    func setFilterYear(_ year: Int?) {
-        filterYear = year
+    func toggleLatestOnly() {
+        showLatestOnly.toggle()
         distribute(biomarkersRepo.results)
+    }
+
+    /// The most recent year that appears anywhere in the loaded results — "latest
+    /// results" means the most recent test round, not each marker's own latest
+    /// (which could span several different years and read as inconsistent).
+    private func latestYear(in results: [BiomarkerWithSeries]) -> Int? {
+        let cal = Calendar.current
+        return results
+            .flatMap { $0.series }
+            .map { cal.component(.year, from: $0.testedAt) }
+            .max()
     }
 
     private func distribute(_ results: [BiomarkerWithSeries]) {
         let cal = Calendar.current
+        let year = showLatestOnly ? latestYear(in: results) : nil
+
         var updated = regions
         for i in updated.indices {
             let cats = updated[i].categories
             updated[i].items = results
                 .filter { cats.contains(biomarkerCategory(for: $0.biomarker.nameNo)) }
                 .compactMap { item -> BiomarkerWithSeries? in
-                    guard let year = filterYear else { return item }
+                    guard let year else { return item }
                     let filtered = item.series.filter { cal.component(.year, from: $0.testedAt) == year }
                     return filtered.isEmpty ? nil : BiomarkerWithSeries(biomarker: item.biomarker, series: filtered)
                 }
