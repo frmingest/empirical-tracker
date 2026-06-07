@@ -27,7 +27,12 @@ public actor SyncedSampleStore {
     }
 
     public func insert(_ uuid: String) {
-        guard ids.insert(uuid).inserted else { return }
+        ids.insert(uuid)
+    }
+
+    /// Persists the in-memory set to UserDefaults. Call once at the end of a sync
+    /// batch rather than after every individual insert to avoid thousands of writes.
+    public func flush() {
         persist()
     }
 
