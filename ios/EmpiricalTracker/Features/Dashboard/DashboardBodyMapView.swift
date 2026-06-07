@@ -45,24 +45,23 @@ struct DashboardBodyMapView: View {
     // MARK: - Canvas
 
     private func bodyCanvas(_ vm: BodyMapViewModel) -> some View {
-        // All overlay elements are explicit ZStack siblings rather than .overlay
-        // children of BodyMapCanvas (a GeometryReader). Overlays on GeometryReader
-        // can silently fail to render inside NavigationStack. Siblings avoid that
-        // and also prevent @Observable bodyMetrics updates from triggering a canvas
-        // layout pass.
+        // The legend and year-filter are placed OUTSIDE the ZStack in a VStack
+        // wrapper so they are never subject to ZStack height-resolution failures
+        // (GeometryReader + NavigationStack can silently clip sibling overlays).
         let hasYearFilter = vm.availableYears.count > 1
 
-        return ZStack {
-            BodyMapCanvas(
-                regions: vm.regions,
-                silhouetteOpacity: 0.18,
-                bottomReserve: 80
-            ) { region in
-                selectedRegion = region
-            }
+        return VStack(spacing: 0) {
+            // ── Silhouette canvas (takes all remaining vertical space) ──────
+            ZStack(alignment: .top) {
+                BodyMapCanvas(
+                    regions: vm.regions,
+                    silhouetteOpacity: 0.18,
+                    bottomReserve: 0
+                ) { region in
+                    selectedRegion = region
+                }
 
-            // Top: stat panels + compact year-filter chips below them
-            VStack(spacing: 0) {
+                // Stat panels overlaid at the top of the canvas only
                 HStack(alignment: .top) {
                     HeartStatsPanel(metrics: env.bodyMetrics.metrics)
                         .padding(.top, 12)
@@ -75,28 +74,29 @@ struct DashboardBodyMapView: View {
                     .padding(.top, 12)
                     .padding(.trailing, 12)
                 }
-                if hasYearFilter {
-                    yearFilterRow(vm).padding(.top, 8)
-                }
-                Spacer()
+                .frame(maxWidth: .infinity)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            // Bottom: colour legend + last-sync caption.
-            // Uses an inner Spacer for bottom inset — .padding after
-            // .frame(maxHeight: .infinity) would push content outside the ZStack.
-            VStack(spacing: 0) {
-                Spacer()
-                BodyMapLegendView()
-                if let date = env.healthSyncState.lastSyncDate {
-                    Text("Synced \(date.formatted(.relative(presentation: .named)))")
-                        .font(.labelSmall)
-                        .foregroundStyle(Color.textMuted)
-                        .padding(.top, 4)
-                }
-                Spacer().frame(height: 14)
+            // ── Year filter — always below the canvas, never overlapping ────
+            if hasYearFilter {
+                yearFilterRow(vm)
+                    .padding(.top, 6)
+                    .padding(.bottom, 4)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            // ── Colour legend — always visible at the bottom ─────────────────
+            BodyMapLegendView()
+                .padding(.top, hasYearFilter ? 2 : 8)
+
+            if let date = env.healthSyncState.lastSyncDate {
+                Text("Synced \(date.formatted(.relative(presentation: .named)))")
+                    .font(.labelSmall)
+                    .foregroundStyle(Color.textMuted)
+                    .padding(.top, 4)
+            }
+
+            Spacer().frame(height: 12)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.bgBase)
