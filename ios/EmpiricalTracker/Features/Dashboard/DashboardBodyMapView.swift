@@ -45,9 +45,11 @@ struct DashboardBodyMapView: View {
     // MARK: - Canvas
 
     private func bodyCanvas(_ vm: BodyMapViewModel) -> some View {
-        // The overlay panels are siblings of BodyMapCanvas via ZStack rather
-        // than children via .overlay — this way @Observable changes to
-        // env.bodyMetrics do not trigger a BodyMapCanvas layout pass.
+        // Legend is applied directly to BodyMapCanvas (a GeometryReader) so it
+        // inherits the exact same frame — this mirrors the proven pattern in
+        // BodyMapView. Stats panels are ZStack siblings rather than .overlay
+        // children so @Observable env.bodyMetrics updates don't invalidate the
+        // BodyMapCanvas layout pass.
         ZStack {
             BodyMapCanvas(
                 regions: vm.regions,
@@ -56,9 +58,11 @@ struct DashboardBodyMapView: View {
             ) { region in
                 selectedRegion = region
             }
+            .overlay(alignment: .bottom) {
+                BodyMapLegendView()
+                    .padding(.bottom, 20)
+            }
 
-            // Stats panels sit in the ZStack so @Observable updates to
-            // env.bodyMetrics don't trigger a BodyMapCanvas layout pass.
             VStack(spacing: 0) {
                 HStack(alignment: .top) {
                     HeartStatsPanel(metrics: env.bodyMetrics.metrics)
@@ -75,10 +79,6 @@ struct DashboardBodyMapView: View {
                 Spacer()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .overlay(alignment: .bottom) {
-            BodyMapLegendView()
-                .padding(.bottom, 20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.bgBase)
