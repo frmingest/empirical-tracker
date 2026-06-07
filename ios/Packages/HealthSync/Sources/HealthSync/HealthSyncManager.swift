@@ -124,7 +124,7 @@ public actor HealthSyncManager {
                 group.addTask {
                     let c = try await self.syncPaged(
                         type: HKQuantityType(.bodyMass), since: since,
-                        transform: { sample in
+                        transform: { sample -> WeightReading? in
                             guard let q = sample as? HKQuantitySample else { return nil }
                             let kg = q.quantity.doubleValue(for: .gramUnit(with: .kilo))
                             guard kg > 0 else { return nil }
@@ -141,7 +141,7 @@ public actor HealthSyncManager {
                 group.addTask {
                     let c = try await self.syncPaged(
                         type: HKCorrelationType(.bloodPressure), since: since,
-                        transform: { sample in
+                        transform: { sample -> BPReading? in
                             guard let correlation = sample as? HKCorrelation else { return nil }
                             let unit = HKUnit.millimeterOfMercury()
                             guard
@@ -166,7 +166,7 @@ public actor HealthSyncManager {
                 group.addTask {
                     let c = try await self.syncPaged(
                         type: HKQuantityType(.restingHeartRate), since: since,
-                        transform: { sample in
+                        transform: { sample -> HRReading? in
                             guard let q = sample as? HKQuantitySample else { return nil }
                             let unit = HKUnit.count().unitDivided(by: .minute())
                             let bpm = q.quantity.doubleValue(for: unit)
@@ -184,7 +184,7 @@ public actor HealthSyncManager {
                 group.addTask {
                     let c = try await self.syncPaged(
                         type: HKQuantityType(.heartRateVariabilitySDNN), since: since,
-                        transform: { sample in
+                        transform: { sample -> HRVReading? in
                             guard let q = sample as? HKQuantitySample else { return nil }
                             let ms = q.quantity.doubleValue(for: .secondUnit(with: .milli))
                             guard ms > 0 else { return nil }
