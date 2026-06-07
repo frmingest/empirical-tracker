@@ -74,6 +74,7 @@ struct DashboardBodyMapView: View {
                 BodyMapLegendView()
                     .padding(.bottom, 20)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.bgBase)
@@ -161,9 +162,11 @@ private struct BodyMetricsStatRow: View {
 // MARK: - Heart stats panel (top-left)
 
 /// Compact panel showing latest resting heart rate and HRV from Apple Watch.
-/// Always rendered so @Observable tracking is established on first pass.
+/// Tapping the card opens a plain-language explanation of both metrics.
 struct HeartStatsPanel: View {
     let metrics: [BodyMetric]
+
+    @State private var showInfo = false
 
     private var sorted: [BodyMetric] { metrics.sorted { $0.measuredOn > $1.measuredOn } }
 
@@ -176,29 +179,43 @@ struct HeartStatsPanel: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HeartRow(
-                icon: "heart.fill",
-                label: "Resting HR",
-                value: latestRHR.map { "\($0) BPM" } ?? "--",
-                color: hrColor(latestRHR)
+        Button { showInfo = true } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 4) {
+                    HeartRow(
+                        icon: "heart.fill",
+                        label: "Resting HR",
+                        value: latestRHR.map { "\($0) BPM" } ?? "--",
+                        color: hrColor(latestRHR)
+                    )
+                    Spacer(minLength: 0)
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.textMuted)
+                }
+                HeartRow(
+                    icon: "waveform.path.ecg",
+                    label: "HRV",
+                    value: latestHRV.map { String(format: "%.0f ms", $0) } ?? "--",
+                    color: .accent
+                )
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(Color.borderSubtle.opacity(0.5), lineWidth: 0.5)
             )
-            HeartRow(
-                icon: "waveform.path.ecg",
-                label: "HRV",
-                value: latestHRV.map { String(format: "%.0f ms", $0) } ?? "--",
-                color: .accent
-            )
+            .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 3)
+            .frame(maxWidth: 148)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(Color.borderSubtle.opacity(0.5), lineWidth: 0.5)
-        )
-        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 3)
-        .frame(maxWidth: 140)
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showInfo) {
+            HeartMetricsInfoSheet()
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
     }
 }
 
@@ -223,6 +240,48 @@ private struct HeartRow: View {
                     .foregroundStyle(Color.textPrimary)
             }
         }
+    }
+}
+
+// MARK: - Heart metrics info sheet
+
+private struct HeartMetricsInfoSheet: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    Image(systemName: "heart.fill")
+                        .foregroundStyle(Color.outRange)
+                    Text("Resting Heart Rate")
+                        .font(.headlineMedium)
+                        .foregroundStyle(Color.textPrimary)
+                }
+                Text("This is how many times your heart beats per minute when you're completely at rest — sitting still or lying down. A lower number generally means your heart is working more efficiently. Most healthy adults fall between **60 and 100 BPM**. Athletes often run lower. A high resting HR over time can be a sign of stress, poor sleep, or that your body is fighting something off.")
+                    .font(.bodyMedium)
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    Image(systemName: "waveform.path.ecg")
+                        .foregroundStyle(Color.accent)
+                    Text("Heart Rate Variability (HRV)")
+                        .font(.headlineMedium)
+                        .foregroundStyle(Color.textPrimary)
+                }
+                Text("HRV measures the tiny variation in time between each heartbeat. Counterintuitively, **more variation is better** — it means your nervous system is flexible and recovering well. A higher HRV typically signals good sleep, low stress, and solid fitness. A low or falling HRV often appears before you feel run-down. HRV is highly personal, so trends over time matter more than any single number.")
+                    .font(.bodyMedium)
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer()
+        }
+        .padding(24)
+        .background(Color.bgBase)
     }
 }
 
