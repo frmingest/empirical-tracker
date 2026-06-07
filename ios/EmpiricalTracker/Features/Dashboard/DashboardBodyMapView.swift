@@ -70,7 +70,7 @@ struct DashboardBodyMapView: View {
                 BodyMapCanvas(
                     regions: vm.regions,
                     silhouetteOpacity: 0.18,
-                    bottomReserve: hasYearFilter ? 0 : 32,
+                    bottomReserve: 0,
                     highlightedAssessment: spotlightOrder.flatMap(assessment(forOrder:))
                 ) { region in
                     selectedRegion = region
@@ -425,9 +425,6 @@ struct BodyMapStatusSummary: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 2)
             }
-            .fixedSize(horizontal: true, vertical: false)
-
-            Spacer(minLength: 0)
 
             Button { isKeyPresented = true } label: {
                 Image(systemName: "info.circle")
