@@ -66,6 +66,18 @@ async def create_body_metric(
     return repository.create_metric(user_id, body.model_dump())
 
 
+@router.post("/batch", status_code=201)
+async def create_body_metrics_batch(
+    body: list[BodyMetricIn],
+    user_id: str = Depends(current_user_id),
+) -> list[dict]:
+    if not body:
+        return []
+    if len(body) > 500:
+        raise HTTPException(status_code=422, detail="Batch size cannot exceed 500")
+    return repository.create_metrics_batch(user_id, [m.model_dump() for m in body])
+
+
 @router.delete("/by-source/{source}")
 async def delete_body_metrics_by_source(
     source: str,

@@ -122,6 +122,61 @@ def test_create_endpoint_rejects_half_blood_pressure():
         app.dependency_overrides.clear()
 
 
+@patch("app.body_metrics.router.repository.create_metrics_batch")
+def test_batch_endpoint_ok(mock_batch):
+    mock_batch.return_value = [{"id": "m1"}, {"id": "m2"}]
+    app.dependency_overrides[current_user_id] = lambda: "u1"
+    try:
+        res = client.post(
+            "/body-metrics/batch",
+            json=[
+                {"measured_on": "2026-06-01", "weight_kg": 82.5},
+                {"measured_on": "2026-06-02", "weight_kg": 83.0},
+            ],
+        )
+        assert res.status_code == 201
+        assert len(res.json()) == 2
+        mock_batch.assert_called_once()
+        _, rows = mock_batch.call_args.args
+        assert len(rows) == 2
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_batch_endpoint_rejects_empty():
+    app.dependency_overrides[current_user_id] = lambda: "u1"
+    try:
+        res = client.post("/body-metrics/batch", json=[])
+        assert res.status_code == 201
+        assert res.json() == []
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_batch_endpoint_rejects_over_limit():
+    app.dependency_overrides[current_user_id] = lambda: "u1"
+    try:
+        items = [{"measured_on": "2026-06-01", "weight_kg": 80.0}] * 501
+        res = client.post("/body-metrics/batch", json=items)
+        assert res.status_code == 422
+    finally:
+        app.dependency_overrides.clear()
+
+
+@patch("app.body_metrics.router.repository.create_metrics_batch")
+def test_batch_endpoint_rejects_invalid_item(mock_batch):
+    app.dependency_overrides[current_user_id] = lambda: "u1"
+    try:
+        res = client.post(
+            "/body-metrics/batch",
+            json=[{"measured_on": "2026-06-01"}],  # no metric value
+        )
+        assert res.status_code == 422
+        mock_batch.assert_not_called()
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_create_endpoint_rejects_non_positive_weight():
     app.dependency_overrides[current_user_id] = lambda: "u1"
     try:
