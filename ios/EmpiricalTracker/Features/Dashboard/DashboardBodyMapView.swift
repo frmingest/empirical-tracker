@@ -53,7 +53,7 @@ struct DashboardBodyMapView: View {
         return VStack(spacing: 0) {
             // ── Single "latest results" filter — top-anchored, always visible ──
             HStack {
-                PillChip("Latest results only", isSelected: vm.showLatestOnly) {
+                PillChip("Latest results", isSelected: vm.showLatestOnly) {
                     vm.toggleLatestOnly()
                 }
                 Spacer(minLength: 0)
