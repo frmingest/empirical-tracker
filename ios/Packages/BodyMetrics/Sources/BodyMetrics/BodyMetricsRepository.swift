@@ -140,6 +140,18 @@ public final class BodyMetricsRepository {
         metrics.sort { $0.measuredOn < $1.measuredOn }
     }
 
+    /// Inserts many measurements in a single `POST /body-metrics/batch` round-trip and
+    /// merges the stored rows back into the in-memory list with one sort (not one sort
+    /// per row). Used by the Apple Health sync, where a history import is thousands of
+    /// readings; per-row `create` would mean thousands of requests and O(n²) sorting on
+    /// the main actor. The backend caps a batch at 500 — callers chunk accordingly.
+    public func createBatch(_ payloads: [BodyMetricPayload]) async throws {
+        guard !payloads.isEmpty else { return }
+        let created: [BodyMetric] = try await client.request(.post("/body-metrics/batch", body: payloads))
+        metrics.append(contentsOf: created)
+        metrics.sort { $0.measuredOn < $1.measuredOn }
+    }
+
     public func delete(id: String) async throws {
         try await client.requestEmpty(.delete("/body-metrics/\(id)"))
         metrics.removeAll { $0.id == id }

@@ -17,4 +17,11 @@ final class RepositoryBodyMetricSyncSink: BodyMetricSyncSink {
     func upload(_ payload: BodyMetricPayload) async throws {
         try await repository.create(payload)
     }
+
+    /// Routes the batch through `POST /body-metrics/batch` (one request for up to 500
+    /// readings) instead of one `POST /body-metrics` per reading — the change that
+    /// keeps a full Apple Health history import to seconds rather than hours.
+    func uploadBatch(_ payloads: [BodyMetricPayload]) async throws {
+        try await repository.createBatch(payloads)
+    }
 }
