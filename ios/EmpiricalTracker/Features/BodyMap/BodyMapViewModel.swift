@@ -48,12 +48,24 @@ private extension MarkerSignals.Assessment {
 final class BodyMapViewModel {
     private(set) var regions: [BodyRegion] = BodyMapViewModel.makeRegions()
     private(set) var isLoading = false
+    private(set) var filterYear: Int? = nil
     var errorMessage: String?
 
     private let biomarkersRepo: BiomarkersRepository
 
     init(biomarkersRepo: BiomarkersRepository) {
         self.biomarkersRepo = biomarkersRepo
+    }
+
+    /// Years that appear in the loaded data, newest first. Empty when no data.
+    var availableYears: [Int] {
+        let cal = Calendar.current
+        let years = Set(
+            biomarkersRepo.results
+                .flatMap { $0.series }
+                .map { cal.component(.year, from: $0.testedAt) }
+        )
+        return years.sorted(by: >)
     }
 
     func load() async {
@@ -69,12 +81,23 @@ final class BodyMapViewModel {
         distribute(biomarkersRepo.results)
     }
 
+    func setFilterYear(_ year: Int?) {
+        filterYear = year
+        distribute(biomarkersRepo.results)
+    }
+
     private func distribute(_ results: [BiomarkerWithSeries]) {
+        let cal = Calendar.current
         var updated = regions
         for i in updated.indices {
-            updated[i].items = results.filter { item in
-                updated[i].categories.contains(biomarkerCategory(for: item.biomarker.nameNo))
-            }
+            let cats = updated[i].categories
+            updated[i].items = results
+                .filter { cats.contains(biomarkerCategory(for: $0.biomarker.nameNo)) }
+                .compactMap { item -> BiomarkerWithSeries? in
+                    guard let year = filterYear else { return item }
+                    let filtered = item.series.filter { cal.component(.year, from: $0.testedAt) == year }
+                    return filtered.isEmpty ? nil : BiomarkerWithSeries(biomarker: item.biomarker, series: filtered)
+                }
         }
         regions = updated
     }

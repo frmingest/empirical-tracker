@@ -45,24 +45,24 @@ struct DashboardBodyMapView: View {
     // MARK: - Canvas
 
     private func bodyCanvas(_ vm: BodyMapViewModel) -> some View {
-        // Legend is applied directly to BodyMapCanvas (a GeometryReader) so it
-        // inherits the exact same frame — this mirrors the proven pattern in
-        // BodyMapView. Stats panels are ZStack siblings rather than .overlay
-        // children so @Observable env.bodyMetrics updates don't invalidate the
-        // BodyMapCanvas layout pass.
-        ZStack {
+        // Stats panels are ZStack siblings so @Observable env.bodyMetrics updates
+        // don't invalidate the BodyMapCanvas layout pass. The legend, year filter,
+        // and sync text live in an explicit bottom-pinned VStack rather than as an
+        // .overlay on BodyMapCanvas (a GeometryReader) — overlays on GeometryReader
+        // can silently vanish in certain NavigationStack contexts.
+        let hasYearFilter = vm.availableYears.count > 1
+        let bottomReserve: CGFloat = hasYearFilter ? 116 : 80
+
+        return ZStack {
             BodyMapCanvas(
                 regions: vm.regions,
                 silhouetteOpacity: 0.18,
-                bottomReserve: 72
+                bottomReserve: bottomReserve
             ) { region in
                 selectedRegion = region
             }
-            .overlay(alignment: .bottom) {
-                BodyMapLegendView()
-                    .padding(.bottom, 20)
-            }
 
+            // Top-corner stat panels
             VStack(spacing: 0) {
                 HStack(alignment: .top) {
                     HeartStatsPanel(metrics: env.bodyMetrics.metrics)
@@ -79,9 +79,43 @@ struct DashboardBodyMapView: View {
                 Spacer()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            // Bottom legend group — year filter (when >1 year), colour legend, sync time
+            VStack(spacing: 0) {
+                Spacer()
+                if hasYearFilter {
+                    yearFilterRow(vm)
+                        .padding(.bottom, 8)
+                }
+                BodyMapLegendView()
+                if let date = env.healthSyncState.lastSyncDate {
+                    Text("Synced \(date.formatted(.relative(presentation: .named)))")
+                        .font(.labelSmall)
+                        .foregroundStyle(Color.textMuted)
+                        .padding(.top, 4)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.bottom, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.bgBase)
+    }
+
+    private func yearFilterRow(_ vm: BodyMapViewModel) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                PillChip("All", isSelected: vm.filterYear == nil) {
+                    vm.setFilterYear(nil)
+                }
+                ForEach(vm.availableYears, id: \.self) { year in
+                    PillChip("\(year)", isSelected: vm.filterYear == year) {
+                        vm.setFilterYear(year)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+        }
     }
 }
 
