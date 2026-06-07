@@ -195,7 +195,58 @@ colours outside the palette.
 
 ---
 
-## 7. Adding to the system
+## 7. BodyMapCanvas — layout rules
+
+`BodyMapCanvas` is a `GeometryReader`-rooted view. GeometryReader is greedy: it
+expands to fill the full space proposed by its parent. This has one critical
+consequence for overlays:
+
+**Always apply `.overlay` directly on `BodyMapCanvas`, never on a ZStack that
+wraps it.**
+
+When an outer ZStack wraps a GeometryReader, the ZStack's own frame depends on
+how the parent proposes space to it. If that proposal is ambiguous, the overlay
+lands on a different (often smaller) rect than the canvas itself — meaning the
+legend or any bottom-aligned element appears in the wrong place or not at all.
+
+```swift
+// ✅ Correct — overlay inherits BodyMapCanvas's exact GeometryReader frame
+BodyMapCanvas(regions: ..., bottomReserve: 72) { ... }
+    .overlay(alignment: .bottom) {
+        BodyMapLegendView()
+            .padding(.bottom, 20)
+    }
+
+// ❌ Wrong — outer ZStack frame is ambiguous; .overlay does not land at the bottom
+ZStack {
+    BodyMapCanvas(regions: ..., bottomReserve: 72) { ... }
+    // other siblings…
+}
+.overlay(alignment: .bottom) {
+    BodyMapLegendView()   // will not appear where expected
+}
+```
+
+If you need to layer additional views on top of the canvas (e.g. stats panels),
+add them as ZStack siblings **after** attaching the legend overlay to
+`BodyMapCanvas`:
+
+```swift
+ZStack {
+    BodyMapCanvas(...)
+        .overlay(alignment: .bottom) { BodyMapLegendView()... }  // ← on canvas
+    StatsPanel()  // ← sibling, not an .overlay on the outer ZStack
+}
+```
+
+The `bottomReserve` parameter tells the canvas to leave that many points clear at
+the bottom so pins never collide with the legend. Keep `bottomReserve` ≥ legend
+height + vertical padding (currently 72 pt on the dashboard, 84 pt on the full-
+screen Body Map).
+
+---
+
+## 8. Adding to the system
 
 1. If a feature needs a new visual primitive, add it to
    `Core/DesignSystem/Components/` as a `public` view, with a `#Preview`.

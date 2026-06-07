@@ -45,18 +45,24 @@ struct DashboardBodyMapView: View {
     // MARK: - Canvas
 
     private func bodyCanvas(_ vm: BodyMapViewModel) -> some View {
-        // The overlay panels are siblings of BodyMapCanvas via ZStack rather
-        // than children via .overlay — this way @Observable changes to
-        // env.bodyMetrics do not trigger a BodyMapCanvas layout pass.
-        ZStack {
+        // Stats panels are ZStack siblings so @Observable env.bodyMetrics updates
+        // don't invalidate the BodyMapCanvas layout pass. The legend, year filter,
+        // and sync text live in an explicit bottom-pinned VStack rather than as an
+        // .overlay on BodyMapCanvas (a GeometryReader) — overlays on GeometryReader
+        // can silently vanish in certain NavigationStack contexts.
+        let hasYearFilter = vm.availableYears.count > 1
+        let bottomReserve: CGFloat = hasYearFilter ? 116 : 80
+
+        return ZStack {
             BodyMapCanvas(
                 regions: vm.regions,
                 silhouetteOpacity: 0.18,
-                bottomReserve: 72
+                bottomReserve: bottomReserve
             ) { region in
                 selectedRegion = region
             }
 
+            // Top-corner stat panels
             VStack(spacing: 0) {
                 HStack(alignment: .top) {
                     HeartStatsPanel(metrics: env.bodyMetrics.metrics)
@@ -71,12 +77,45 @@ struct DashboardBodyMapView: View {
                     .padding(.trailing, 12)
                 }
                 Spacer()
-                BodyMapLegendView()
-                    .padding(.bottom, 20)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            // Bottom legend group — year filter (when >1 year), colour legend, sync time
+            VStack(spacing: 0) {
+                Spacer()
+                if hasYearFilter {
+                    yearFilterRow(vm)
+                        .padding(.bottom, 8)
+                }
+                BodyMapLegendView()
+                if let date = env.healthSyncState.lastSyncDate {
+                    Text("Synced \(date.formatted(.relative(presentation: .named)))")
+                        .font(.labelSmall)
+                        .foregroundStyle(Color.textMuted)
+                        .padding(.top, 4)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.bottom, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.bgBase)
+    }
+
+    private func yearFilterRow(_ vm: BodyMapViewModel) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                PillChip("All", isSelected: vm.filterYear == nil) {
+                    vm.setFilterYear(nil)
+                }
+                ForEach(vm.availableYears, id: \.self) { year in
+                    PillChip("\(year)", isSelected: vm.filterYear == year) {
+                        vm.setFilterYear(year)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+        }
     }
 }
 
@@ -161,9 +200,11 @@ private struct BodyMetricsStatRow: View {
 // MARK: - Heart stats panel (top-left)
 
 /// Compact panel showing latest resting heart rate and HRV from Apple Watch.
-/// Always rendered so @Observable tracking is established on first pass.
+/// Tapping the card opens a plain-language explanation of both metrics.
 struct HeartStatsPanel: View {
     let metrics: [BodyMetric]
+
+    @State private var showInfo = false
 
     private var sorted: [BodyMetric] { metrics.sorted { $0.measuredOn > $1.measuredOn } }
 
@@ -176,29 +217,43 @@ struct HeartStatsPanel: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HeartRow(
-                icon: "heart.fill",
-                label: "Resting HR",
-                value: latestRHR.map { "\($0) BPM" } ?? "--",
-                color: hrColor(latestRHR)
+        Button { showInfo = true } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 4) {
+                    HeartRow(
+                        icon: "heart.fill",
+                        label: "Resting HR",
+                        value: latestRHR.map { "\($0) BPM" } ?? "--",
+                        color: hrColor(latestRHR)
+                    )
+                    Spacer(minLength: 0)
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.textMuted)
+                }
+                HeartRow(
+                    icon: "waveform.path.ecg",
+                    label: "HRV",
+                    value: latestHRV.map { String(format: "%.0f ms", $0) } ?? "--",
+                    color: .accent
+                )
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(Color.borderSubtle.opacity(0.5), lineWidth: 0.5)
             )
-            HeartRow(
-                icon: "waveform.path.ecg",
-                label: "HRV",
-                value: latestHRV.map { String(format: "%.0f ms", $0) } ?? "--",
-                color: .accent
-            )
+            .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 3)
+            .frame(maxWidth: 148)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(Color.borderSubtle.opacity(0.5), lineWidth: 0.5)
-        )
-        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 3)
-        .frame(maxWidth: 140)
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showInfo) {
+            HeartMetricsInfoSheet()
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
     }
 }
 
@@ -223,6 +278,48 @@ private struct HeartRow: View {
                     .foregroundStyle(Color.textPrimary)
             }
         }
+    }
+}
+
+// MARK: - Heart metrics info sheet
+
+private struct HeartMetricsInfoSheet: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    Image(systemName: "heart.fill")
+                        .foregroundStyle(Color.outRange)
+                    Text("Resting Heart Rate")
+                        .font(.headlineMedium)
+                        .foregroundStyle(Color.textPrimary)
+                }
+                Text("This is how many times your heart beats per minute when you're completely at rest — sitting still or lying down. A lower number generally means your heart is working more efficiently. Most healthy adults fall between **60 and 100 BPM**. Athletes often run lower. A high resting HR over time can be a sign of stress, poor sleep, or that your body is fighting something off.")
+                    .font(.bodyMedium)
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    Image(systemName: "waveform.path.ecg")
+                        .foregroundStyle(Color.accent)
+                    Text("Heart Rate Variability (HRV)")
+                        .font(.headlineMedium)
+                        .foregroundStyle(Color.textPrimary)
+                }
+                Text("HRV measures the tiny variation in time between each heartbeat. Counterintuitively, **more variation is better** — it means your nervous system is flexible and recovering well. A higher HRV typically signals good sleep, low stress, and solid fitness. A low or falling HRV often appears before you feel run-down. HRV is highly personal, so trends over time matter more than any single number.")
+                    .font(.bodyMedium)
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer()
+        }
+        .padding(24)
+        .background(Color.bgBase)
     }
 }
 
