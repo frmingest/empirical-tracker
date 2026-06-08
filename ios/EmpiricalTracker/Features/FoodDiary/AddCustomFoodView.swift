@@ -28,6 +28,7 @@ struct AddCustomFoodView: View {
     @State private var satFatText: String
     @State private var sodiumText: String
     @State private var servingText: String
+    @State private var ingredientsText: String
     /// Explicit opt-in to share this food into the common catalogue. Off by
     /// default — sharing is a deliberate choice and the consent basis for keeping
     /// the item (anonymised) after deletion (ADR-027).
@@ -61,12 +62,14 @@ struct AddCustomFoodView: View {
         _satFatText  = State(initialValue: Self.fmt(parsedLabel?.saturatedFat100g))
         _sodiumText  = State(initialValue: Self.fmt(parsedLabel?.sodiumMg100g))
         _servingText = State(initialValue: "100")
+        _ingredientsText = State(initialValue: parsedLabel?.ingredients ?? "")
     }
 
     var body: some View {
         NavigationStack {
             Form {
                 identitySection
+                ingredientsSection
                 nutrientsSection
                 sharingSection
                 ocrHintSection
@@ -119,6 +122,15 @@ struct AddCustomFoodView: View {
             field(String(localized: "food.custom.field.brand"), text: $brand)
             field(String(localized: "food.custom.field.barcode"), text: $barcodeText)
                 .keyboardType(.numberPad)
+        }
+    }
+
+    private var ingredientsSection: some View {
+        Section(String(localized: "food.custom.section.ingredients")) {
+            TextEditor(text: $ingredientsText)
+                .font(.bodyMedium)
+                .foregroundStyle(Color.textPrimary)
+                .frame(minHeight: 80)
         }
     }
 
@@ -206,6 +218,7 @@ struct AddCustomFoodView: View {
             saturatedFatG: parse(satFatText),
             sodiumMg: parse(sodiumText),
             servingG: parse(servingText),
+            ingredients: ingredientsText.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
             isPublic: shareToCatalogue
         )
         print("🔍 OCR-DEBUG payload energy=\(payload.energyKcal as Any) carbs=\(payload.carbsG as Any) protein=\(payload.proteinG as Any) fat=\(payload.fatG as Any)")
