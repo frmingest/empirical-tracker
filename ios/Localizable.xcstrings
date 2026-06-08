@@ -3127,6 +3127,23 @@
         }
       }
     },
+    "food.custom.section.ingredients" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingredients"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingredienser"
+          }
+        }
+      }
+    },
     "food.custom.field.brand" : {
       "extractionState" : "manual",
       "localizations" : {
