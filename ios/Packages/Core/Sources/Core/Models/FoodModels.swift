@@ -118,6 +118,9 @@ public struct FoodEntry: Codable, Identifiable, Sendable {
     /// Provenance of the numbers (ADR-018). `nil` for legacy / free-text entries.
     public let source: FoodSource?
     public let note: String?
+    /// Free-text ingredients snapshot copied from the source product at log time
+    /// (product / custom sources). `nil` for free-text or whole-food entries.
+    public let ingredients: String?
 
     public init(
         id: String,
@@ -134,7 +137,8 @@ public struct FoodEntry: Codable, Identifiable, Sendable {
         saturatedFatG: Double? = nil,
         sodiumMg: Double? = nil,
         source: FoodSource? = nil,
-        note: String? = nil
+        note: String? = nil,
+        ingredients: String? = nil
     ) {
         self.id = id
         self.loggedOn = loggedOn
@@ -151,6 +155,7 @@ public struct FoodEntry: Codable, Identifiable, Sendable {
         self.sodiumMg = sodiumMg
         self.source = source
         self.note = note
+        self.ingredients = ingredients
     }
 }
 
@@ -299,6 +304,9 @@ public struct FoodEntryPayload: Encodable, Sendable {
     public let sodiumMg: Double?
     public let source: FoodSource?
     public let note: String?
+    /// Ingredients snapshot copied from the product at log time, so the diary entry
+    /// keeps them independently of the source food (product / custom sources only).
+    public let ingredients: String?
 
     /// Convenience initialiser that pre-scales per-100g nutrients from a `FoodItem`.
     public init(
@@ -322,6 +330,7 @@ public struct FoodEntryPayload: Encodable, Sendable {
         self.sodiumMg      = item.sodiumMg(forGrams: quantityG)
         self.source        = item.source
         self.note          = note
+        self.ingredients   = item.ingredients
     }
 
     /// Freetext-only entry (no product match).
@@ -353,6 +362,7 @@ public struct FoodEntryPayload: Encodable, Sendable {
         self.sodiumMg      = sodiumMg
         self.source        = nil
         self.note          = note
+        self.ingredients   = nil
     }
 
     /// Raw initialiser used when promoting an already-stored record (e.g. a planned
@@ -373,7 +383,8 @@ public struct FoodEntryPayload: Encodable, Sendable {
         saturatedFatG: Double?,
         sodiumMg: Double?,
         source: FoodSource?,
-        note: String?
+        note: String?,
+        ingredients: String? = nil
     ) {
         self.loggedOn      = loggedOn
         self.meal          = meal
@@ -389,6 +400,7 @@ public struct FoodEntryPayload: Encodable, Sendable {
         self.sodiumMg      = sodiumMg
         self.source        = source
         self.note          = note
+        self.ingredients   = ingredients
     }
 }
 
