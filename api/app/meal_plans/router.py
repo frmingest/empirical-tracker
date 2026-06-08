@@ -38,6 +38,7 @@ class PlannedMealIn(BaseModel):
     saturated_fat_g: float | None = None
     source: str | None = None
     note: str | None = None
+    ingredients: str | None = None
     done: bool = False
 
     @field_validator("food_name")

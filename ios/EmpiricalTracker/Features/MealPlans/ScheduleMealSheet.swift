@@ -42,6 +42,7 @@ struct ScheduleMealSheet: View {
                 headerSection
                 quantitySection
                 if item != nil {
+                    ingredientsSection
                     nutritionPreviewSection
                 } else {
                     freeTextNutritionSection
@@ -101,6 +102,20 @@ struct ScheduleMealSheet: View {
                 TextField(String(localized: "food.log.quantity.placeholder"), text: $quantityText)
                     .keyboardType(.decimalPad)
                 Text(String(localized: "food.unit.g"))
+                    .foregroundStyle(Color.textSecondary)
+            }
+        }
+    }
+
+    /// Read-only ingredients list, shown above the nutrition when the product
+    /// carries one (product / custom sources). Mirrors `LogFoodSheet`.
+    @ViewBuilder
+    private var ingredientsSection: some View {
+        if let ingredients = item?.ingredients,
+           !ingredients.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            Section(String(localized: "food.log.ingredients")) {
+                Text(ingredients)
+                    .font(.bodySmall)
                     .foregroundStyle(Color.textSecondary)
             }
         }

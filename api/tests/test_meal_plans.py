@@ -96,7 +96,28 @@ def test_create_planned_meal_inserts_user_scoped_row(mock_db):
     assert inserted["user_id"] == "u1"
     assert inserted["food_name"] == "Ribeye steak"
     assert inserted["done"] is False  # defaults when omitted
+    # Ingredients column is always written (None when not supplied).
+    assert inserted["ingredients"] is None
     assert out["id"] == "m1"
+
+
+@patch("app.meal_plans.repository.get_supabase")
+def test_create_planned_meal_persists_ingredients(mock_db):
+    # A product scheduled from the OCR flow carries its ingredients snapshot onto
+    # the planned meal, so it forwards onto the diary on "Log to diary" (migration 020).
+    db = _fluent(execute_data=[{"id": "m2"}])
+    mock_db.return_value = db
+    repository.create_planned_meal(
+        "u1",
+        {
+            "scheduled_on": "2026-06-08",
+            "meal": "breakfast",
+            "food_name": "Coke ZERO",
+            "ingredients": "Kullsyreholdig vann, søtstoffer, aspartam",
+        },
+    )
+    inserted = db.insert.call_args.args[0]
+    assert inserted["ingredients"] == "Kullsyreholdig vann, søtstoffer, aspartam"
 
 
 @patch("app.meal_plans.repository.get_supabase")
