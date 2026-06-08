@@ -47,8 +47,8 @@ struct LogFoodSheet: View {
                 mealSection
                 quantitySection
                 if item != nil {
-                    nutritionPreviewSection
                     ingredientsSection
+                    nutritionPreviewSection
                 } else {
                     freeTextNutritionSection
                 }

@@ -71,7 +71,6 @@ struct AddCustomFoodView: View {
                 identitySection
                 ingredientsSection
                 nutrientsSection
-                ingredientsSection
                 sharingSection
                 ocrHintSection
             }
@@ -123,15 +122,6 @@ struct AddCustomFoodView: View {
             field(String(localized: "food.custom.field.brand"), text: $brand)
             field(String(localized: "food.custom.field.barcode"), text: $barcodeText)
                 .keyboardType(.numberPad)
-        }
-    }
-
-    private var ingredientsSection: some View {
-        Section(String(localized: "food.custom.section.ingredients")) {
-            TextEditor(text: $ingredientsText)
-                .font(.bodyMedium)
-                .foregroundStyle(Color.textPrimary)
-                .frame(minHeight: 80)
         }
     }
 
