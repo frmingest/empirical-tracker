@@ -51,6 +51,9 @@ public struct PlannedMeal: Codable, Identifiable, Sendable {
     public let sodiumMg: Double?
     public let source: FoodSource?
     public let note: String?
+    /// Ingredients snapshot copied from the product at schedule time, forwarded onto
+    /// the diary entry when the meal is logged (product / custom sources only).
+    public let ingredients: String?
     /// Cooked / eaten flag. Advisory only — it does not by itself create a diary
     /// entry; "Log to diary" is the explicit, auditable step (ADR-012).
     public let done: Bool
@@ -73,6 +76,7 @@ public struct PlannedMeal: Codable, Identifiable, Sendable {
         sodiumMg: Double? = nil,
         source: FoodSource? = nil,
         note: String? = nil,
+        ingredients: String? = nil,
         done: Bool = false,
         planId: String? = nil
     ) {
@@ -91,6 +95,7 @@ public struct PlannedMeal: Codable, Identifiable, Sendable {
         self.sodiumMg = sodiumMg
         self.source = source
         self.note = note
+        self.ingredients = ingredients
         self.done = done
         self.planId = planId
     }
@@ -124,6 +129,7 @@ public struct PlannedMeal: Codable, Identifiable, Sendable {
         sodiumMg      = try c.decodeIfPresent(Double.self, forKey: .sodiumMg)
         source        = try c.decodeIfPresent(FoodSource.self, forKey: .source)
         note          = try c.decodeIfPresent(String.self, forKey: .note)
+        ingredients   = try c.decodeIfPresent(String.self, forKey: .ingredients)
         done          = try c.decodeIfPresent(Bool.self, forKey: .done) ?? false
         planId        = try c.decodeIfPresent(String.self, forKey: .planId)
     }
@@ -145,7 +151,8 @@ public struct PlannedMeal: Codable, Identifiable, Sendable {
             saturatedFatG: saturatedFatG,
             sodiumMg: sodiumMg,
             source: source,
-            note: note
+            note: note,
+            ingredients: ingredients
         )
     }
 }
@@ -167,6 +174,7 @@ public struct PlannedMealPayload: Encodable, Sendable {
     public let sodiumMg: Double?
     public let source: FoodSource?
     public let note: String?
+    public let ingredients: String?
     public let planId: String?
 
     /// Convenience initialiser that pre-scales per-100g nutrients from a `FoodItem`,
@@ -194,6 +202,7 @@ public struct PlannedMealPayload: Encodable, Sendable {
         self.sodiumMg     = item.sodiumMg(forGrams: quantityG)
         self.source       = item.source
         self.note         = note
+        self.ingredients  = item.ingredients
         self.planId       = planId
     }
 
@@ -228,12 +237,13 @@ public struct PlannedMealPayload: Encodable, Sendable {
         self.sodiumMg     = sodiumMg
         self.source       = source
         self.note         = note
+        self.ingredients  = nil
         self.planId       = planId
     }
 
     enum CodingKeys: String, CodingKey {
         case scheduledOn, meal, foodName, brand, barcode, quantityG, energyKcal
-        case carbsG, proteinG, fatG, saturatedFatG, sodiumMg, source, note, planId
+        case carbsG, proteinG, fatG, saturatedFatG, sodiumMg, source, note, ingredients, planId
     }
 
     /// `scheduled_on` is encoded as a calendar date (`yyyy-MM-dd`) rather than a full
@@ -258,6 +268,7 @@ public struct PlannedMealPayload: Encodable, Sendable {
         try c.encodeIfPresent(sodiumMg, forKey: .sodiumMg)
         try c.encodeIfPresent(source, forKey: .source)
         try c.encodeIfPresent(note, forKey: .note)
+        try c.encodeIfPresent(ingredients, forKey: .ingredients)
         try c.encodeIfPresent(planId, forKey: .planId)
     }
 }

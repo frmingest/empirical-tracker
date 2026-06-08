@@ -115,6 +115,32 @@ struct MealPlanModelsTests {
         #expect(payload.barcode == nil)
         #expect(payload.energyKcal == nil)   // free text never invents nutrition
         #expect(payload.foodName == "Ribeye + eggs")
+        #expect(payload.ingredients == nil)
+    }
+
+    // MARK: - Ingredients carry-through (schedule → persist → diary promotion)
+
+    @Test func plannedPayloadCarriesIngredientsFromItem() {
+        // Scheduling a product copies its ingredients onto the planned meal so the
+        // schedule sheet shows them and they survive into the diary on promotion.
+        let item = FoodItem(
+            code: "c1", name: "Coke ZERO", source: .custom,
+            energyKcal100g: 0.3, ingredients: "Kullsyreholdig vann, søtstoffer"
+        )
+        let payload = PlannedMealPayload(scheduledOn: .now, meal: .breakfast, item: item, quantityG: 100)
+        #expect(payload.ingredients == "Kullsyreholdig vann, søtstoffer")
+    }
+
+    @Test func plannedMealDecodesIngredientsAndForwardsToDiary() throws {
+        // The planned meal decodes its ingredients snapshot (migration 020) and the
+        // diary-promotion payload forwards it, so "Log to diary" keeps ingredients.
+        let json = """
+        { "id": "pm-2", "scheduled_on": "2026-06-08", "meal": "breakfast",
+          "food_name": "Coke ZERO", "ingredients": "Kullsyreholdig vann, søtstoffer" }
+        """.data(using: .utf8)!
+        let meal = try JSONDecoder.api.decode(PlannedMeal.self, from: json)
+        #expect(meal.ingredients == "Kullsyreholdig vann, søtstoffer")
+        #expect(meal.diaryPayload().ingredients == "Kullsyreholdig vann, søtstoffer")
     }
 
     // MARK: - Week grid (Monday-anchored, locale-independent)
