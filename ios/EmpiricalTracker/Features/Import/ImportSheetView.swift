@@ -11,6 +11,7 @@ import UniformTypeIdentifiers
 struct ImportSheetView: View {
     @Bindable var viewModel: ImportViewModel
     @State private var isDocumentPickerPresented = false
+    @State private var isDocumentImportPresented = false
 
     var body: some View {
         NavigationStack {
@@ -29,8 +30,21 @@ struct ImportSheetView: View {
             }
         }
         .sheet(isPresented: $isDocumentPickerPresented) {
-            DocumentPickerView { url in
+            DocumentPickerView(contentTypes: Self.spreadsheetTypes) { url in
                 Task { await viewModel.upload(fileURL: url) }
+            }
+        }
+        .sheet(isPresented: $isDocumentImportPresented) {
+            DocumentPickerView(contentTypes: Self.documentTypes) { url in
+                Task { await viewModel.importDocument(fileURL: url) }
+            }
+        }
+        .sheet(item: $viewModel.documentReview) { review in
+            LabImportReviewView(model: review)
+        }
+        .overlay {
+            if viewModel.isProcessingDocument {
+                processingOverlay
             }
         }
         // Auto-start when the app was launched from Files/AirDrop
@@ -38,6 +52,28 @@ struct ImportSheetView: View {
             if let pending = viewModel.pendingFileURL {
                 await viewModel.upload(fileURL: pending)
             }
+        }
+    }
+
+    private static let spreadsheetTypes: [UTType] = [
+        UTType(filenameExtension: "xlsx") ?? .spreadsheet,
+        .spreadsheet,
+    ]
+
+    private static let documentTypes: [UTType] = [.pdf, .png, .jpeg]
+
+    private var processingOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.25).ignoresSafeArea()
+            VStack(spacing: 14) {
+                ProgressView().controlSize(.large).tint(Color.accent)
+                Text("Reading your report…")
+                    .font(.bodyMedium)
+                    .foregroundStyle(Color.textPrimary)
+            }
+            .padding(28)
+            .background(Color.bgCard)
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
     }
 
@@ -85,13 +121,23 @@ struct ImportSheetView: View {
             Button {
                 isDocumentPickerPresented = true
             } label: {
-                Label("Choose file…", systemImage: "folder")
+                Label("Choose .xlsx file…", systemImage: "folder")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(PrimaryButtonStyle())
             .padding(.horizontal, 32)
 
-            Text("You can also open a .xlsx directly from Mail, Files, or AirDrop — the app will import it automatically.")
+            Button {
+                isDocumentImportPresented = true
+            } label: {
+                Label("Import from PDF or photo…", systemImage: "doc.text.viewfinder")
+                    .frame(maxWidth: .infinity)
+            }
+            .font(.headlineSmall)
+            .foregroundStyle(Color.accent)
+            .padding(.horizontal, 32)
+
+            Text("PDF and photo reports are read on your device and shown for review before anything is saved. You can also open a .xlsx directly from Mail, Files, or AirDrop.")
                 .font(.bodySmall)
                 .foregroundStyle(Color.textMuted)
                 .multilineTextAlignment(.center)
@@ -323,18 +369,16 @@ struct ImportSheetView: View {
 // MARK: - UIDocumentPicker bridge
 
 /// Wraps `UIDocumentPickerViewController` so SwiftUI can present it.
-/// Restricts selection to `.xlsx` files (content type `spreadsheet`).
+/// `contentTypes` restricts selection — `.xlsx`/spreadsheet for the structured
+/// import, or `[.pdf, .png, .jpeg]` for the document-import flow (ADR-032).
 private struct DocumentPickerView: UIViewControllerRepresentable {
+    let contentTypes: [UTType]
     let onPick: (URL) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(onPick: onPick) }
 
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let types: [UTType] = [
-            UTType(filenameExtension: "xlsx") ?? .spreadsheet,
-            .spreadsheet,
-        ]
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: true)
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: contentTypes, asCopy: true)
         picker.allowsMultipleSelection = false
         picker.delegate = context.coordinator
         return picker
