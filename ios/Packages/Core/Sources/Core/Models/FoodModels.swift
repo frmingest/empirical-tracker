@@ -172,6 +172,9 @@ public struct FoodItem: Codable, Identifiable, Sendable {
     public let saturatedFat100g: Double?
     /// Sodium per 100 g, in milligrams (ADR-016).
     public let sodium100g: Double?
+    /// Free-text ingredients list, when the source provides one (product / custom
+    /// sources). `nil` for whole-food tables that have no ingredients.
+    public let ingredients: String?
 
     public var id: String { code }
 
@@ -186,7 +189,8 @@ public struct FoodItem: Codable, Identifiable, Sendable {
         protein100g: Double? = nil,
         fat100g: Double? = nil,
         saturatedFat100g: Double? = nil,
-        sodium100g: Double? = nil
+        sodium100g: Double? = nil,
+        ingredients: String? = nil
     ) {
         self.code = code
         self.name = name
@@ -199,6 +203,7 @@ public struct FoodItem: Codable, Identifiable, Sendable {
         self.fat100g = fat100g
         self.saturatedFat100g = saturatedFat100g
         self.sodium100g = sodium100g
+        self.ingredients = ingredients
     }
 
     // Decode defensively: `source` is always stamped by the backend today, but default
@@ -216,6 +221,7 @@ public struct FoodItem: Codable, Identifiable, Sendable {
         fat100g          = try c.decodeIfPresent(Double.self, forKey: .fat100g)
         saturatedFat100g = try c.decodeIfPresent(Double.self, forKey: .saturatedFat100g)
         sodium100g       = try c.decodeIfPresent(Double.self, forKey: .sodium100g)
+        ingredients      = try c.decodeIfPresent(String.self, forKey: .ingredients)
     }
 
     // MARK: Computed nutrients for a given serving
@@ -486,7 +492,8 @@ public struct ParsedLabel: Decodable, Identifiable, Sendable {
             protein100g: protein100g,
             fat100g: fat100g,
             saturatedFat100g: saturatedFat100g,
-            sodium100g: sodiumMg100g
+            sodium100g: sodiumMg100g,
+            ingredients: ingredients
         )
     }
 }
@@ -556,6 +563,7 @@ public struct CustomFoodRecord: Decodable, Identifiable, Sendable {
     public let saturatedFatG: Double?
     public let sodiumMg: Double?
     public let servingG: Double?
+    public let ingredients: String?
     public let createdAt: Date?
 
     public func toFoodItem() -> FoodItem {
@@ -569,7 +577,8 @@ public struct CustomFoodRecord: Decodable, Identifiable, Sendable {
             protein100g: proteinG,
             fat100g: fatG,
             saturatedFat100g: saturatedFatG,
-            sodium100g: sodiumMg
+            sodium100g: sodiumMg,
+            ingredients: ingredients
         )
     }
 }

@@ -2,10 +2,12 @@
 
 Every food source — Open Food Facts, Matvaretabellen, USDA — returns the same
 normalised dict, a ``FoodItem``: a name, optional brand/quantity, six per-100 g
-nutrient values exactly as published (never invented), and a ``source`` tag that
-records where the numbers came from. The ``source`` tag is what lets the diary
-show a provenance badge and lets a clinician reading an export tell a
-lab-analysed whole-food entry from a crowd-sourced branded one (ADR-018).
+nutrient values exactly as published (never invented), an optional free-text
+``ingredients`` list (only product sources have one — whole-food tables leave it
+``None``), and a ``source`` tag that records where the numbers came from. The
+``source`` tag is what lets the diary show a provenance badge and lets a clinician
+reading an export tell a lab-analysed whole-food entry from a crowd-sourced
+branded one (ADR-018).
 
 A later phase will add an optional micronutrient map to this shape; today's six
 macro fields are the stable contract the frontend and storage rely on.
@@ -43,6 +45,7 @@ class FoodItem(TypedDict):
     fat_100g: float | None
     saturated_fat_100g: float | None
     sodium_mg_100g: float | None
+    ingredients: str | None
     source: str
 
 
@@ -59,6 +62,7 @@ def make_food_item(
     fat_100g: float | None = None,
     saturated_fat_100g: float | None = None,
     sodium_mg_100g: float | None = None,
+    ingredients: str | None = None,
 ) -> FoodItem:
     """Build a ``FoodItem``, giving every source one place to stamp ``source``."""
     return {
@@ -72,6 +76,7 @@ def make_food_item(
         "fat_100g": fat_100g,
         "saturated_fat_100g": saturated_fat_100g,
         "sodium_mg_100g": sodium_mg_100g,
+        "ingredients": ingredients,
         "source": source,
     }
 

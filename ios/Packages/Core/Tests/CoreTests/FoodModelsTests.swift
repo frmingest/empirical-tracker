@@ -32,6 +32,23 @@ struct FoodModelsTests {
         #expect(item.source.supportsBarcode == false)
     }
 
+    @Test func foodItemDecodesIngredientsWhenPresent() throws {
+        // Product / custom sources carry a free-text ingredients list; it decodes
+        // alongside the macros and survives when absent (whole-food tables omit it).
+        let withIngredients = """
+        { "code": "c1", "name": "Granola", "source": "custom",
+          "ingredients": "Oats, honey, almonds" }
+        """.data(using: .utf8)!
+        let item = try JSONDecoder.api.decode(FoodItem.self, from: withIngredients)
+        #expect(item.ingredients == "Oats, honey, almonds")
+
+        let without = """
+        { "code": "mvt-1", "name": "Egg", "source": "mvt" }
+        """.data(using: .utf8)!
+        let wholeFood = try JSONDecoder.api.decode(FoodItem.self, from: without)
+        #expect(wholeFood.ingredients == nil)
+    }
+
     @Test func foodItemDefaultsSourceToOFFWhenMissing() throws {
         // Legacy payload without a `source` field still decodes (defaults to OFF).
         let json = """
@@ -175,6 +192,25 @@ struct FoodModelsTests {
         #expect(label.sodiumMg100g == 27.3)
         #expect(label.servingG == 100.0)
         #expect(label.ingredients == "Kullsyreholdig vann, sukker")
+        // The ingredients carry through into the FoodItem used by the logging flow.
+        #expect(label.toFoodItem().ingredients == "Kullsyreholdig vann, sukker")
+    }
+
+    /// A custom food round-trips its ingredients back from storage so they can be
+    /// displayed on the log sheet after a scan-and-save.
+    @Test func customFoodRecordCarriesIngredientsIntoFoodItem() throws {
+        let json = """
+        {
+            "id": "7b3c1e9a-0000-4000-8000-000000000002",
+            "food_name": "Scanned Granola",
+            "energy_kcal": 420.0,
+            "ingredients": "Oats, honey, almonds",
+            "created_at": "2026-06-04T08:15:30.123456+00:00"
+        }
+        """.data(using: .utf8)!
+        let record = try JSONDecoder.api.decode(CustomFoodRecord.self, from: json)
+        #expect(record.ingredients == "Oats, honey, almonds")
+        #expect(record.toFoodItem().ingredients == "Oats, honey, almonds")
     }
 
     // MARK: - Search source contract

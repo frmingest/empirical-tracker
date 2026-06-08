@@ -31,7 +31,8 @@ _CATALOGUE_FIELDS = (
 
 _COLUMNS = (
     "id,food_name,brand,barcode,"
-    "energy_kcal,carbs_g,protein_g,fat_g,saturated_fat_g,sodium_mg,serving_g"
+    "energy_kcal,carbs_g,protein_g,fat_g,saturated_fat_g,sodium_mg,serving_g,"
+    "ingredients"
 )
 
 
@@ -48,6 +49,7 @@ def _row_to_food_item(row: dict) -> FoodItem:
         fat_100g=_to_float(row.get("fat_g")),
         saturated_fat_100g=_to_float(row.get("saturated_fat_g")),
         sodium_mg_100g=_to_float(row.get("sodium_mg")),
+        ingredients=row.get("ingredients"),
     )
 
 
