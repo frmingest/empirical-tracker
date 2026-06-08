@@ -64,7 +64,28 @@ def test_create_entry_inserts_user_scoped_row(mock_db):
     # Sprint 9 columns are always written (None when not supplied).
     assert "sodium_mg" in inserted
     assert "saturated_fat_g" in inserted
+    # Ingredients column is always written too (None when not supplied).
+    assert inserted["ingredients"] is None
     assert out["id"] == "f1"
+
+
+@patch("app.food_diary.repository.get_supabase")
+def test_create_entry_persists_ingredients(mock_db):
+    # A product logged from the OCR flow carries its ingredients snapshot onto the
+    # diary row, so the Edit Entry screen can read them back (migration 019).
+    db = _fluent(execute_data=[{"id": "f2"}])
+    mock_db.return_value = db
+    repository.create_entry(
+        "u1",
+        {
+            "logged_on": "2026-06-08",
+            "meal": "breakfast",
+            "food_name": "Eplejuice",
+            "ingredients": "Vann, eplejuice fra konsentrat",
+        },
+    )
+    inserted = db.insert.call_args.args[0]
+    assert inserted["ingredients"] == "Vann, eplejuice fra konsentrat"
 
 
 @patch("app.food_diary.repository.get_supabase")

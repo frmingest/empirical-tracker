@@ -63,6 +63,8 @@ struct EditFoodEntrySheet: View {
                     Text(String(localized: "food.log.quantity"))
                 }
 
+                ingredientsSection
+
                 Section {
                     numericField(String(localized: "food.macro.energy"),  text: $energyText,  unit: String(localized: "food.unit.kcal"))
                     numericField(String(localized: "food.macro.carbs"),   text: $carbsText,   unit: String(localized: "food.unit.g"))
@@ -102,6 +104,23 @@ struct EditFoodEntrySheet: View {
             }
         }
         .presentationDetents([.large])
+    }
+
+    // MARK: - Sections
+
+    /// Read-only ingredients snapshot, shown above the nutrition figures when the
+    /// logged entry carries one (product / custom sources). A diary entry's
+    /// nutrients are a snapshot too, so ingredients are not edited here.
+    @ViewBuilder
+    private var ingredientsSection: some View {
+        if let ingredients = entry.ingredients,
+           !ingredients.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            Section(String(localized: "food.log.ingredients")) {
+                Text(ingredients)
+                    .font(.bodySmall)
+                    .foregroundStyle(Color.textSecondary)
+            }
+        }
     }
 
     // MARK: - Row builders

@@ -96,6 +96,40 @@ struct FoodModelsTests {
         #expect(payload.sodiumMg == 50 * 200 / 100)
     }
 
+    @Test func payloadCarriesIngredientsFromItem() {
+        // Logging a product copies its ingredients onto the entry payload so the
+        // diary keeps them (the Edit Entry screen reads them back) — independently
+        // of how the nutrients scale by quantity.
+        let item = FoodItem(
+            code: "c1", name: "Granola", source: .custom,
+            energyKcal100g: 450, ingredients: "Oats, honey, almonds"
+        )
+        let payload = FoodEntryPayload(loggedOn: .now, meal: .breakfast, item: item, quantityG: 60)
+        #expect(payload.ingredients == "Oats, honey, almonds")
+
+        // Whole-food / free-text products have no ingredients to carry.
+        let wholeFood = FoodItem(code: "mvt-egg", name: "Egg", source: .mvt)
+        let plain = FoodEntryPayload(loggedOn: .now, meal: .breakfast, item: wholeFood, quantityG: 50)
+        #expect(plain.ingredients == nil)
+    }
+
+    @Test func foodEntryDecodesIngredientsWhenPresent() throws {
+        // The diary row carries a denormalised ingredients snapshot (migration 019);
+        // it decodes alongside the rest and stays nil for legacy rows that omit it.
+        let withIngredients = """
+        { "id": "e1", "logged_on": "2026-06-08", "meal": "breakfast",
+          "food_name": "Eplejuice", "ingredients": "Vann, eplejuice fra konsentrat" }
+        """.data(using: .utf8)!
+        let entry = try JSONDecoder.api.decode(FoodEntry.self, from: withIngredients)
+        #expect(entry.ingredients == "Vann, eplejuice fra konsentrat")
+
+        let legacy = """
+        { "id": "e2", "logged_on": "2026-06-08", "meal": "lunch", "food_name": "Egg" }
+        """.data(using: .utf8)!
+        let legacyEntry = try JSONDecoder.api.decode(FoodEntry.self, from: legacy)
+        #expect(legacyEntry.ingredients == nil)
+    }
+
     // MARK: - Daily totals
 
     @Test func dailyTotalsSumPresentNutrientsOnly() {
