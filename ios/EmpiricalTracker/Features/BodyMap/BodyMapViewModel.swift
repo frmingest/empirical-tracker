@@ -50,7 +50,7 @@ final class BodyMapViewModel {
     private(set) var isLoading = false
     /// When `true`, each marker is judged on its single most recent result only —
     /// the simplest possible read of "where do things stand right now".
-    private(set) var showLatestOnly = false
+    private(set) var showLatestOnly = true
     var errorMessage: String?
 
     private let biomarkersRepo: BiomarkersRepository
