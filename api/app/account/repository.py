@@ -13,6 +13,9 @@ USER_TABLES: tuple[str, ...] = (
     "biomarkers",
     "panels",
     "results",
+    # Staged lab-document candidates (ADR-032): user-owned, RLS-scoped, so they
+    # join the Art. 20 export and Art. 17 erasure like the rest of the schema.
+    "lab_imports",
     "user_settings",
     "diet_events",
     "food_entries",
@@ -35,6 +38,7 @@ USER_TABLES: tuple[str, ...] = (
 # tables (no children), so their position is free.
 DELETE_ORDER: tuple[str, ...] = (
     "results",
+    "lab_imports",
     "planned_meals",
     "food_entries",
     "diet_events",

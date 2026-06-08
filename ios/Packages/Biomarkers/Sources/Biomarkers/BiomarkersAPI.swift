@@ -28,6 +28,36 @@ public enum BiomarkersAPI {
         try await client.requestEmpty(.post("/biomarkers/results/manual", body: payload))
     }
 
+    /// `POST /biomarkers/import/document` — structure on-device-extracted lab
+    /// text into a reviewable candidate (ADR-032). Nothing is written yet.
+    public static func importDocument(
+        text: String,
+        sourceKind: String,
+        client: APIClient
+    ) async throws -> LabImportCandidate {
+        try await client.request(
+            .post("/biomarkers/import/document",
+                  body: LabDocumentPayload(text: text, sourceKind: sourceKind))
+        )
+    }
+
+    /// `POST /biomarkers/imports/{id}/apply` — write the reviewed candidate.
+    public static func applyLabImport(
+        id: String,
+        panels: [LabImportPanel],
+        client: APIClient
+    ) async throws -> LabImportApplyResult {
+        try await client.request(
+            .post("/biomarkers/imports/\(id)/apply",
+                  body: ApplyLabImportPayload(panels: panels))
+        )
+    }
+
+    /// `DELETE /biomarkers/imports/{id}` — discard a pending candidate.
+    public static func discardLabImport(id: String, client: APIClient) async throws {
+        try await client.requestEmpty(.delete("/biomarkers/imports/\(id)"))
+    }
+
     /// `DELETE /biomarkers/import/{panelId}` — remove one panel and its results.
     public static func deletePanel(id: String, client: APIClient) async throws {
         try await client.requestEmpty(.delete("/biomarkers/import/\(id)"))

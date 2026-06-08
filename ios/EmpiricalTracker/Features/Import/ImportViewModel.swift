@@ -29,6 +29,14 @@ final class ImportViewModel {
     var isDeletingAll = false
     var showDeleteAllConfirmation = false
 
+    /// True while a picked PDF/photo is being read on-device and structured by
+    /// the server, before the review sheet appears (ADR-032).
+    var isProcessingDocument = false
+
+    /// When non-nil, the document-import review sheet is presented. Holds the
+    /// editable candidate the user confirms before anything is written.
+    var documentReview: LabImportReviewModel?
+
     /// Set to true by the dashboard toolbar button or an incoming share-sheet URL.
     var isPresented = false
 
@@ -66,6 +74,45 @@ final class ImportViewModel {
                 }
             )
             phase = .success(result)
+        } catch let e as APIError {
+            phase = .failure(Self.message(for: e))
+        } catch {
+            phase = .failure(error.localizedDescription)
+        }
+    }
+
+    /// Import path for a PDF or photo of a lab report (ADR-032 Phase 1).
+    ///
+    /// Text is extracted on-device (PDFKit text layer / Vision OCR) so the
+    /// document never leaves the phone; only the text is sent to the server,
+    /// which returns a candidate for mandatory review before any write.
+    func importDocument(fileURL: URL) async {
+        isProcessingDocument = true
+        defer { isProcessingDocument = false }
+
+        let scoped = fileURL.startAccessingSecurityScopedResource()
+        defer { if scoped { fileURL.stopAccessingSecurityScopedResource() } }
+
+        do {
+            let extraction = try await LabDocumentTextExtractor.extract(from: fileURL)
+            let candidate = try await biomarkersRepo.importDocument(
+                text: extraction.text,
+                sourceKind: extraction.sourceKind
+            )
+            documentReview = LabImportReviewModel(
+                candidate: candidate,
+                repo: biomarkersRepo,
+                onApplied: { [weak self] result in
+                    self?.documentReview = nil
+                    self?.phase = .success(ImportResult(
+                        panelsCreated: result.panelsApplied,
+                        resultsInserted: result.resultsInserted
+                    ))
+                },
+                onDiscarded: { [weak self] in
+                    self?.documentReview = nil
+                }
+            )
         } catch let e as APIError {
             phase = .failure(Self.message(for: e))
         } catch {

@@ -83,6 +83,28 @@ public final class BiomarkersRepository {
         return result
     }
 
+    // MARK: - Document import (ADR-032)
+
+    /// Sends on-device-extracted lab text to the server and returns a reviewable
+    /// candidate. Nothing is written to the store until `applyLabImport` runs.
+    public func importDocument(text: String, sourceKind: String) async throws -> LabImportCandidate {
+        try await BiomarkersAPI.importDocument(text: text, sourceKind: sourceKind, client: client)
+    }
+
+    /// Applies a reviewed candidate, then refreshes panels and results.
+    @discardableResult
+    public func applyLabImport(id: String, panels: [LabImportPanel]) async throws -> LabImportApplyResult {
+        let result = try await BiomarkersAPI.applyLabImport(id: id, panels: panels, client: client)
+        await loadPanels()
+        await loadResults()
+        return result
+    }
+
+    /// Discards a pending candidate without writing anything.
+    public func discardLabImport(id: String) async throws {
+        try await BiomarkersAPI.discardLabImport(id: id, client: client)
+    }
+
     // MARK: - Filtering helpers
 
     /// Returns only the markers visible for the given diet focus.

@@ -6,7 +6,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from app.auth import current_user_id
 from app.biomarkers import parser, repository
@@ -80,6 +80,50 @@ class ManualResultIn(BaseModel):
     biomarker_id: str
     tested_at: str   # "YYYY-MM-DD"
     value: float
+
+
+class LabDocumentIn(BaseModel):
+    """On-device-extracted lab-report text (PDFKit text layer / Vision OCR)."""
+
+    text: str
+    source_kind: str = "text"  # 'text' | 'pdf' | 'image'
+
+    @field_validator("text")
+    @classmethod
+    def _non_empty_capped(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("text must not be empty")
+        # Same cap as the OCR path so a single request cannot amplify LLM spend
+        # or smuggle a large prompt-injection payload (ADR-026 F4).
+        max_chars = get_settings().max_ocr_chars
+        if len(v) > max_chars:
+            raise ValueError(f"text must be at most {max_chars} characters")
+        return v
+
+    @field_validator("source_kind")
+    @classmethod
+    def _known_kind(cls, v: str) -> str:
+        if v not in {"text", "pdf", "image"}:
+            raise ValueError("source_kind must be one of text, pdf, image")
+        return v
+
+
+class LabResultIn(BaseModel):
+    name_no: str
+    value: float | None = None
+    value_text: str | None = None
+    unit: str | None = None
+    ref_range_raw: str | None = None
+
+
+class LabPanelIn(BaseModel):
+    tested_at: str | None = None  # "YYYY-MM-DD"; required at apply time
+    results: list[LabResultIn] = []
+
+
+class ApplyLabImportIn(BaseModel):
+    panels: list[LabPanelIn]
 
 
 # ── Import ─────────────────────────────────────────────────────────────────────
@@ -195,6 +239,85 @@ async def add_manual_result(
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return result
+
+
+# ── Document import (PDF / image → candidate → review → apply) ──────────────────
+#
+# Unlike the .xlsx import, a document import is *probabilistic* and medical, so it
+# never auto-writes to `results`. It produces a candidate the user reviews and
+# explicitly applies (ADR-032). Phase 1 receives text the device already
+# extracted (PDFKit text layer / Vision OCR); the consent-gated vision posture is
+# Phase 4.
+
+@router.post("/import/document", status_code=201)
+async def import_document(
+    body: LabDocumentIn,
+    user_id: str = Depends(rate_limit("biomarkers_import_document", expensive=True)),
+) -> dict:
+    """Structure lab-report text into a reviewable candidate, staged for apply."""
+    from app.biomarkers.lab_parser import parse_lab_text
+
+    try:
+        extracted = parse_lab_text(body.text)
+    except ValueError as exc:
+        if "not configured" in str(exc):
+            raise HTTPException(status_code=503, detail="Lab parser not available") from exc
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Lab parsing failed") from exc
+
+    if not extracted.get("panels"):
+        raise HTTPException(status_code=422, detail="No usable lab data found")
+
+    row = repository.create_lab_import(
+        user_id, source_kind=body.source_kind, posture="ocr_text", extracted=extracted
+    )
+    return {"import_id": row["id"], "status": row["status"], **extracted}
+
+
+@router.get("/imports")
+async def list_pending_imports(user_id: str = Depends(current_user_id)) -> list:
+    """List document imports awaiting review."""
+    return repository.list_lab_imports(user_id, status="pending_review")
+
+
+@router.post("/imports/{import_id}/apply")
+async def apply_import(
+    import_id: str,
+    body: ApplyLabImportIn,
+    user_id: str = Depends(current_user_id),
+) -> dict:
+    """Apply the reviewed (possibly user-edited) candidate to the biomarker store."""
+    staged = repository.get_lab_import(user_id, import_id)
+    if staged is None:
+        raise HTTPException(status_code=404, detail="Import not found")
+    if staged["status"] != "pending_review":
+        raise HTTPException(status_code=409, detail="Import already resolved")
+
+    panels = [p.model_dump() for p in body.panels]
+    if not any(p.get("tested_at") for p in panels):
+        raise HTTPException(status_code=422, detail="Each panel needs a test date")
+
+    try:
+        summary = repository.apply_panels(user_id, panels)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    repository.set_lab_import_status(user_id, import_id, "applied")
+    return summary
+
+
+@router.delete("/imports/{import_id}")
+async def discard_import(
+    import_id: str,
+    user_id: str = Depends(current_user_id),
+) -> dict:
+    """Discard a pending candidate without writing anything."""
+    staged = repository.get_lab_import(user_id, import_id)
+    if staged is None:
+        raise HTTPException(status_code=404, detail="Import not found")
+    repository.set_lab_import_status(user_id, import_id, "discarded")
+    return {"discarded": import_id}
 
 
 # ── Read ───────────────────────────────────────────────────────────────────────

@@ -1,6 +1,8 @@
 # ADR-032: Multi-format lab import — PDF & image documents beyond `.xlsx`
 
-**Status:** Proposed
+**Status:** Proposed — **Phase 1 spike implemented** (text-PDF/photo on-device →
+staged candidate → review → apply). Phases 3–4 (qualitative `value_text`,
+consent-gated vision) remain.
 **Date:** 2026-06-08
 **Author:** Architecture proposal (Claude)
 **Sprint:** Ingestion follow-up (extends ADR-001 `.xlsx` import; builds on the
@@ -148,9 +150,9 @@ results ("Positive"), censored values (`<0.01`), text-valued analytes — which
 today cannot be stored because `results.value` is `numeric NOT NULL`
 (`001_biomarkers.sql:38`).
 
-Two migrations:
+Two migrations (Phase 1 ships the first; the second is Phase 3):
 
-**`0xx_lab_imports.sql`** — a staging/audit table (mirrors the `ocr_raw`
+**`019_lab_imports.sql`** — a staging/audit table (mirrors the `ocr_raw`
 pattern):
 
 ```sql
@@ -166,7 +168,7 @@ create table public.lab_imports (
 );
 ```
 
-**`0xx_results_value_text.sql`** — admit non-numeric results:
+**`0xx_results_value_text.sql`** (Phase 3) — admit non-numeric results:
 
 ```sql
 alter table public.results add column value_text text;
@@ -270,6 +272,38 @@ Discard sets `discarded`. This is both a data-quality and a patient-safety gate.
 | Send images by default (Option B as default) | Unnecessary privacy exposure; on-device OCR covers the common clean-text case. |
 
 ---
+
+## Implementation notes (Phase 1 spike)
+
+Shipped behind the existing Import surface, both postures' default path (Option A,
+on-device):
+
+- **Migration** `api/supabase/migrations/019_lab_imports.sql` adds the
+  `lab_imports` staging table (RLS, `on delete cascade`, status lifecycle). It is
+  registered in `account/repository.py` `USER_TABLES` + `DELETE_ORDER` so it
+  flows into GDPR export/erasure (ADR-013). The `results.value_text` change is
+  **deferred to Phase 3** — the staging table already guarantees no data loss, so
+  qualitative rows are surfaced read-only and parked in `extracted` for now.
+- **Backend.** `app/biomarkers/lab_parser.py` structures lab text via Claude
+  (Haiku, "never invent, null when unsure" — same discipline as the food-label
+  parser), returning candidate `panels`. New routes on the biomarkers router:
+  `POST /import/document` (rate-limited, text capped at `max_ocr_chars`, stages a
+  candidate — never auto-writes), `GET /imports`, `POST /imports/{id}/apply`
+  (upserts biomarkers/panels/results via the existing idempotent paths, numeric
+  values only), `DELETE /imports/{id}`. Covered by `tests/test_lab_imports.py`
+  (15 tests; parser cleaning, apply upserts, endpoint lifecycle).
+- **iOS.** `LabDocumentTextExtractor` does on-device extraction — PDFKit text
+  layer first, Vision OCR (`["nb","en"]`) fallback for scans/photos — so the
+  document never leaves the phone. The Import sheet gains an "Import from PDF or
+  photo…" entry (`UIDocumentPickerViewController` widened to `[.pdf,.png,.jpeg]`),
+  and `LabImportReviewView` is the mandatory review screen: editable values,
+  per-panel date (required), include toggles, then apply. New Core models in
+  `LabImportModels.swift`; repo/API methods on `BiomarkersRepository`/
+  `BiomarkersAPI`.
+
+**Not yet wired:** Phase 4's consent-gated vision posture (Option B) — the
+`posture` column + `source_kind in ('pdf','image')` are in the schema ready for
+it, but the spike only exercises `posture='ocr_text'`.
 
 ## Open questions
 
