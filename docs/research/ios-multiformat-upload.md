@@ -1,6 +1,7 @@
 # Research: Multi-format data/file upload (PDF + image, beyond `.xlsx`)
 
-**Status:** Research / discovery (no decision made yet — precursor to an ADR)
+**Status:** Research / discovery — now formalised in
+[ADR-032](../adr/032-multiformat-lab-import.md) (Proposed)
 **Author:** iOS
 **Date:** 2026-06-08
 
