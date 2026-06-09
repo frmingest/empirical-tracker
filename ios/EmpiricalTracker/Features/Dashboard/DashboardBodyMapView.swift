@@ -33,7 +33,6 @@ struct DashboardBodyMapView: View {
                 viewModel = BodyMapViewModel(biomarkersRepo: env.biomarkers)
             }
             await viewModel?.load()
-            await env.bodyMetrics.load()
         }
         .sheet(item: $selectedRegion) { region in
             BodyRegionSheet(region: region) { marker in
