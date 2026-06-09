@@ -300,18 +300,17 @@ struct BodyMetricsView: View {
             }
         }
 
-        if !vm.restingHRPoints.isEmpty {
+        if !vm.heartRatePoints.isEmpty {
             Section {
                 BodyMetricChart(
-                    title: "Resting Heart Rate",
+                    title: "Average Heart Rate",
                     unit: "BPM",
                     series: [.init(
-                        id: "rhr",
-                        label: "Resting HR",
+                        id: "hr",
+                        label: "Avg HR",
                         color: .outRange,
-                        points: vm.restingHRPoints
+                        points: vm.heartRatePoints
                     )],
-                    guidelines: [.init(value: 60), .init(value: 100)],
                     events: vm.overlappingEvents
                 )
                 .chartRowStyle()

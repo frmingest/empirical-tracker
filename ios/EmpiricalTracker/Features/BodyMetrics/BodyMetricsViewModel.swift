@@ -113,12 +113,12 @@ final class BodyMetricsViewModel {
             .heartRateBpm
     }
 
-    var restingHRPoints: [BodyMetricChart.DataPoint] {
-        repo.metrics.compactMap { m in m.restingHeartRateBpm.map { .init(date: m.measuredOn, value: Double($0)) } }
-    }
-
     var hrvPoints: [BodyMetricChart.DataPoint] {
         repo.metrics.compactMap { m in m.hrvMs.map { .init(date: m.measuredOn, value: $0) } }
+    }
+
+    var heartRatePoints: [BodyMetricChart.DataPoint] {
+        repo.metrics.compactMap { m in m.heartRateBpm.map { .init(date: m.measuredOn, value: Double($0)) } }
     }
 
     /// Diet events intersecting the full body-metrics window, for the chart overlay.
