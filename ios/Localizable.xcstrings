@@ -8178,19 +8178,19 @@
         }
       }
     },
-    "tab.home" : {
+    "tab.trends" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Home"
+            "value" : "Trends"
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hjem"
+            "value" : "Trender"
           }
         }
       }

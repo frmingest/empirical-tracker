@@ -37,24 +37,24 @@ struct RootView: View {
 /// the redesigned, rounded "glass capsule" look. Includes the Recipes catalogue
 /// added in the Sprint 7 recipes module.
 enum AppTab: Int, CaseIterable, Identifiable {
-    case home, nutrition, body, settings
+    case body, nutrition, trends, settings
 
     var id: Int { rawValue }
 
     var title: String {
         switch self {
-        case .home:      return String(localized: "tab.home")
-        case .nutrition: return String(localized: "tab.nutrition")
         case .body:      return String(localized: "tab.body")
+        case .nutrition: return String(localized: "tab.nutrition")
+        case .trends:    return String(localized: "tab.trends")
         case .settings:  return String(localized: "tab.settings")
         }
     }
 
     var icon: String {
         switch self {
-        case .home:      return "house.fill"
+        case .body:      return "figure.stand"
         case .nutrition: return "fork.knife"
-        case .body:      return "figure.walk"
+        case .trends:    return "chart.xyaxis.line"
         case .settings:  return "gearshape"
         }
     }
@@ -65,17 +65,17 @@ enum AppTab: Int, CaseIterable, Identifiable {
 /// behaviour the system `TabView` gave us for free — while a translucent floating
 /// capsule replaces the opaque system bar.
 struct MainTabView: View {
-    @State private var selection: AppTab = .home
+    @State private var selection: AppTab = .body
     // Tracks which tabs have been visited at least once. A tab is only rendered
     // after its first selection, preventing all six views from firing their
     // network tasks simultaneously on launch.
-    @State private var activated: Set<AppTab> = [.home]
+    @State private var activated: Set<AppTab> = [.body]
 
     var body: some View {
         ZStack {
-            screen(.home)      { DashboardView() }
+            screen(.body)      { DashboardView() }
             screen(.nutrition) { NutritionHubView() }
-            screen(.body)      { BodyMetricsView() }
+            screen(.trends)    { BodyMetricsView() }
             screen(.settings)  { SettingsView() }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -124,7 +124,7 @@ private struct FloatingTabBar: View {
                             .font(.system(size: 10, weight: .medium))
                             .lineLimit(1)
                     }
-                    .foregroundStyle(selection == tab && tab != .home ? Color.accent : Color.textMuted)
+                    .foregroundStyle(selection == tab && tab != .body ? Color.accent : Color.textMuted)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
                     .contentShape(Rectangle())
