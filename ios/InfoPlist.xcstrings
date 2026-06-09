@@ -1,6 +1,33 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "CFBundleDisplayName" : {
+      "comment" : "Bundle display name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Biotrack"
+          }
+        }
+      }
+    },
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "EmpiricalTracker"
+          }
+        }
+      }
+    },
+    "Excel Open XML Spreadsheet" : {
+
+    },
     "NSCameraUsageDescription" : {
       "comment" : "System permission prompt shown before the app accesses the camera.",
       "extractionState" : "manual",
