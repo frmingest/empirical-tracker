@@ -34,9 +34,8 @@ struct DashboardView: View {
     @State private var customMarkerDraft: Set<String> = []
     @State private var dashboardMode: DashboardViewMode = .bodyMap
 
-    // Sprint 4 — import & panel timeline state
+    // Sprint 4 — import state
     @State private var importViewModel: ImportViewModel?
-    @State private var isPanelTimelinePresented = false
 
     // Sprint 6 — share biomarker report as PDF
     @State private var isReportSharePresented = false
@@ -91,10 +90,6 @@ struct DashboardView: View {
             if let ivm = importViewModel {
                 ImportSheetView(viewModel: ivm)
             }
-        }
-        // Present panel timeline
-        .sheet(isPresented: $isPanelTimelinePresented) {
-            PanelTimelineView()
         }
         // Present share-report sheet
         .sheet(isPresented: $isReportSharePresented) {
@@ -244,16 +239,6 @@ struct DashboardView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        // History button
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                isPanelTimelinePresented = true
-            } label: {
-                Image(systemName: "calendar.badge.clock")
-                    .accessibilityLabel("Blood test history")
-            }
-            .foregroundStyle(Color.accent)
-        }
         // View mode toggle
         ToolbarItem(placement: .topBarLeading) {
             ViewModeToggle(mode: $dashboardMode)
