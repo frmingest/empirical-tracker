@@ -24,12 +24,15 @@ it with what you eat and how your body responds.
 
 The product has three data surfaces, all correlated on a shared timeline:
 
-1. **Biomarkers** — imported from lab `.xlsx` files, categorized, and charted with
-   reference bands, clinical-target lines, and within-range trend signals.
+1. **Biomarkers** — imported from lab `.xlsx` files *and* PDF/photo lab reports
+   (on-device extraction → human review → apply, ADR-032), categorized, and charted
+   with reference bands, clinical-target lines, and within-range trend signals.
 2. **Food diary** — daily logging from three nutrition databases, with macros,
    sodium, and saturated fat; barcode scanning on device.
-3. **Body metrics** — weight, waist, and blood pressure, plus Withings data via
-   Apple HealthKit and (in progress) the Withings Cloud API.
+3. **Body & activity metrics** — weight, waist, and blood pressure logged by hand,
+   plus Apple HealthKit signals: weight/BP and heart metrics (resting HR, HRV,
+   average HR) via the Withings bridge, and iPhone-sourced **activity** (steps,
+   active energy, exercise minutes, ADR-033). Withings Cloud API sync is in progress.
 
 **Diet events** annotate every chart so the user can see *visual correlation*
 (never claimed causation) between a regimen change and a marker's movement.
@@ -65,6 +68,22 @@ native-device features the backend can't provide: barcode scanning, on-device
 - **Shared clinical logic** is **ported to Swift** (`MarkerSignals`, `DietProfiles`,
   `BiomarkerCategories`) so the app renders identical Watch / in-range / out-of-range
   assessments without a network round-trip.
+- **App shell:** a **custom floating "glass capsule" tab bar** (`FloatingTabBar` in
+  `App/RootView.swift`) — not the system `TabView` — drives **four** destinations via
+  the `AppTab` enum:
+
+  | Tab | Icon | Screen | Holds |
+  |-----|------|--------|-------|
+  | **Body** | `figure.stand` | `DashboardView` | Body-map dashboard (default) ↔ biomarker grid, diet filter, lab import |
+  | **Nutrition** | `fork.knife` | `NutritionHubView` | Swipe/segmented sub-tabs: **Diary**, **Plan**, **Recipes** |
+  | **Trends** | `chart.xyaxis.line` | `BodyMetricsView` | Weight / waist / BP / heart-metric charts, HealthKit & Withings sync |
+  | **Settings** | `gearshape` | `SettingsView` | Account / GDPR (Danger Zone), consent, about |
+
+  Each tab is kept alive in a `ZStack` (toggled via opacity) so state and scroll
+  position survive switches; a tab isn't rendered until first selected, so its `.task`
+  network calls don't all fire on launch. The three nutrition surfaces were **merged
+  into one Nutrition tab** (from three top-level tabs), and the former "Dashboard" /
+  "Body metrics" tabs were renamed **Body** / **Trends**.
 
 > **Retired:** the original client was a **Next.js / React web app**. It has been
 > removed from the repository (`chore: retire Next.js web app — iOS + Railway/
@@ -89,6 +108,10 @@ backend.
 
 ## How your blood-test data flows through the system
 
+There are two file-based paths in, both ending in the same biomarker tables:
+
+**The `.xlsx` path (deterministic, auto-applied):**
+
 1. **You get a blood panel** from the lab as an Excel file (`.xlsx`).
 2. **You import it** in the app via a `UIDocumentPicker` (or the Files / share
    sheet), which uploads the file to `POST /biomarkers/import` — there is **no
@@ -99,6 +122,22 @@ backend.
 4. **The data is saved** to the biomarker tables (below).
 5. **The dashboard refreshes**, fetching results from the API and drawing the
    categorized grid and charts with Swift Charts.
+
+**The PDF / photo path (probabilistic, human-reviewed — ADR-032):**
+
+Most labs hand out a **PDF report** or the user **photographs** a printed sheet, so
+ingestion also accepts `[.pdf, .png, .jpeg]`. Extraction is **on-device** (the
+document never leaves the phone): `LabDocumentTextExtractor` reads a PDF's embedded
+text layer when present and falls back to Apple Vision OCR (`["nb","en"]`) for scans
+and photos. Only the extracted **text** is sent to `POST /biomarkers/import/document`,
+where Claude (Haiku, "never invent, null when unsure") structures it into candidate
+rows. Because extraction is probabilistic and medical, the candidate is staged in the
+`lab_imports` table as `pending_review` and **never auto-written** — the user confirms
+or edits each row in `LabImportReviewView`, sets the draw date, then taps Apply, which
+writes through the same idempotent upsert path as the `.xlsx` import. An import **never
+fails and never silently drops data**: anything unmapped stays in `lab_imports.extracted`.
+The consent-gated vision posture (sending document pixels to a vision model) is parked
+in the schema (`posture` column) but not yet wired.
 
 ---
 
@@ -118,11 +157,15 @@ user_settings  Dashboard preferences         "diet carnivore | custom_markers [.
 Added by later sprints / ADRs:
 
 ```
-diet_events    Regimen-change annotations    "Started carnivore | kind diet | 2024-05-31"   (ADR-010)
-food_entries   What you ate each day         "2026-05-31 | dinner | Ribeye | 728 kcal"       (ADR-011)
-meal_plans     A named, reusable plan        "Carnivore week | High-protein, zero-carb"      (ADR-012)
-planned_meals  A meal scheduled on a day      "2026-06-02 | dinner | Ribeye | done false"    (ADR-012)
-body_metrics   A body measurement on a day    "2026-05-22 | 83.1 kg | 90 cm | BP 122/79"     (ADR-017)
+diet_events       Regimen-change annotations   "Started carnivore | kind diet | 2024-05-31"  (ADR-010)
+food_entries      What you ate each day        "2026-05-31 | dinner | Ribeye | 728 kcal"      (ADR-011)
+meal_plans        A named, reusable plan       "Carnivore week | High-protein, zero-carb"     (ADR-012)
+planned_meals     A meal scheduled on a day    "2026-06-02 | dinner | Ribeye | done false"    (ADR-012)
+body_metrics      A body measurement on a day  "2026-05-22 | 83.1 kg | 90 cm | BP 122/79"     (ADR-017)
+custom_foods      A user-authored food         "Home-made bone broth | per-100g macros"      (ADR-027)
+recipes           A user-authored recipe       "Ribeye & eggs | ingredients | servings"       (ADR-024/028)
+lab_imports       A staged PDF/photo import    "pending_review | extracted JSON | source pdf" (ADR-032)
+activity_metrics  Daily activity (one/day)     "2026-06-08 | 9 240 steps | 410 kcal | 32 min" (ADR-033)
 ```
 
 Schema evolutions worth knowing (all in `api/supabase/migrations/`):
@@ -133,6 +176,20 @@ Schema evolutions worth knowing (all in `api/supabase/migrations/`):
 - **`010_body_metrics_source.sql`** — a `source` provenance column on `body_metrics`
   (`manual | healthkit | withings`) plus an external-id dedupe key, so HealthKit/
   Withings syncs never double-insert (ADR-022).
+- **`016_heart_metrics.sql` / `017_heart_metrics_constraint.sql`** — resting HR, HRV,
+  and daily-average HR columns on `body_metrics`, read from Apple Health alongside
+  weight/BP (extends ADR-022; see the doc-drift note there).
+- **`018_body_metrics_unique_day.sql`** — one body-metrics row per user per day.
+- **`019_food_entries_ingredients.sql` / `020_planned_meals_ingredients.sql`** —
+  carry recipe/meal ingredients through the diary and schedule flows.
+- **`019_lab_imports.sql`** — the PDF/photo import staging table (RLS,
+  `on delete cascade`, `pending_review → applied | discarded` lifecycle, ADR-032).
+- **`021_activity_metrics.sql`** — the daily-grain `activity_metrics` table (steps,
+  active energy, exercise minutes), upserted on `(user_id, measured_on)` (ADR-033).
+
+> Two migrations share the `019_` prefix (`food_entries_ingredients` and
+> `lab_imports`) — they landed on parallel branches; they touch different tables and
+> are both applied.
 
 ---
 
@@ -218,6 +275,19 @@ eGFR, HbA1c, and ferritin each carry a plain-language detail-page note explainin
 the diet itself can move the number (creatinine-based eGFR depressed by meat/muscle;
 HbA1c read high from longer red-cell lifespan on keto; ferritin an acute-phase reactant).
 
+### Multi-format lab import — PDF & photo (ADR-032)
+
+Beyond the Fürst `.xlsx` export, the Import sheet accepts **PDF reports and photos/
+screenshots** of a printed sheet. Extraction runs **on device** (`LabDocumentTextExtractor`
+— PDFKit text layer first, Apple Vision OCR fallback), so the document never leaves the
+phone; only the extracted text is structured server-side by Claude. Because the result
+is probabilistic and medical it is **staged in `lab_imports` and never auto-written** —
+the user reviews and edits candidate rows in `LabImportReviewView`, sets the draw date,
+and taps Apply to write through the existing upsert path. An import never fails and
+never drops data; unmapped content is preserved in `lab_imports.extracted`. Shipped:
+on-device OCR (Phases 1–2). Deferred: `results.value_text` for qualitative results
+(Phase 3) and the consent-gated vision posture (Phase 4).
+
 ### Correlation overlay — diet events (ADR-010)
 
 Account-wide **diet events** (the day you started carnivore, a supplement, a
@@ -247,17 +317,30 @@ energy totals, **named plans** that group scheduled meals, and a **"Log to diary
 action that copies a planned meal into the diary for its date. Deleting a plan keeps its
 meals; deleting a meal keeps the plan.
 
-### Body metrics + Withings (ADR-017, 021, 022, 023)
+### Body & activity metrics + Withings (ADR-017, 021, 022, 023, 033)
 
-A Body tab logs **weight (kg)**, **waist (cm)**, and **blood pressure (mmHg)** on any
-date (every metric optional; BP is a both-or-neither pair; a row needs at least one
-metric). Each gets a Swift Charts trend on the shared timeline, carrying the same
-diet-event overlay; the BP chart draws faint **guideline** lines at 120/80 (a neutral
-population reference, *not* a clinical-target line or personalised verdict).
+The **Trends** tab (`BodyMetricsView`) logs **weight (kg)**, **waist (cm)**, and
+**blood pressure (mmHg)** on any date (every metric optional; BP is a both-or-neither
+pair; a row needs at least one metric) and charts each on the shared timeline, carrying
+the same diet-event overlay; the BP chart draws faint **guideline** lines at 120/80 (a
+neutral population reference, *not* a clinical-target line or personalised verdict). It
+also surfaces the synced **heart metrics** as their own trends — **Heart Rate
+Variability (SDNN)** and **Average Heart Rate** — plus stat cards for weight, waist,
+derived **BMI**, resting HR, HRV, and average HR.
 
-- **Apple HealthKit bridge (ADR-022):** with Withings Health Mate writing to Apple
-  Health, the app reads **weight and blood pressure**, tags them `source: healthkit`,
-  and dedupes by sample UUID via `HKObserverQuery` background delivery.
+- **Apple HealthKit bridge (ADR-022, extended):** with Withings Health Mate writing to
+  Apple Health, the app reads **weight, blood pressure, and the three heart metrics**
+  (resting HR, HRV, average HR — `016_heart_metrics.sql`), tags them `source: healthkit`,
+  and dedupes by sample UUID via `HKObserverQuery` background delivery. `HealthMetricType`
+  enumerates all five; they are the default-enabled set on first connect.
+- **Activity metrics (ADR-033):** iPhone-sourced **steps, active energy, and exercise
+  minutes**, summed daily inside HealthKit via `HKStatisticsCollectionQuery` and synced
+  through a parallel `ActivityMetricSyncSink` → `/activity-metrics/batch`. Unlike
+  immutable samples, a daily activity *sum* is mutable, so it dedupes by **day-key +
+  server UPSERT** on `(user_id, measured_on)` with a trailing 7-day re-pull — never by
+  sample UUID. Activity is **context/confounder data** (no clinical target lines); the
+  sync, storage, and GDPR plumbing are shipped, while the on-chart activity-context band
+  is a noted UI follow-up.
 - **Withings Cloud connect (ADR-023):** "Connect Withings account" opens the OAuth
   consent page in `ASWebAuthenticationSession`. **No Withings tokens touch the device** —
   the backend owns the token exchange and webhooks. The client **self-hides until the
@@ -294,7 +377,8 @@ sheet with warning, recipe-donation disclosure, and type-to-confirm `DELETE` gat
 
 ### Body map dashboard (ADR-030)
 
-The **Home tab defaults to an anatomical body-map view** rather than the flat
+The **Body tab** (the app's home destination) **defaults to an anatomical body-map
+view** rather than the flat
 biomarker grid. A human silhouette is overlaid with coloured pins, one per
 biomarker category, colour-coded by the worst marker status in that region (in-range
 green / Watch amber / out-of-range red / no-data grey). Tapping a pin opens a
@@ -356,22 +440,34 @@ addressed across a sequence of ADRs.
   intake totals, then wire selected micronutrients to their biomarker counterparts
   (iron→ferritin, B12, vitamin D, magnesium). This closes the diet ⇄ biomarker loop and
   is its own sprint (ADR-018, Phase 3).
-- **Richer Withings signals** — body-fat %, lean mass, resting HR via the deferred
+- **Richer Withings signals** — body-fat %, lean mass via the deferred
   `withings_measures` backend table (ADR-022 / ADR-023, migration plan §4.3–§4.4).
+  (Resting HR / HRV / average HR have since shipped via `016_heart_metrics.sql`.)
+- **Activity-context overlay** — render synced activity (steps/energy/exercise) as a
+  secondary context band under the diet-event overlay so a reader can discount an
+  outcome change that coincides with an activity change; let the correlation layer
+  *control for* activity (ADR-033 §5 — data foundation shipped, UI deferred).
+- **Lab-import depth (ADR-032)** — `results.value_text` for qualitative results
+  (Phase 3) and the consent-gated vision-model posture (Phase 4).
 
 ---
 
 ## iOS delivery status
 
 **Complete:** the read path / dashboard, biomarker detail with clinical signals, Excel
-import & panel timeline, diet events, the **food diary with barcode scanning (ADR-019)**,
+import & panel timeline, **multi-format lab import — PDF & photo, on-device → review →
+apply (ADR-032)**, diet events, the **food diary with barcode scanning (ADR-019)**,
 **meal plans & calendar (ADR-020)**, **body metrics (ADR-021)**, the **Apple HealthKit
-Withings bridge (ADR-022)** — weight + BP, deduped by sample UUID, the **doctor PDF
+Withings bridge (ADR-022, extended)** — weight + BP **plus heart metrics** (resting HR,
+HRV, average HR), deduped by sample UUID, **iPhone activity metrics** (steps, active
+energy, exercise minutes — ADR-033, day-key UPSERT), the **doctor PDF
 report**, **account / GDPR surface** (Sprint 11 — Delete account + Export data in
 Settings), **sign-up flow + first-run onboarding**, **custom-food and recipe
 anonymise-on-delete** (ADR-027, ADR-028), **proactive catalogue donation** (ADR-029),
-and the **body-map dashboard** (ADR-030 — anatomical silhouette as default Home view
-with health-stats and BP overlay panels, BMI derivation, and category drill-down).
+the **body-map dashboard** (ADR-030 — anatomical silhouette as default Body-tab view
+with health-stats and BP overlay panels, BMI derivation, and category drill-down), and
+the **four-tab floating shell** (Body / Nutrition / Trends / Settings — Diary, Plan and
+Recipes merged under Nutrition).
 
 **In progress:** the **Withings Cloud connection (ADR-023)** — the iOS connect/disconnect/
 "Sync now" flow is shipped and self-gates until the backend `/withings/*` endpoints (OAuth
@@ -404,7 +500,8 @@ Weight trend; Lock Screen status-only by default).
 | `api/app/auth.py` | Shared `current_user_id` dependency (resolves the bearer token) |
 | `api/app/biomarkers/parser.py` | Reads the Excel file and extracts the data |
 | `api/app/biomarkers/router.py` | Import, delete, list, chart-data endpoints |
-| `api/app/diet_events/`, `food_diary/`, `meal_plans/`, `body_metrics/` | Per-domain routers + repositories |
+| `api/app/diet_events/`, `food_diary/`, `meal_plans/`, `body_metrics/`, `activity_metrics/` | Per-domain routers + repositories |
+| `api/app/biomarkers/lab_parser.py` | Structures PDF/photo lab text into candidate rows via Claude (ADR-032) |
 | `api/app/food_sources/` | Multi-source food providers (OFF, Matvaretabellen, USDA) + registry (ADR-018) |
 | `api/app/account/repository.py` | Gathers / erases all of a user's data (GDPR) |
 | `api/supabase/migrations/` | Numbered SQL migrations (run manually in the Supabase SQL editor) |
@@ -418,14 +515,17 @@ Weight trend; Lock Screen status-only by default).
 | `ios/Packages/Core/Sources/Core/Models/` | `Codable` DTOs mirroring the API response shapes |
 | `ios/Packages/Biomarkers/Sources/Biomarkers/` | Ported clinical logic: categories, diet profiles, marker signals |
 | `ios/Packages/Auth/Sources/AppAuth/` | Supabase auth, Keychain session, mock auth for demo mode |
-| `ios/Packages/HealthSync/Sources/HealthSync/` | HealthKit sync + Withings Cloud service |
-| `ios/EmpiricalTracker/Features/Dashboard/` | Dashboard host: body-map (default) + biomarker grid, diet filter, sparklines, toolbar mode toggle |
+| `ios/Packages/HealthSync/Sources/HealthSync/` | HealthKit sync (weight/BP, heart metrics, activity) + Withings Cloud service |
+| `ios/EmpiricalTracker/App/RootView.swift` | Auth/consent/onboarding gate + the four-tab `FloatingTabBar` shell (`AppTab`) |
+| `ios/EmpiricalTracker/App/NutritionHubView.swift` | Nutrition tab — segmented/swipe host for Diary, Plan, Recipes |
+| `ios/EmpiricalTracker/Features/Dashboard/` | Body-tab host: body-map (default) + biomarker grid, diet filter, sparklines, toolbar mode toggle |
+| `ios/EmpiricalTracker/Features/Import/` | Lab import sheet, on-device PDF/photo extractor, review screen (ADR-032) |
 | `ios/EmpiricalTracker/Features/BodyMap/` | Anatomical silhouette, body-region pins, region sheet (ADR-030) |
 | `ios/EmpiricalTracker/Features/CategoryGraphs/` | Per-category multi-chart view, pushed from body map or category header |
 | `ios/EmpiricalTracker/Features/BiomarkerDetail/` | Trend chart, clinical signals, confounder notes, manual entry |
 | `ios/EmpiricalTracker/Features/FoodDiary/` | Diary, multi-source search, barcode scanner |
 | `ios/EmpiricalTracker/Features/MealPlans/` | Weekly calendar + plan management |
-| `ios/EmpiricalTracker/Features/BodyMetrics/` | Log + charts, HealthSync + WithingsCloud sections |
+| `ios/EmpiricalTracker/Features/BodyMetrics/` | Trends tab — body/heart-metric log + charts, HealthSync + WithingsCloud sections |
 | `ios/EmpiricalTracker/Features/ReportShare/` | Client-side doctor PDF report |
 | `ios/EmpiricalTracker/Features/Consent/` | Health-data consent gate (versioned `ConsentStore`) |
 | `ios/EmpiricalTracker/Features/Onboarding/` | First-run profile setup (height/weight/waist + units, or Apple Health) |

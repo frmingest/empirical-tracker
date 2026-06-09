@@ -1,8 +1,10 @@
 # ADR-032: Multi-format lab import — PDF & image documents beyond `.xlsx`
 
-**Status:** Proposed — **Phase 1 spike implemented** (text-PDF/photo on-device →
-staged candidate → review → apply). Phases 3–4 (qualitative `value_text`,
-consent-gated vision) remain.
+**Status:** Accepted — **shipped** (text-PDF + photo/scan via on-device OCR →
+staged candidate → mandatory review → apply). Capture is via the widened
+`UIDocumentPickerViewController` (`[.pdf, .png, .jpeg]`); the dedicated
+`VNDocumentCameraViewController` / `PHPicker` capture sources and Phases 3–4
+(qualitative `value_text`, consent-gated vision posture) remain.
 **Date:** 2026-06-08
 **Author:** Architecture proposal (Claude)
 **Sprint:** Ingestion follow-up (extends ADR-001 `.xlsx` import; builds on the

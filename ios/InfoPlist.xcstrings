@@ -26,13 +26,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Biotrack reads your weight and blood pressure from Apple Health — including readings your Withings devices write there via Health Mate — so it can chart them alongside your blood biomarkers and diet events. It only reads the data types you enable, and never writes to Apple Health."
+            "value" : "Biotrack reads your weight, blood pressure, and heart metrics (resting heart rate, heart-rate variability, average heart rate) from Apple Health — including readings your Withings devices write there via Health Mate — and your activity (steps, active energy, exercise minutes), so it can chart them alongside your blood biomarkers and diet events and show how active you were around diet changes. It only reads the data types you enable, and never writes to Apple Health."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Biotrack leser vekt og blodtrykk fra Apple Helse – inkludert målinger som Withings-enhetene dine skriver dit via Health Mate – slik at de kan vises sammen med blodbiomarkørene og kostholdshendelsene dine. Appen leser bare datatypene du aktiverer, og skriver aldri til Apple Helse."
+            "value" : "Biotrack leser vekt, blodtrykk og hjertemål (hvilepuls, hjertefrekvensvariasjon, gjennomsnittspuls) fra Apple Helse – inkludert målinger som Withings-enhetene dine skriver dit via Health Mate – og aktiviteten din (skritt, aktiv energi, treningsminutter), slik at de kan vises sammen med blodbiomarkørene og kostholdshendelsene dine og vise hvor aktiv du var rundt kostholdsendringer. Appen leser bare datatypene du aktiverer, og skriver aldri til Apple Helse."
           }
         }
       }

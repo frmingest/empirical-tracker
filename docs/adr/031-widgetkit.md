@@ -1,4 +1,12 @@
-# ADR-031 — WidgetKit Home/Lock Screen Widgets
+# ADR-031 (companion) — WidgetKit implementation & Xcode setup
+
+> **This is the implementation companion to
+> [ADR-031: Home Screen & Lock Screen widgets](031-ios-home-lock-screen-widgets.md).**
+> That file is the canonical *decision* record; this one captures the concrete
+> source files written and the manual Xcode-target / App-Group setup the widget
+> extension still needs. The two share the ADR-031 number deliberately — they
+> describe one decision, not two. (Numbering hygiene: future single-file ADRs
+> continue from 034.)
 
 **Status:** In progress (source files written; Xcode target setup required — see below)  
 **Date:** 2026-06-05
