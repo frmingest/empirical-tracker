@@ -11,7 +11,7 @@ struct NutritionHubView: View {
             picker
             pageContent
         }
-        .background(Color.backgroundPrimary.ignoresSafeArea())
+        .background(Color.bgBase.ignoresSafeArea())
     }
 
     // MARK: - Picker
