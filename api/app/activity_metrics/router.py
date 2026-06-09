@@ -9,6 +9,19 @@ from app.activity_metrics import repository
 router = APIRouter(prefix="/activity-metrics", tags=["activity-metrics"])
 
 
+class ActivityMetricOut(BaseModel):
+    """Response model — coerces Postgres `numeric` to float so the iOS decoder
+    always receives a JSON number, never a quoted string."""
+
+    id: str
+    measured_on: str
+    steps: int | None = None
+    active_energy_kcal: float | None = None
+    exercise_minutes: int | None = None
+    source: str
+    created_at: str
+
+
 class ActivityMetricIn(BaseModel):
     measured_on: str  # "YYYY-MM-DD"
     steps: int | None = None
@@ -44,7 +57,7 @@ class ActivityMetricIn(BaseModel):
         return self
 
 
-@router.get("")
+@router.get("", response_model=list[ActivityMetricOut])
 async def list_activity_metrics(user_id: str = Depends(current_user_id)) -> list[dict]:
     return repository.list_metrics(user_id)
 
