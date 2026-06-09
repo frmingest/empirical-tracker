@@ -46,7 +46,9 @@ private extension MarkerSignals.Assessment {
 @MainActor
 @Observable
 final class BodyMapViewModel {
-    private(set) var regions: [BodyRegion] = BodyMapViewModel.makeRegions()
+    /// Static region skeleton (anchors + categories). Items are filled in on the
+    /// fly from the live repository — see `regions`.
+    private let regionLayout: [BodyRegion] = BodyMapViewModel.makeRegions()
     private(set) var isLoading = false
     /// When `true`, each marker is judged on its single most recent result only —
     /// the simplest possible read of "where do things stand right now".
@@ -59,8 +61,23 @@ final class BodyMapViewModel {
         self.biomarkersRepo = biomarkersRepo
     }
 
+    /// Regions with their markers distributed from the live repository results.
+    ///
+    /// Deliberately *computed*, not a cached stored property: SwiftUI's
+    /// `@Observable` tracking sees the reads of `biomarkersRepo.results` and
+    /// `showLatestOnly` while the view body evaluates, so the silhouette
+    /// re-renders automatically whenever results change — after a delete-all or
+    /// a fresh import — without waiting for the view's `.task` to run again.
+    /// (A previous stored-property version went stale on delete and only
+    /// refreshed after a logout/login rebuilt the view model.)
+    var regions: [BodyRegion] {
+        distribute(biomarkersRepo.results)
+    }
+
     func load() async {
-        // Reuse already-loaded data if available to avoid a redundant network hit.
+        // Fetch from the network only when nothing is loaded yet. An empty store
+        // after a delete-all is a valid, intentional state — not a cache miss —
+        // so we must not treat "empty" as a reason to keep hammering the API.
         if biomarkersRepo.results.isEmpty {
             isLoading = true
             await biomarkersRepo.loadResults()
@@ -69,12 +86,10 @@ final class BodyMapViewModel {
                 errorMessage = err.localizedDescription
             }
         }
-        distribute(biomarkersRepo.results)
     }
 
     func toggleLatestOnly() {
         showLatestOnly.toggle()
-        distribute(biomarkersRepo.results)
     }
 
     /// The most recent year that appears anywhere in the loaded results — "latest
@@ -88,11 +103,11 @@ final class BodyMapViewModel {
             .max()
     }
 
-    private func distribute(_ results: [BiomarkerWithSeries]) {
+    private func distribute(_ results: [BiomarkerWithSeries]) -> [BodyRegion] {
         let cal = Calendar.current
         let year = showLatestOnly ? latestYear(in: results) : nil
 
-        var updated = regions
+        var updated = regionLayout
         for i in updated.indices {
             let cats = updated[i].categories
             updated[i].items = results
@@ -103,7 +118,7 @@ final class BodyMapViewModel {
                     return filtered.isEmpty ? nil : BiomarkerWithSeries(biomarker: item.biomarker, series: filtered)
                 }
         }
-        regions = updated
+        return updated
     }
 
     // MARK: - Static layout
