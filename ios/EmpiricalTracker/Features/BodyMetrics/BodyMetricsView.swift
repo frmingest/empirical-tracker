@@ -23,7 +23,7 @@ struct BodyMetricsView: View {
                     LoadingView(message: String(localized: "body.loading"))
                 }
             }
-            .navigationTitle(String(localized: "tab.body"))
+            .navigationTitle(String(localized: "tab.trends"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .fullScreenCover(isPresented: $isBodyMapPresented) {

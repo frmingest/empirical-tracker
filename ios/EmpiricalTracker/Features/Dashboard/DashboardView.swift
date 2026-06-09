@@ -24,7 +24,7 @@ enum DashboardViewMode: String, CaseIterable {
     }
 }
 
-/// Home tab — faithful replica of the web dashboard.
+/// Body tab — faithful replica of the web dashboard.
 /// Sprint 2 delivers the read path: live data, category grid, diet filter, flagged toggle.
 /// Import action is wired in Sprint 4.
 struct DashboardView: View {
