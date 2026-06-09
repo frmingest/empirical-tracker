@@ -99,9 +99,9 @@ struct LabImportReviewView: View {
 
                 Divider()
 
-                ForEach(panel.results) { $row in
+                ForEach(panel.rows) { $row in
                     rowView(row: $row)
-                    if row.id != panel.wrappedValue.results.last?.id {
+                    if row.id != panel.wrappedValue.rows.last?.id {
                         Divider()
                     }
                 }
