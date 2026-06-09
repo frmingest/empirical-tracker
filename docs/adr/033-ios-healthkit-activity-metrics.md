@@ -1,9 +1,10 @@
 # ADR-033: Apple Health activity metrics (steps, active energy, exercise minutes)
 
-**Status:** Proposed
+**Status:** Accepted — **data foundation shipped** (table, sync, GDPR); the on-chart
+activity-context band (§5) remains a UI follow-up.
 **Date:** 2026-06-09
 **Author:** iOS team
-**Sprint:** TBD (HealthKit expansion)
+**Sprint:** HealthKit expansion
 
 ---
 
@@ -214,6 +215,30 @@ new table is added to the export bundle and the account-deletion cascade —
 | Keep ignoring activity (status quo) | Leaves the core correlation claim unguarded against the dominant confounder and forgoes the broadest available daily signal. |
 
 ---
+
+## Implementation notes (shipped)
+
+- **Migration** `api/supabase/migrations/021_activity_metrics.sql` adds the
+  `activity_metrics` table exactly as specified (daily grain, `at_least_one_activity`
+  check, `unique (user_id, measured_on)`, RLS, `on delete cascade`). It is registered in
+  `api/app/account/repository.py` `USER_TABLES` + `DELETE_ORDER`, so it flows into the
+  GDPR Art. 20 export and Art. 17 erasure (the schema-drift guard in
+  `tests/test_account.py` enforces this).
+- **Backend.** `api/app/activity_metrics/` mirrors the body-metrics domain:
+  `GET /activity-metrics`, `POST /activity-metrics/batch` (UPSERT on
+  `(user_id, measured_on)`), and `DELETE /activity-metrics/by-source/{source}`.
+- **iOS.** `HealthSync` gains `ActivityMetricType` (the three types,
+  `defaultEnabled`), `ActivityMetricPayload`, and an `ActivityMetricSyncSink`;
+  `HealthSyncManager.syncActivity(types:since:)` computes daily sums via
+  `HKStatisticsCollectionQuery(.cumulativeSum)`. The app wires
+  `RepositoryActivityMetricSyncSink` → `ActivityMetricsRepository` →
+  `/activity-metrics/batch`, and `HealthSyncState` always re-pulls a trailing 7-day
+  window (mutable daily totals); the local UUID store is deliberately **not** used for
+  activity.
+
+**Not yet wired:** the §5 product surface — activity is synced and stored but not yet
+drawn as a context band under the diet-event overlay; the correlation layer does not
+yet *control for* it.
 
 > Numbering note: ADR-033 continues the iOS HealthKit thread from ADR-022
 > (Withings bridge) and ADR-023 (Withings Cloud). It is independent of the

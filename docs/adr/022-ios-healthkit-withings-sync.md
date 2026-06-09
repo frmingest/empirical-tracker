@@ -1,11 +1,23 @@
 # ADR-022: iOS Withings capture via Apple HealthKit
 
-**Status:** Accepted
+**Status:** Accepted — **scope since widened** (see update note below)
 **Date:** 2026-06-02
 **Author:** iOS team
 **Sprint:** 9 (iOS)
 
 ---
+
+> **Update note (2026-06):** the §1 scope line ("weight + blood pressure now;
+> body composition deferred") has since moved on. The three **heart metrics** —
+> resting HR, HRV, and daily-average HR — shipped via `016_heart_metrics.sql` /
+> `017_heart_metrics_constraint.sql`, so `HealthMetricType` now enumerates five
+> types (all default-enabled), and **iPhone activity** (steps, active energy,
+> exercise minutes) shipped in its own `activity_metrics` table via
+> [ADR-033](033-ios-healthkit-activity-metrics.md). The
+> `NSHealthShareUsageDescription` has been rewritten to name all of these. Only
+> **body-fat % / lean mass** remain deferred (they still await the
+> `withings_measures` table, §4.3). This ADR is preserved as the point-in-time
+> record of where the line was first drawn.
 
 ## Context
 
