@@ -1,6 +1,8 @@
 import io
 import json
+import re
 import zipfile
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
@@ -10,6 +12,42 @@ from app.auth import current_user_id
 from app.main import app
 
 client = TestClient(app)
+
+MIGRATIONS_DIR = Path(__file__).resolve().parents[1] / "supabase" / "migrations"
+
+
+def _user_owned_tables_from_migrations() -> set[str]:
+    """Every table whose CREATE TABLE declares a column referencing ``auth.users``.
+
+    Such tables hold user-owned, RLS-scoped rows, so each one MUST appear in both
+    ``USER_TABLES`` (Art. 20 export) and ``DELETE_ORDER`` (Art. 17 erasure). The
+    anonymous catalogues (``food_catalogue`` / ``recipe_catalogue``) carry no
+    ``auth.users`` reference, so they are correctly ignored here.
+
+    Parsing the migrations rather than hand-listing the tables is the whole point:
+    when a future feature adds a user-owned table (as ADR-033's ``activity_metrics``
+    did) this guard fails until the table is registered — it can't be forgotten.
+    """
+    create_re = re.compile(r"create\s+table\s+(?:public\.)?(\w+)", re.IGNORECASE)
+    owned: set[str] = set()
+    for sql_path in MIGRATIONS_DIR.glob("*.sql"):
+        lines = sql_path.read_text().splitlines()
+        i = 0
+        while i < len(lines):
+            match = create_re.search(lines[i])
+            if not match:
+                i += 1
+                continue
+            table = match.group(1)
+            # Collect the CREATE TABLE body up to its terminating ");" line.
+            body: list[str] = []
+            i += 1
+            while i < len(lines) and lines[i].strip() not in (");", ")"):
+                body.append(lines[i])
+                i += 1
+            if "references auth.users" in "\n".join(body).lower():
+                owned.add(table)
+    return owned
 
 
 def _fluent(execute_data=None):
@@ -121,6 +159,37 @@ def test_delete_user_data_survives_admin_failure(mock_db):
     out = repository.delete_user_data("u1")
     # Data still erased even though the auth record could not be removed.
     assert out == {"data_deleted": True, "account_deleted": False}
+
+
+# ── schema-drift guard: every user-owned table is registered ──────────────────
+# These are the "never let it happen again" checks. The mock-based tests above
+# pass even when a real user-owned table is missing from the lists (the mock
+# answers for any table name), so they cannot catch a forgotten registration.
+# These guards read the actual schema and fail the build until a new table is
+# wired into BOTH the export and the erasure path.
+
+
+def test_every_user_owned_table_is_exported_and_erased():
+    owned = _user_owned_tables_from_migrations()
+    # Sanity: the parser actually found the schema (guards against a silent
+    # empty-set pass if the migrations move or the parser breaks).
+    assert "biomarkers" in owned and "activity_metrics" in owned
+    missing_from_export = owned - set(repository.USER_TABLES)
+    missing_from_erase = owned - set(repository.DELETE_ORDER)
+    assert not missing_from_export, (
+        "User-owned tables missing from USER_TABLES (GDPR Art. 20 export): "
+        f"{sorted(missing_from_export)}. Register them in app/account/repository.py."
+    )
+    assert not missing_from_erase, (
+        "User-owned tables missing from DELETE_ORDER (GDPR Art. 17 erasure): "
+        f"{sorted(missing_from_erase)}. Register them in app/account/repository.py."
+    )
+
+
+def test_export_and_erasure_cover_the_same_tables():
+    # Export and erasure must describe the same footprint: a table we hand back in
+    # an Art. 20 export but never erase (or vice versa) is a compliance bug.
+    assert set(repository.USER_TABLES) == set(repository.DELETE_ORDER)
 
 
 # ── HTTP endpoints ────────────────────────────────────────────────────────────
