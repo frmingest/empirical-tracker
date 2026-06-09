@@ -37,29 +37,25 @@ struct RootView: View {
 /// the redesigned, rounded "glass capsule" look. Includes the Recipes catalogue
 /// added in the Sprint 7 recipes module.
 enum AppTab: Int, CaseIterable, Identifiable {
-    case home, diary, plan, recipes, body, settings
+    case home, nutrition, body, settings
 
     var id: Int { rawValue }
 
     var title: String {
         switch self {
-        case .home:     return String(localized: "tab.home")
-        case .diary:    return String(localized: "tab.diary")
-        case .plan:     return String(localized: "tab.plan")
-        case .recipes:  return String(localized: "tab.recipes")
-        case .body:     return String(localized: "tab.body")
-        case .settings: return String(localized: "tab.settings")
+        case .home:      return String(localized: "tab.home")
+        case .nutrition: return String(localized: "tab.nutrition")
+        case .body:      return String(localized: "tab.body")
+        case .settings:  return String(localized: "tab.settings")
         }
     }
 
     var icon: String {
         switch self {
-        case .home:     return "house.fill"
-        case .diary:    return "fork.knife"
-        case .plan:     return "calendar"
-        case .recipes:  return "frying.pan"
-        case .body:     return "figure.walk"
-        case .settings: return "gearshape"
+        case .home:      return "house.fill"
+        case .nutrition: return "fork.knife"
+        case .body:      return "figure.walk"
+        case .settings:  return "gearshape"
         }
     }
 }
@@ -77,12 +73,10 @@ struct MainTabView: View {
 
     var body: some View {
         ZStack {
-            screen(.home)     { DashboardView() }
-            screen(.diary)    { FoodDiaryView() }
-            screen(.plan)     { MealPlanCalendarView() }
-            screen(.recipes)  { RecipesView() }
-            screen(.body)     { BodyMetricsView() }
-            screen(.settings) { SettingsView() }
+            screen(.home)      { DashboardView() }
+            screen(.nutrition) { NutritionHubView() }
+            screen(.body)      { BodyMetricsView() }
+            screen(.settings)  { SettingsView() }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             FloatingTabBar(selection: $selection)
