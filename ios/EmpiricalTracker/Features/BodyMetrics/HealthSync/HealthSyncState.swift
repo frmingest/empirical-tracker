@@ -47,6 +47,7 @@ final class HealthSyncState {
 
     private let manager: HealthSyncManager
     private let bodyMetrics: BodyMetricsRepository
+    private let activityMetrics: ActivityMetricsRepository
     private let defaults: UserDefaults
     private var isObserving = false
 
@@ -55,10 +56,13 @@ final class HealthSyncState {
     /// debounce window cancels the previous pending task.
     private var pendingObserverSync: Task<Void, Never>?
 
+    private var enabledActivityTypes: Set<ActivityMetricType>
+
     private enum Key {
         static let connected = "healthsync.connected"
         static let lastSync = "healthsync.lastSync"
         static let enabledTypes = "healthsync.enabledTypes"
+        static let enabledActivityTypes = "healthsync.enabledActivityTypes"
     }
 
     // MARK: - Init
@@ -66,16 +70,24 @@ final class HealthSyncState {
     init(
         manager: HealthSyncManager,
         bodyMetrics: BodyMetricsRepository,
+        activityMetrics: ActivityMetricsRepository,
         defaults: UserDefaults = .standard
     ) {
         self.manager = manager
         self.bodyMetrics = bodyMetrics
+        self.activityMetrics = activityMetrics
         self.defaults = defaults
 
         if let stored = defaults.stringArray(forKey: Key.enabledTypes) {
             enabledTypes = Set(stored.compactMap(HealthMetricType.init(rawValue:)))
         } else {
             enabledTypes = HealthMetricType.defaultEnabled
+        }
+
+        if let stored = defaults.stringArray(forKey: Key.enabledActivityTypes) {
+            enabledActivityTypes = Set(stored.compactMap(ActivityMetricType.init(rawValue:)))
+        } else {
+            enabledActivityTypes = ActivityMetricType.defaultEnabled
         }
 
         let available = HealthSyncManager.isHealthDataAvailable
@@ -122,6 +134,7 @@ final class HealthSyncState {
         errorMessage = nil
         do {
             try await manager.requestAuthorization(for: enabledTypes)
+            try await manager.requestAuthorization(for: enabledActivityTypes)
             connection = .connected
             defaults.set(true, forKey: Key.connected)
             await syncNow()
@@ -151,15 +164,18 @@ final class HealthSyncState {
         errorMessage = nil
         do {
             try await bodyMetrics.deleteBySource(.healthkit)
+            try await activityMetrics.deleteBySource("healthkit")
             await manager.resetSyncedSamples()
             lastSyncDate = nil
             defaults.removeObject(forKey: Key.lastSync)
             let summary = try await manager.sync(types: enabledTypes)
             lastSummary = summary
+            try await manager.syncActivity(types: enabledActivityTypes)
             let now = Date()
             lastSyncDate = now
             defaults.set(now.timeIntervalSince1970, forKey: Key.lastSync)
             await bodyMetrics.load()
+            await activityMetrics.load()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -184,14 +200,17 @@ final class HealthSyncState {
             // catch samples the user entered with a backdated date. UUID dedup ensures
             // the overlap window never double-uploads samples already on the backend.
             // `nil` on first sync → full history import.
+            // Activity always re-pulls the trailing 7-day window (mutable daily totals).
             let since = lastSyncDate.map { $0.addingTimeInterval(-7 * 24 * 3600) }
             let summary = try await manager.sync(types: enabledTypes, since: since)
             lastSummary = summary
+            try await manager.syncActivity(types: enabledActivityTypes, since: since)
             let now = Date()
             lastSyncDate = now
             defaults.set(now.timeIntervalSince1970, forKey: Key.lastSync)
-            // The repository is the source of truth; reload so charts reflect dedupe.
+            // Repositories are the source of truth; reload so charts reflect dedupe.
             await bodyMetrics.load()
+            await activityMetrics.load()
         } catch {
             if !silent { errorMessage = error.localizedDescription }
         }
@@ -203,7 +222,10 @@ final class HealthSyncState {
     private func ensureObserving() async {
         guard connection == .connected, !isObserving, !enabledTypes.isEmpty else { return }
         do {
-            try await manager.startObserving(types: enabledTypes) { [weak self] in
+            try await manager.startObserving(
+                types: enabledTypes,
+                activityTypes: enabledActivityTypes
+            ) { [weak self] in
                 await self?.scheduleObserverSync()
             }
             isObserving = true

@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.account.router import router as account_router
+from app.activity_metrics.router import router as activity_metrics_router
 from app.biomarkers.router import router as biomarkers_router
 from app.body_metrics.router import router as body_metrics_router
 from app.config import get_settings
@@ -49,6 +50,7 @@ async def security_headers(request: Request, call_next):
     return response
 
 
+app.include_router(activity_metrics_router)
 app.include_router(biomarkers_router)
 app.include_router(settings_router)
 app.include_router(diet_events_router)

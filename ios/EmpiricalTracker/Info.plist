@@ -25,7 +25,7 @@
 	<key>SupabaseAnonKey</key>
 	<string>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFoZmxmam5kdmtodWxtcWF0ZHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyMTMyMjAsImV4cCI6MjA5NTc4OTIyMH0.NyMQ87lhKXr0TGeoFsj80Ajgb-_cvB5cNA6fFqNRek0</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Biotrack reads your weight and blood pressure from Apple Health — including readings your Withings devices write there via Health Mate — so it can chart them alongside your blood biomarkers and diet events. It only reads the data types you enable, and never writes to Apple Health.</string>
+	<string>Biotrack reads your weight, blood pressure, heart rate, and heart rate variability from Apple Health — including readings your Withings devices write there via Health Mate — and also reads your daily steps, active energy, and exercise minutes so it can show how active you were around diet changes. It only reads the data types you enable, stores them on EU servers, and never writes to Apple Health.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Biotrack uses the camera to scan food barcodes and photograph nutrition labels. Barcode data is looked up online; label photos are processed for text only and never stored on our servers.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
