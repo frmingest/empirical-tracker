@@ -33,7 +33,8 @@ struct BodyMetricsView: View {
                 if viewModel == nil {
                     viewModel = BodyMetricsViewModel(
                         repo: env.bodyMetrics,
-                        dietEventsRepo: env.dietEvents
+                        dietEventsRepo: env.dietEvents,
+                        activityRepo: env.activityMetrics
                     )
                     await viewModel?.load()
                 }
@@ -189,6 +190,27 @@ struct BodyMetricsView: View {
                     color: .textSecondary,
                     subtitle: vm.latestHeartRate.map { _ in "BPM" }
                 )
+                StatCard(
+                    title: "Steps (7d avg)",
+                    value: vm.sevenDayAvgSteps.map { $0.formatted() } ?? "–",
+                    icon: "figure.walk",
+                    color: .accent,
+                    subtitle: vm.sevenDayAvgSteps.map { _ in "steps/day" }
+                )
+                StatCard(
+                    title: "Active Energy",
+                    value: vm.latestActiveEnergy.map { "\($0.formatted(.number.precision(.fractionLength(0)))) kcal" } ?? "–",
+                    icon: "flame.fill",
+                    color: .outRange,
+                    subtitle: vm.latestActiveEnergy.map { _ in "yesterday" }
+                )
+                StatCard(
+                    title: "Exercise",
+                    value: vm.latestExerciseMinutes.map { "\($0) min" } ?? "–",
+                    icon: "figure.run",
+                    color: .inRange,
+                    subtitle: vm.latestExerciseMinutes.map { _ in "yesterday" }
+                )
             }
             .padding(.vertical, 4)
         }
@@ -316,6 +338,62 @@ struct BodyMetricsView: View {
                 .chartRowStyle()
             }
         }
+
+        activityChartsSection(vm)
+    }
+
+    @ViewBuilder
+    private func activityChartsSection(_ vm: BodyMetricsViewModel) -> some View {
+        if !vm.stepsPoints.isEmpty {
+            Section(header: Text("Activity").font(.labelMedium).foregroundStyle(Color.textMuted)) {
+                BodyMetricChart(
+                    title: "Steps",
+                    unit: "steps/day",
+                    series: [.init(
+                        id: "steps",
+                        label: "Steps",
+                        color: .accent,
+                        points: vm.stepsPoints
+                    )],
+                    events: vm.overlappingEvents
+                )
+                .chartRowStyle()
+            }
+        }
+
+        if !vm.activeEnergyPoints.isEmpty {
+            Section {
+                BodyMetricChart(
+                    title: "Active Energy",
+                    unit: "kcal/day",
+                    series: [.init(
+                        id: "energy",
+                        label: "Active Energy",
+                        color: .outRange,
+                        points: vm.activeEnergyPoints
+                    )],
+                    events: vm.overlappingEvents
+                )
+                .chartRowStyle()
+            }
+        }
+
+        if !vm.exerciseMinutesPoints.isEmpty {
+            Section {
+                BodyMetricChart(
+                    title: "Exercise Minutes",
+                    unit: "min/day",
+                    series: [.init(
+                        id: "exercise",
+                        label: "Exercise",
+                        color: .inRange,
+                        points: vm.exerciseMinutesPoints
+                    )],
+                    events: vm.overlappingEvents
+                )
+                .chartRowStyle()
+            }
+        }
     }
 
 }
@@ -430,6 +508,7 @@ private struct HeightStatCard: View {
         let e = AppEnvironment.preview()
         e.bodyMetrics.metrics = MockData.bodyMetrics
         e.dietEvents.events = MockData.dietEvents
+        e.activityMetrics.metrics = MockData.activityMetrics
         return e
     }()
     BodyMetricsView()

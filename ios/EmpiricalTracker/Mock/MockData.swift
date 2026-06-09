@@ -221,6 +221,22 @@ public enum MockData {
         BodyMetric(id: "bm-7", measuredOn: daysAgo(0), weightKg: 79.1, waistCm: 89,
                    systolic: 118, diastolic: 76, note: "Down 13 kg."),
     ]
+
+    // MARK: - Activity metrics (HealthKit — steps, active energy, exercise)
+
+    public static let activityMetrics: [ActivityMetric] = (0..<90).map { i in
+        let d = daysAgo(89 - i)
+        let baseSteps = 7_500 + Int.random(in: -2_000...3_000)
+        let energy = Double(baseSteps) * 0.045 + Double.random(in: -50...80)
+        let exercise = max(0, baseSteps / 500 - 5 + Int.random(in: -5...15))
+        return ActivityMetric(
+            id: "am-\(i)",
+            measuredOn: d,
+            steps: baseSteps,
+            activeEnergyKcal: energy,
+            exerciseMinutes: exercise
+        )
+    }
 }
 
 // MARK: - Builder
