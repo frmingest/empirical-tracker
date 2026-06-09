@@ -54,6 +54,7 @@ public final class ActivityMetricsRepository {
     }
 
     public func load() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         do {
@@ -66,10 +67,12 @@ public final class ActivityMetricsRepository {
     }
 
     /// Upserts a batch of daily activity payloads (one round-trip).
-    /// The response is discarded; `load()` refreshes the in-memory list.
+    /// Uses requestEmpty to avoid decoding the upsert response — the backend
+    /// may return numeric columns as JSON strings (Postgres `numeric` type),
+    /// which would fail ActivityMetric decoding. `load()` fetches the real data.
     public func upsertBatch(_ payloads: [some Encodable & Sendable]) async throws {
         guard !payloads.isEmpty else { return }
-        let _: [ActivityMetric] = try await client.request(.post("/activity-metrics/batch", body: payloads))
+        try await client.requestEmpty(.post("/activity-metrics/batch", body: payloads))
         await load()
     }
 

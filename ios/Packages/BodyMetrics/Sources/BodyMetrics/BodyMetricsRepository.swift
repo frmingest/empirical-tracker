@@ -123,6 +123,7 @@ public final class BodyMetricsRepository {
     }
 
     public func load() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         do {
