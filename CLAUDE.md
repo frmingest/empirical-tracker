@@ -66,6 +66,12 @@ See `docs/SOLUTION.md` for full sprint descriptions.
 ## Key conventions
 
 - DB migrations live in `api/supabase/migrations/` — numbered sequentially, run manually in Supabase SQL editor
+- **Any new table that holds user-owned rows** (a `user_id` column referencing `auth.users`)
+  **must** be registered in *both* `USER_TABLES` and `DELETE_ORDER` in
+  `api/app/account/repository.py` — otherwise the GDPR Art. 20 export silently omits
+  it and Art. 17 erasure silently skips it (account deletion). The schema-drift guard
+  in `api/tests/test_account.py` enforces this and will fail the build until the table
+  is registered; do not bypass it.
 - Tests: `cd api && pytest -v` (all must pass)
 - External data (Open Food Facts) is reached through an authenticated backend proxy that sets a `User-Agent`; never call third-party APIs directly from the iOS app
 - Xcode project uses folder synchronization (Xcode 15) — new `.swift` files added to `ios/EmpiricalTracker/` subdirectories are picked up automatically, no `.pbxproj` edits needed

@@ -22,6 +22,9 @@ USER_TABLES: tuple[str, ...] = (
     "meal_plans",
     "planned_meals",
     "body_metrics",
+    # HealthKit daily activity sums (ADR-033): user-owned + RLS like the rest, so
+    # it joins the Art. 20 export and Art. 17 erasure like every other user table.
+    "activity_metrics",
     # custom_foods carries a user_id + RLS like the rest; it joins the export so a
     # user's own contributions appear in their Art. 20 download (ADR-027). The
     # anonymous food_catalogue is intentionally NOT here — those rows are nobody's
@@ -34,8 +37,8 @@ USER_TABLES: tuple[str, ...] = (
 
 # Deletion order: children before parents, so foreign-key constraints never
 # block erasure (results → panels/biomarkers; planned_meals → meal_plans;
-# recipe_favorites → recipes). body_metrics and custom_foods are standalone
-# tables (no children), so their position is free.
+# recipe_favorites → recipes). body_metrics, activity_metrics and custom_foods
+# are standalone tables (no children), so their position is free.
 DELETE_ORDER: tuple[str, ...] = (
     "results",
     "lab_imports",
@@ -43,6 +46,7 @@ DELETE_ORDER: tuple[str, ...] = (
     "food_entries",
     "diet_events",
     "body_metrics",
+    "activity_metrics",
     "custom_foods",
     "meal_plans",
     "panels",
