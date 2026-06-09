@@ -127,8 +127,8 @@ struct LogBodyMetricSheet: View {
 
 #Preview {
     let env = AppEnvironment.preview()
-    let vm = BodyMetricsViewModel(repo: env.bodyMetrics, dietEventsRepo: env.dietEvents)
+    let vm = BodyMetricsViewModel(repo: env.bodyMetrics, dietEventsRepo: env.dietEvents, activityRepo: env.activityMetrics)
     vm.isFormPresented = true
-    return LogBodyMetricSheet(viewModel: vm)
+    LogBodyMetricSheet(viewModel: vm)
         .environment(env)
 }
