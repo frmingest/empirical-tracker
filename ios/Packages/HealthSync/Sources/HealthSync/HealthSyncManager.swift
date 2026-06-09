@@ -160,6 +160,7 @@ public actor HealthSyncManager {
     // MARK: - Dependencies
 
     private let sink: any BodyMetricSyncSink
+    private let activitySink: (any ActivityMetricSyncSink)?
     private let syncedStore: SyncedSampleStore
 
     #if canImport(HealthKit)
@@ -169,9 +170,11 @@ public actor HealthSyncManager {
 
     public init(
         sink: any BodyMetricSyncSink,
+        activitySink: (any ActivityMetricSyncSink)? = nil,
         syncedStore: SyncedSampleStore = SyncedSampleStore()
     ) {
         self.sink = sink
+        self.activitySink = activitySink
         self.syncedStore = syncedStore
     }
 
@@ -194,6 +197,18 @@ public actor HealthSyncManager {
         #if canImport(HealthKit)
         guard HKHealthStore.isHealthDataAvailable() else { throw HealthSyncError.unavailable }
         let readTypes = Self.readObjectTypes(for: types)
+        guard !readTypes.isEmpty else { return }
+        try await store.requestAuthorization(toShare: [], read: readTypes)
+        #else
+        throw HealthSyncError.unavailable
+        #endif
+    }
+
+    /// Presents the system permission sheet for the read types backing `activityTypes`.
+    public func requestAuthorization(for activityTypes: Set<ActivityMetricType>) async throws {
+        #if canImport(HealthKit)
+        guard HKHealthStore.isHealthDataAvailable() else { throw HealthSyncError.unavailable }
+        let readTypes = Self.activityReadObjectTypes(for: activityTypes)
         guard !readTypes.isEmpty else { return }
         try await store.requestAuthorization(toShare: [], read: readTypes)
         #else
@@ -315,6 +330,58 @@ public actor HealthSyncManager {
         #endif
     }
 
+    // MARK: - Activity sync (ADR-033)
+
+    /// Reads daily sums for the enabled `activityTypes` using
+    /// `HKStatisticsCollectionQuery` (cumulative sum per day), then uploads them
+    /// via the `activitySink` as a single batch UPSERT per trailing window.
+    ///
+    /// Dedup is by deterministic **day-key** (not sample UUID), because daily
+    /// totals are mutable — today's step count grows until midnight and even past
+    /// days can gain late-arriving samples. The trailing window default (7 days)
+    /// ensures partial days settle to their final totals on the next sync.
+    ///
+    /// - Parameter since: lower bound for the query; `nil` imports the full history.
+    @discardableResult
+    public func syncActivity(types: Set<ActivityMetricType>, since: Date? = nil) async throws -> Int {
+        #if canImport(HealthKit)
+        guard HKHealthStore.isHealthDataAvailable() else { throw HealthSyncError.unavailable }
+        guard let activitySink else { return 0 }
+
+        var allReadings: [ActivityDayReading] = []
+        var groupError: Error?
+        do {
+            try await withThrowingTaskGroup(of: [ActivityDayReading].self) { group in
+                if types.contains(.steps) {
+                    group.addTask { try await self.readDailySteps(since: since) }
+                }
+                if types.contains(.activeEnergy) {
+                    group.addTask { try await self.readDailyActiveEnergy(since: since) }
+                }
+                if types.contains(.exerciseMinutes) {
+                    group.addTask { try await self.readDailyExerciseMinutes(since: since) }
+                }
+                for try await batch in group { allReadings.append(contentsOf: batch) }
+            }
+        } catch { groupError = error }
+
+        // Merge all types into one payload per calendar day.
+        let payloads = Self.mergeActivityByDay(allReadings)
+        if !payloads.isEmpty {
+            var index = 0
+            while index < payloads.count {
+                let chunk = Array(payloads[index..<min(index + Self.maxBatchSize, payloads.count)])
+                index += Self.maxBatchSize
+                try await activitySink.uploadBatch(chunk)
+            }
+        }
+        if let groupError { throw groupError }
+        return payloads.count
+        #else
+        throw HealthSyncError.unavailable
+        #endif
+    }
+
     // MARK: - Background observation
 
     /// Registers observer queries with background delivery for the enabled types so
@@ -323,13 +390,16 @@ public actor HealthSyncManager {
     /// "Sync now" button is the reliable fallback.
     public func startObserving(
         types: Set<HealthMetricType>,
+        activityTypes: Set<ActivityMetricType> = [],
         onUpdate: @escaping @Sendable () async -> Void
     ) async throws {
         #if canImport(HealthKit)
         guard HKHealthStore.isHealthDataAvailable() else { throw HealthSyncError.unavailable }
         stopObservingInternal()
 
-        for sampleType in Self.observerSampleTypes(for: types) {
+        let allSampleTypes = Self.observerSampleTypes(for: types)
+            + Self.activityObserverSampleTypes(for: activityTypes)
+        for sampleType in allSampleTypes {
             let query = HKObserverQuery(sampleType: sampleType, predicate: nil) { _, completion, error in
                 // `completion()` must be called so HealthKit stops retrying delivery.
                 guard error == nil else { completion(); return }
@@ -516,6 +586,139 @@ public actor HealthSyncManager {
                 }
             }
             store.execute(query)
+        }
+    }
+
+    // MARK: - Activity HealthKit internals
+
+    private struct ActivityDayReading: Sendable {
+        let day: Date
+        let steps: Int?
+        let activeEnergyKcal: Double?
+        let exerciseMinutes: Int?
+    }
+
+    private func readDailySteps(since: Date?) async throws -> [ActivityDayReading] {
+        try await statisticsCollection(
+            type: HKQuantityType(.stepCount),
+            options: .cumulativeSum,
+            since: since
+        ) { stat in
+            guard let sum = stat.sumQuantity() else { return nil }
+            let value = Int(sum.doubleValue(for: .count()).rounded())
+            guard value > 0 else { return nil }
+            return ActivityDayReading(day: stat.startDate, steps: value, activeEnergyKcal: nil, exerciseMinutes: nil)
+        }
+    }
+
+    private func readDailyActiveEnergy(since: Date?) async throws -> [ActivityDayReading] {
+        try await statisticsCollection(
+            type: HKQuantityType(.activeEnergyBurned),
+            options: .cumulativeSum,
+            since: since
+        ) { stat in
+            guard let sum = stat.sumQuantity() else { return nil }
+            let kcal = sum.doubleValue(for: .kilocalorie())
+            guard kcal > 0 else { return nil }
+            return ActivityDayReading(day: stat.startDate, steps: nil, activeEnergyKcal: kcal, exerciseMinutes: nil)
+        }
+    }
+
+    private func readDailyExerciseMinutes(since: Date?) async throws -> [ActivityDayReading] {
+        try await statisticsCollection(
+            type: HKQuantityType(.appleExerciseTime),
+            options: .cumulativeSum,
+            since: since
+        ) { stat in
+            guard let sum = stat.sumQuantity() else { return nil }
+            let minutes = Int(sum.doubleValue(for: .minute()).rounded())
+            guard minutes > 0 else { return nil }
+            return ActivityDayReading(day: stat.startDate, steps: nil, activeEnergyKcal: nil, exerciseMinutes: minutes)
+        }
+    }
+
+    /// Generic bridge for `HKStatisticsCollectionQuery` (cumulative sum, one-day interval).
+    private func statisticsCollection<T: Sendable>(
+        type: HKQuantityType,
+        options: HKStatisticsOptions,
+        since: Date?,
+        transform: @escaping @Sendable (HKStatistics) -> T?
+    ) async throws -> [T] {
+        let predicate = since.map {
+            HKQuery.predicateForSamples(withStart: $0, end: nil, options: .strictStartDate)
+        }
+        let anchorDate = Calendar.current.startOfDay(for: Date())
+        let interval = DateComponents(day: 1)
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let q = HKStatisticsCollectionQuery(
+                quantityType: type,
+                quantitySamplePredicate: predicate,
+                options: options,
+                anchorDate: anchorDate,
+                intervalComponents: interval
+            )
+            q.initialResultsHandler = { _, collection, error in
+                if let error {
+                    continuation.resume(throwing: HealthSyncError.query(error.localizedDescription))
+                    return
+                }
+                let results: [T] = (collection?.statistics() ?? []).compactMap(transform)
+                continuation.resume(returning: results)
+            }
+            store.execute(q)
+        }
+    }
+
+    /// Merges per-type daily readings into one `ActivityMetricPayload` per calendar day.
+    private static func mergeActivityByDay(_ readings: [ActivityDayReading]) -> [ActivityMetricPayload] {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+
+        var byDay: [String: (date: Date, steps: Int?, kcal: Double?, minutes: Int?)] = [:]
+        for r in readings {
+            let key = formatter.string(from: r.day)
+            if var existing = byDay[key] {
+                if let s = r.steps { existing.steps = s }
+                if let k = r.activeEnergyKcal { existing.kcal = k }
+                if let m = r.exerciseMinutes { existing.minutes = m }
+                byDay[key] = existing
+            } else {
+                byDay[key] = (date: r.day, steps: r.steps, kcal: r.activeEnergyKcal, minutes: r.exerciseMinutes)
+            }
+        }
+        return byDay.values
+            .sorted { $0.date < $1.date }
+            .map { entry in
+                ActivityMetricPayload(
+                    measuredOn: entry.date,
+                    steps: entry.steps,
+                    activeEnergyKcal: entry.kcal,
+                    exerciseMinutes: entry.minutes
+                )
+            }
+    }
+
+    private static func activityReadObjectTypes(for types: Set<ActivityMetricType>) -> Set<HKObjectType> {
+        var set = Set<HKObjectType>()
+        for type in types {
+            switch type {
+            case .steps:           set.insert(HKQuantityType(.stepCount))
+            case .activeEnergy:    set.insert(HKQuantityType(.activeEnergyBurned))
+            case .exerciseMinutes: set.insert(HKQuantityType(.appleExerciseTime))
+            }
+        }
+        return set
+    }
+
+    private static func activityObserverSampleTypes(for types: Set<ActivityMetricType>) -> [HKSampleType] {
+        types.map { type in
+            switch type {
+            case .steps:           HKQuantityType(.stepCount)
+            case .activeEnergy:    HKQuantityType(.activeEnergyBurned)
+            case .exerciseMinutes: HKQuantityType(.appleExerciseTime)
+            }
         }
     }
 

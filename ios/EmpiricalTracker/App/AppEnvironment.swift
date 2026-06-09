@@ -48,6 +48,7 @@ public final class AppEnvironment {
     public let mealPlans: MealPlansRepository
     public let recipes: RecipesRepository
     public let bodyMetrics: BodyMetricsRepository
+    public let activityMetrics: ActivityMetricsRepository
     public let account: AccountRepository
     public let healthSync: HealthSyncManager
     /// Shared Apple Health connection/sync state (Sprint 9). One instance so the
@@ -102,12 +103,18 @@ public final class AppEnvironment {
         bodyMetrics = BodyMetricsRepository(client: apiClient)
         account     = AccountRepository(client: apiClient)
 
-        // HealthKit (Sprint 9): the manager uploads mapped Apple Health readings
-        // through the body-metrics repository, tagged `source: healthkit`.
+        // HealthKit (Sprint 9 / ADR-033): the manager uploads mapped Apple Health
+        // readings through their respective repositories.
+        activityMetrics = ActivityMetricsRepository(client: apiClient)
         let syncSink = RepositoryBodyMetricSyncSink(repository: bodyMetrics)
-        let manager = HealthSyncManager(sink: syncSink)
+        let activitySink = RepositoryActivityMetricSyncSink(repository: activityMetrics)
+        let manager = HealthSyncManager(sink: syncSink, activitySink: activitySink)
         healthSync = manager
-        healthSyncState = HealthSyncState(manager: manager, bodyMetrics: bodyMetrics)
+        healthSyncState = HealthSyncState(
+            manager: manager,
+            bodyMetrics: bodyMetrics,
+            activityMetrics: activityMetrics
+        )
 
         // Withings Cloud (Sprint 10): the backend owns the OAuth token exchange and
         // webhooks; this client starts the connection and reflects status. It stays
