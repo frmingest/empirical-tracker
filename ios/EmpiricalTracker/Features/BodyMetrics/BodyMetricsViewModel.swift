@@ -123,39 +123,6 @@ final class BodyMetricsViewModel {
         repo.metrics.compactMap { m in m.heartRateBpm.map { .init(date: m.measuredOn, value: Double($0)) } }
     }
 
-    // MARK: - Activity metrics (Apple Health — steps, active energy, exercise)
-
-    private var recentActivity: [ActivityMetric] {
-        activityRepo.metrics.sorted { $0.measuredOn < $1.measuredOn }
-    }
-
-    var stepsPoints: [BodyMetricChart.DataPoint] {
-        recentActivity.compactMap { m in m.steps.map { .init(date: m.measuredOn, value: Double($0)) } }
-    }
-
-    var activeEnergyPoints: [BodyMetricChart.DataPoint] {
-        recentActivity.compactMap { m in m.activeEnergyKcal.map { .init(date: m.measuredOn, value: $0) } }
-    }
-
-    var exerciseMinutesPoints: [BodyMetricChart.DataPoint] {
-        recentActivity.compactMap { m in m.exerciseMinutes.map { .init(date: m.measuredOn, value: Double($0)) } }
-    }
-
-    /// 7-day average steps (nil when no data).
-    var sevenDayAvgSteps: Int? {
-        let last7 = stepsPoints.suffix(7)
-        guard !last7.isEmpty else { return nil }
-        return Int(last7.map(\.value).reduce(0, +) / Double(last7.count))
-    }
-
-    /// Most recent day's active energy.
-    var latestActiveEnergy: Double? { activeEnergyPoints.last?.value }
-
-    /// Most recent day's exercise minutes.
-    var latestExerciseMinutes: Int? {
-        exerciseMinutesPoints.last.map { Int($0.value) }
-    }
-
     /// Diet events intersecting the full body-metrics window, for the chart overlay.
     var overlappingEvents: [DietEvent] {
         let dates = repo.metrics.map(\.measuredOn)

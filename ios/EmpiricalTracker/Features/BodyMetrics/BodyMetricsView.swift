@@ -190,26 +190,36 @@ struct BodyMetricsView: View {
                     color: .textSecondary,
                     subtitle: vm.latestHeartRate.map { _ in "BPM" }
                 )
+                // Activity cards read env.activityMetrics directly so SwiftUI
+                // observes the @Observable repository — not a computed property
+                // on the VM where let-binding breaks the observation chain.
+                let activityMetrics = env.activityMetrics.metrics
+                let stepsLast7 = activityMetrics.suffix(7).compactMap(\.steps)
+                let avgSteps: Int? = stepsLast7.isEmpty ? nil
+                    : stepsLast7.reduce(0, +) / stepsLast7.count
+                let latestEnergy = activityMetrics.last?.activeEnergyKcal
+                let latestExercise = activityMetrics.last?.exerciseMinutes
+
                 StatCard(
                     title: "Steps (7d avg)",
-                    value: vm.sevenDayAvgSteps.map { $0.formatted() } ?? "–",
+                    value: avgSteps.map { $0.formatted() } ?? "–",
                     icon: "figure.walk",
                     color: .accent,
-                    subtitle: vm.sevenDayAvgSteps.map { _ in "steps/day" }
+                    subtitle: avgSteps.map { _ in "steps/day" }
                 )
                 StatCard(
                     title: "Active Energy",
-                    value: vm.latestActiveEnergy.map { "\($0.formatted(.number.precision(.fractionLength(0)))) kcal" } ?? "–",
+                    value: latestEnergy.map { "\($0.formatted(.number.precision(.fractionLength(0)))) kcal" } ?? "–",
                     icon: "flame.fill",
                     color: .outRange,
-                    subtitle: vm.latestActiveEnergy.map { _ in "yesterday" }
+                    subtitle: latestEnergy.map { _ in "yesterday" }
                 )
                 StatCard(
                     title: "Exercise",
-                    value: vm.latestExerciseMinutes.map { "\($0) min" } ?? "–",
+                    value: latestExercise.map { "\($0) min" } ?? "–",
                     icon: "figure.run",
                     color: .inRange,
-                    subtitle: vm.latestExerciseMinutes.map { _ in "yesterday" }
+                    subtitle: latestExercise.map { _ in "yesterday" }
                 )
             }
             .padding(.vertical, 4)
@@ -339,56 +349,47 @@ struct BodyMetricsView: View {
             }
         }
 
-        activityChartsSection(vm)
+        // Activity charts also read env.activityMetrics directly.
+        activityChartsSection(vm, metrics: env.activityMetrics.metrics)
     }
 
     @ViewBuilder
-    private func activityChartsSection(_ vm: BodyMetricsViewModel) -> some View {
-        if !vm.stepsPoints.isEmpty {
+    private func activityChartsSection(_ vm: BodyMetricsViewModel, metrics: [ActivityMetric]) -> some View {
+        let sorted = metrics.sorted { $0.measuredOn < $1.measuredOn }
+        let stepsPoints    = sorted.compactMap { m in m.steps.map          { BodyMetricChart.DataPoint(date: m.measuredOn, value: Double($0)) } }
+        let energyPoints   = sorted.compactMap { m in m.activeEnergyKcal.map { BodyMetricChart.DataPoint(date: m.measuredOn, value: $0) } }
+        let exercisePoints = sorted.compactMap { m in m.exerciseMinutes.map { BodyMetricChart.DataPoint(date: m.measuredOn, value: Double($0)) } }
+
+        if !stepsPoints.isEmpty {
             Section(header: Text("Activity").font(.labelMedium).foregroundStyle(Color.textMuted)) {
                 BodyMetricChart(
                     title: "Steps",
                     unit: "steps/day",
-                    series: [.init(
-                        id: "steps",
-                        label: "Steps",
-                        color: .accent,
-                        points: vm.stepsPoints
-                    )],
+                    series: [.init(id: "steps", label: "Steps", color: .accent, points: stepsPoints)],
                     events: vm.overlappingEvents
                 )
                 .chartRowStyle()
             }
         }
 
-        if !vm.activeEnergyPoints.isEmpty {
+        if !energyPoints.isEmpty {
             Section {
                 BodyMetricChart(
                     title: "Active Energy",
                     unit: "kcal/day",
-                    series: [.init(
-                        id: "energy",
-                        label: "Active Energy",
-                        color: .outRange,
-                        points: vm.activeEnergyPoints
-                    )],
+                    series: [.init(id: "energy", label: "Active Energy", color: .outRange, points: energyPoints)],
                     events: vm.overlappingEvents
                 )
                 .chartRowStyle()
             }
         }
 
-        if !vm.exerciseMinutesPoints.isEmpty {
+        if !exercisePoints.isEmpty {
             Section {
                 BodyMetricChart(
                     title: "Exercise Minutes",
                     unit: "min/day",
-                    series: [.init(
-                        id: "exercise",
-                        label: "Exercise",
-                        color: .inRange,
-                        points: vm.exerciseMinutesPoints
-                    )],
+                    series: [.init(id: "exercise", label: "Exercise", color: .inRange, points: exercisePoints)],
                     events: vm.overlappingEvents
                 )
                 .chartRowStyle()
