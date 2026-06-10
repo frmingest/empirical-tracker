@@ -27,15 +27,6 @@ public struct ActivityMetric: Codable, Identifiable, Sendable {
         self.exerciseMinutes = exerciseMinutes
         self.source = source
     }
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case measuredOn = "measured_on"
-        case steps
-        case activeEnergyKcal = "active_energy_kcal"
-        case exerciseMinutes = "exercise_minutes"
-        case source
-    }
 }
 
 // MARK: - Repository
