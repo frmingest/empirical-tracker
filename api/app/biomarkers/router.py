@@ -348,10 +348,14 @@ async def get_results(user_id: str = Depends(current_user_id)) -> list:
         .execute()
     )
 
+    # Explicit limit: PostgREST silently caps unbounded selects at 1 000 rows,
+    # which would truncate chart series for long histories. 100 000 is far above
+    # any realistic lifetime result count.
     results_resp = (
         db.table("results")
         .select("biomarker_id,value,in_range,panels(tested_at)")
         .eq("user_id", user_id)
+        .limit(100000)
         .execute()
     )
 

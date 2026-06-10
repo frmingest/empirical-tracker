@@ -15,7 +15,7 @@ def _fluent(execute_data=None):
     m = MagicMock()
     m.execute.return_value = MagicMock(data=execute_data or [])
     for method in (
-        "table", "select", "eq", "or_", "order",
+        "table", "select", "eq", "or_", "order", "limit",
         "insert", "update", "delete", "upsert",
     ):
         getattr(m, method).return_value = m

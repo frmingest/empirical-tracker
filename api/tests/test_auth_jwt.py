@@ -6,8 +6,8 @@ from unittest.mock import MagicMock, patch
 
 import jwt
 import pytest
-from cryptography.hazmat.primitives.asymmetric.ec import SECP256K1, generate_private_key
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric.ec import generate_private_key
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 

@@ -222,7 +222,9 @@ def _list_catalogue(
         query = query.eq("category", category)
     if only_free:
         query = query.eq("is_premium", False)
-    resp = query.order("donated_at", desc=True).execute()
+    # Explicit bound, newest donations first — without it PostgREST silently
+    # truncates at 1 000 rows once the shared catalogue grows past that.
+    resp = query.order("donated_at", desc=True).limit(1000).execute()
     rows = resp.data or []
     if exclude_ids:
         rows = [row for row in rows if row["id"] not in exclude_ids]
@@ -251,7 +253,8 @@ def list_recipes(
         query = query.eq("category", category)
     if only_free:
         query = query.eq("is_premium", False)
-    resp = query.order("created_at", desc=True).execute()
+    # Explicit bound, newest first (PostgREST otherwise silently caps at 1 000).
+    resp = query.order("created_at", desc=True).limit(1000).execute()
     rows = resp.data or []
     favorite_ids = _favorite_ids(db, user_id)
     # Own + public recipes first (newest authored wins), then the anonymous
