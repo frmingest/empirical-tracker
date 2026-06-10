@@ -74,9 +74,6 @@ struct AddCustomFoodView: View {
                 sharingSection
                 ocrHintSection
             }
-            .onAppear {
-                print("🔍 OCR-DEBUG form-appear energy=\(energyText) carbs=\(carbsText) protein=\(proteinText) fat=\(fatText) sodium=\(sodiumText)")
-            }
             .navigationTitle(String(localized: "food.custom.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -228,7 +225,6 @@ struct AddCustomFoodView: View {
             ingredients: ingredientsText.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
             isPublic: shareToCatalogue
         )
-        print("🔍 OCR-DEBUG payload energy=\(payload.energyKcal as Any) carbs=\(payload.carbsG as Any) protein=\(payload.proteinG as Any) fat=\(payload.fatG as Any)")
 
         do {
             let record = try await viewModel.createCustomFood(payload)

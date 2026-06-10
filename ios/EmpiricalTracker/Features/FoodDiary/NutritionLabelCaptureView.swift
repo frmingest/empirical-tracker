@@ -193,11 +193,9 @@ struct NutritionLabelCaptureView: View {
         phase = .parsing
         do {
             let label = try await viewModel.repo.parseLabel(ocrText: ocrText)
-            print("🔍 OCR-DEBUG ParsedLabel name=\(label.foodName as Any) energy=\(label.energyKcal100g as Any) carbs=\(label.carbs100g as Any) fat=\(label.fat100g as Any) sodium=\(label.sodiumMg100g as Any)")
             parsedLabel = label   // triggers .sheet(item:) — safe, same hierarchy
             phase = .done
         } catch {
-            print("🔍 OCR-DEBUG parse error: \(error)")
             errorMessage = String(localized: "food.label.error.message")
             phase = .idle
         }

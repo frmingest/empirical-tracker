@@ -20,12 +20,12 @@ struct DashboardBodyMapView: View {
         Group {
             if let vm = viewModel {
                 if vm.isLoading {
-                    LoadingView(message: "Loading biomarkers…")
+                    LoadingView(message: String(localized: "dashboard.loading"))
                 } else {
                     bodyCanvas(vm)
                 }
             } else {
-                LoadingView(message: "Loading biomarkers…")
+                LoadingView(message: String(localized: "dashboard.loading"))
             }
         }
         .task {

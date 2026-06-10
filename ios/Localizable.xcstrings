@@ -2222,13 +2222,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Import your first .xlsx file from a Norwegian lab to get started."
+            "value" : "Import your first blood test to see your biomarkers here."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Importer din første .xlsx-fil fra et norsk laboratorium for å komme i gang."
+            "value" : "Importer din første blodprøve for å se biomarkørene dine her."
           }
         }
       }
@@ -2239,13 +2239,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No blood tests yet"
+            "value" : "No data yet"
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ingen blodprøver ennå"
+            "value" : "Ingen data ennå"
           }
         }
       }
@@ -2280,6 +2280,91 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Importer fil"
+          }
+        }
+      }
+    },
+    "dashboard.loading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading biomarkers…"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Laster biomarkører…"
+          }
+        }
+      }
+    },
+    "dashboard.mode.bodyMap" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Body Map"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kroppskart"
+          }
+        }
+      }
+    },
+    "dashboard.mode.grid" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grid"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rutenett"
+          }
+        }
+      }
+    },
+    "dashboard.noFilter.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try a different diet focus or switch to All."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prøv et annet kostholdsfokus eller bytt til Alle."
+          }
+        }
+      }
+    },
+    "dashboard.noFilter.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No markers for this filter"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen markører for dette filteret"
           }
         }
       }
