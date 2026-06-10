@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, field_validator
 
 from app.auth import current_user_id
+from app.dates import validate_calendar_date
 from app.food_sources.base import VALID_SOURCES
 from app.meal_plans import repository
 
@@ -40,6 +41,11 @@ class PlannedMealIn(BaseModel):
     note: str | None = None
     ingredients: str | None = None
     done: bool = False
+
+    @field_validator("scheduled_on")
+    @classmethod
+    def _calendar_date(cls, v: str) -> str:
+        return validate_calendar_date(v)
 
     @field_validator("food_name")
     @classmethod

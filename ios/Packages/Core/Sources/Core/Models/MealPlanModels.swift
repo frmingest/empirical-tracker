@@ -109,7 +109,7 @@ public struct PlannedMeal: Codable, Identifiable, Sendable {
         // Plan tab compares against in `MealPlanViewModel.meals(on:)`. Decoding it as
         // a UTC instant would shift the meal onto the wrong day for any non-UTC user.
         let scheduledRaw = try c.decode(String.self, forKey: .scheduledOn)
-        guard let scheduled = calendarDateFormatter.date(from: scheduledRaw) else {
+        guard let scheduled = CalendarDate.date(from: scheduledRaw) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .scheduledOn, in: c,
                 debugDescription: "Expected a yyyy-MM-dd date, got \"\(scheduledRaw)\""
@@ -254,7 +254,7 @@ public struct PlannedMealPayload: Encodable, Sendable {
     /// (ADR-007). The remaining keys are converted to snake_case by `JSONEncoder.api`.
     public func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(calendarDateFormatter.string(from: scheduledOn), forKey: .scheduledOn)
+        try c.encode(CalendarDate.string(from: scheduledOn), forKey: .scheduledOn)
         try c.encode(meal, forKey: .meal)
         try c.encode(foodName, forKey: .foodName)
         try c.encodeIfPresent(brand, forKey: .brand)
@@ -272,21 +272,6 @@ public struct PlannedMealPayload: Encodable, Sendable {
         try c.encodeIfPresent(planId, forKey: .planId)
     }
 }
-
-// MARK: - Calendar-date helper
-
-/// Formats / parses `scheduled_on` as a calendar date (`yyyy-MM-dd`) in the current
-/// time zone, so a planned meal round-trips on the day the user actually picked
-/// regardless of UTC offset. Shared by `PlannedMealPayload` (encode) and
-/// `PlannedMeal` (decode); mirrors the fix already applied to `ManualResultPayload`.
-let calendarDateFormatter: DateFormatter = {
-    let f = DateFormatter()
-    f.calendar = Calendar(identifier: .gregorian)
-    f.locale = Locale(identifier: "en_US_POSIX")
-    f.timeZone = .current
-    f.dateFormat = "yyyy-MM-dd"
-    return f
-}()
 
 // MARK: - PlannedMealDonePayload (PATCH body)
 

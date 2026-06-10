@@ -5,6 +5,7 @@ from pydantic import BaseModel, field_validator, model_validator
 
 from app.auth import current_user_id
 from app.body_metrics import repository
+from app.dates import validate_calendar_date
 
 router = APIRouter(prefix="/body-metrics", tags=["body-metrics"])
 
@@ -20,6 +21,11 @@ class BodyMetricIn(BaseModel):
     hrv_ms: float | None = None
     note: str | None = None
     source: str = "manual"
+
+    @field_validator("measured_on")
+    @classmethod
+    def _calendar_date(cls, v: str) -> str:
+        return validate_calendar_date(v)
 
     @field_validator("source")
     @classmethod

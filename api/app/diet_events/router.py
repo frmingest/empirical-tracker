@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, field_validator
 
 from app.auth import current_user_id
+from app.dates import validate_calendar_date
 from app.diet_events import repository
 
 router = APIRouter(prefix="/diet-events", tags=["diet-events"])
@@ -15,6 +16,16 @@ class DietEventIn(BaseModel):
     started_on: str  # "YYYY-MM-DD"
     ended_on: str | None = None
     note: str | None = None
+
+    @field_validator("started_on")
+    @classmethod
+    def _calendar_date(cls, v: str) -> str:
+        return validate_calendar_date(v)
+
+    @field_validator("ended_on")
+    @classmethod
+    def _calendar_date_optional(cls, v: str | None) -> str | None:
+        return validate_calendar_date(v) if v is not None else None
 
     @field_validator("label")
     @classmethod

@@ -149,20 +149,11 @@ public struct ManualResultPayload: Encodable, Sendable {
     /// full ISO-8601 timestamp. Sending a UTC timestamp for a midnight-local
     /// `Date` shifts the day backwards for positive-offset time zones (e.g.
     /// `2026-06-02` local midnight serialises as `2026-06-01T22:00:00Z` in CEST),
-    /// which would file the result under the wrong day.
+    /// which would file the result under the wrong day. See `CalendarDate`.
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(biomarkerId, forKey: .biomarkerId)
         try container.encode(value, forKey: .value)
-        try container.encode(Self.dateOnlyFormatter.string(from: testedAt), forKey: .testedAt)
+        try container.encode(CalendarDate.string(from: testedAt), forKey: .testedAt)
     }
-
-    private static let dateOnlyFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter
-    }()
 }

@@ -3,8 +3,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, field_validator, model_validator
 
-from app.auth import current_user_id
 from app.activity_metrics import repository
+from app.auth import current_user_id
+from app.dates import validate_calendar_date
 
 router = APIRouter(prefix="/activity-metrics", tags=["activity-metrics"])
 
@@ -28,6 +29,11 @@ class ActivityMetricIn(BaseModel):
     active_energy_kcal: float | None = None
     exercise_minutes: int | None = None
     source: str = "healthkit"
+
+    @field_validator("measured_on")
+    @classmethod
+    def _calendar_date(cls, v: str) -> str:
+        return validate_calendar_date(v)
 
     @field_validator("source")
     @classmethod

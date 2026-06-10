@@ -81,15 +81,13 @@ public actor HealthSyncManager {
     /// 12 000+ rows — exceeding the list endpoint cap and silently cutting off the
     /// most-recent data. Merging here collapses all same-day payloads into one row.
     private static func mergeByDay(_ readings: [PendingUpload]) -> [PendingUpload] {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withFullDate]
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-
         var byDay: [(dayKey: String, date: Date, keys: [String], payload: BodyMetricPayload)] = []
         var indexByDay: [String: Int] = [:]
 
         for reading in readings {
-            let dayKey = formatter.string(from: reading.payload.measuredOn)
+            // Group on the *local* calendar day — the same day `measured_on` is
+            // encoded under (CalendarDate), so merge keys match wire dates.
+            let dayKey = CalendarDate.string(from: reading.payload.measuredOn)
             if let idx = indexByDay[dayKey] {
                 // Merge: keep non-nil values from the existing entry, fill in
                 // any nil fields from the incoming reading.
@@ -524,14 +522,14 @@ public actor HealthSyncManager {
                     return
                 }
                 let unit = HKUnit.count().unitDivided(by: .minute())
-                let formatter = ISO8601DateFormatter()
-                formatter.formatOptions = [.withFullDate]
                 let readings: [DailyAvgHRReading] = (collection?.statistics() ?? []).compactMap { stat in
                     guard let avg = stat.averageQuantity() else { return nil }
                     let bpm = avg.doubleValue(for: unit)
                     guard bpm > 0 else { return nil }
                     let day = stat.startDate
-                    let key = "avg-hr-\(formatter.string(from: day))"
+                    // Dedup key on the *local* calendar day (stat.startDate is local
+                    // midnight) so it names the same day the row is stored under.
+                    let key = "avg-hr-\(CalendarDate.string(from: day))"
                     return DailyAvgHRReading(dedupKey: key, day: day, bpm: Int(bpm.rounded()))
                 }
                 continuation.resume(returning: readings.sorted { $0.day < $1.day })
@@ -672,13 +670,10 @@ public actor HealthSyncManager {
 
     /// Merges per-type daily readings into one `ActivityMetricPayload` per calendar day.
     private static func mergeActivityByDay(_ readings: [ActivityDayReading]) -> [ActivityMetricPayload] {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withFullDate]
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-
         var byDay: [String: (date: Date, steps: Int?, kcal: Double?, minutes: Int?)] = [:]
         for r in readings {
-            let key = formatter.string(from: r.day)
+            // Local calendar day, matching the `measured_on` wire encoding.
+            let key = CalendarDate.string(from: r.day)
             if var existing = byDay[key] {
                 if let s = r.steps { existing.steps = s }
                 if let k = r.activeEnergyKcal { existing.kcal = k }

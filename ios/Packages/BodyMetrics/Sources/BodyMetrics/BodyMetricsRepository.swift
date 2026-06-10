@@ -105,6 +105,30 @@ public struct BodyMetricPayload: Encodable, Sendable {
         self.note = note
         self.source = source
     }
+
+    enum CodingKeys: CodingKey {
+        case measuredOn, weightKg, waistCm, systolic, diastolic
+        case heartRateBpm, restingHeartRateBpm, hrvMs, note, source
+    }
+
+    /// `measured_on` is a calendar date (`yyyy-MM-dd` column). The shared encoder's
+    /// `.iso8601` strategy would serialise a midnight-local `Date` (the HealthKit
+    /// day-bucket anchor) as a UTC timestamp on the *previous* day for
+    /// positive-offset time zones, filing the reading under the wrong day once
+    /// Postgres truncates it to a date. See `CalendarDate`.
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(CalendarDate.string(from: measuredOn), forKey: .measuredOn)
+        try c.encodeIfPresent(weightKg, forKey: .weightKg)
+        try c.encodeIfPresent(waistCm, forKey: .waistCm)
+        try c.encodeIfPresent(systolic, forKey: .systolic)
+        try c.encodeIfPresent(diastolic, forKey: .diastolic)
+        try c.encodeIfPresent(heartRateBpm, forKey: .heartRateBpm)
+        try c.encodeIfPresent(restingHeartRateBpm, forKey: .restingHeartRateBpm)
+        try c.encodeIfPresent(hrvMs, forKey: .hrvMs)
+        try c.encodeIfPresent(note, forKey: .note)
+        try c.encodeIfPresent(source, forKey: .source)
+    }
 }
 
 // MARK: - Repository (stub — wired fully in Sprint 8)

@@ -308,6 +308,34 @@ public struct FoodEntryPayload: Encodable, Sendable {
     /// keeps them independently of the source food (product / custom sources only).
     public let ingredients: String?
 
+    enum CodingKeys: CodingKey {
+        case loggedOn, meal, foodName, brand, barcode, quantityG, energyKcal
+        case carbsG, proteinG, fatG, saturatedFatG, sodiumMg, source, note, ingredients
+    }
+
+    /// `logged_on` is a calendar date (`yyyy-MM-dd`), not an instant. Letting the
+    /// shared encoder serialise it as a UTC timestamp would file an entry logged at
+    /// local midnight under the *previous* day for positive-offset time zones
+    /// (`2026-06-10` 00:00 CEST → `2026-06-09T22:00:00Z`). See `CalendarDate`.
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(CalendarDate.string(from: loggedOn), forKey: .loggedOn)
+        try c.encode(meal, forKey: .meal)
+        try c.encode(foodName, forKey: .foodName)
+        try c.encodeIfPresent(brand, forKey: .brand)
+        try c.encodeIfPresent(barcode, forKey: .barcode)
+        try c.encodeIfPresent(quantityG, forKey: .quantityG)
+        try c.encodeIfPresent(energyKcal, forKey: .energyKcal)
+        try c.encodeIfPresent(carbsG, forKey: .carbsG)
+        try c.encodeIfPresent(proteinG, forKey: .proteinG)
+        try c.encodeIfPresent(fatG, forKey: .fatG)
+        try c.encodeIfPresent(saturatedFatG, forKey: .saturatedFatG)
+        try c.encodeIfPresent(sodiumMg, forKey: .sodiumMg)
+        try c.encodeIfPresent(source, forKey: .source)
+        try c.encodeIfPresent(note, forKey: .note)
+        try c.encodeIfPresent(ingredients, forKey: .ingredients)
+    }
+
     /// Convenience initialiser that pre-scales per-100g nutrients from a `FoodItem`.
     public init(
         loggedOn: Date,
