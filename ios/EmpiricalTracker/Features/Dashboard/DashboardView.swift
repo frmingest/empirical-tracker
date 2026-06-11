@@ -18,8 +18,8 @@ enum DashboardViewMode: String, CaseIterable {
 
     var label: String {
         switch self {
-        case .grid:    return "Grid"
-        case .bodyMap: return "Body Map"
+        case .grid:    return String(localized: "dashboard.mode.grid")
+        case .bodyMap: return String(localized: "dashboard.mode.bodyMap")
         }
     }
 }
@@ -51,7 +51,7 @@ struct DashboardView: View {
                 if let vm = viewModel {
                     content(vm)
                 } else {
-                    LoadingView(message: "Loading…")
+                    LoadingView(message: String(localized: "common.loading"))
                 }
             }
             .navigationTitle("")
@@ -210,16 +210,16 @@ struct DashboardView: View {
     private var emptyState: some View {
         EmptyStateView(
             icon: "tray",
-            title: "No data yet",
-            message: "Import your first blood test to see your biomarkers here."
+            title: String(localized: "dashboard.emptyTitle"),
+            message: String(localized: "dashboard.emptyMessage")
         )
     }
 
     private var noResultsForFilter: some View {
         EmptyStateView(
             icon: "line.3.horizontal.decrease.circle",
-            title: "No markers for this filter",
-            message: "Try a different diet focus or switch to All."
+            title: String(localized: "dashboard.noFilter.title"),
+            message: String(localized: "dashboard.noFilter.message")
         )
         .frame(maxWidth: .infinity)
     }

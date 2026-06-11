@@ -8,7 +8,7 @@ def _fluent(execute_data=None):
     """Build a fluent mock where every chained method returns self."""
     m = MagicMock()
     m.execute.return_value = MagicMock(data=execute_data or [])
-    for method in ("table", "upsert", "insert", "delete", "select", "eq", "order"):
+    for method in ("table", "upsert", "insert", "delete", "select", "eq", "order", "limit"):
         getattr(m, method).return_value = m
     return m
 

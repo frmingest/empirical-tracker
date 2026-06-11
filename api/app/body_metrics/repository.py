@@ -4,7 +4,10 @@ from app.db import get_supabase
 
 # Columns returned to the client. `created_at` is omitted — the chart and log
 # order on `measured_on` only.
-_COLUMNS = "id,measured_on,weight_kg,waist_cm,systolic,diastolic,heart_rate_bpm,resting_heart_rate_bpm,hrv_ms,note,source"
+_COLUMNS = (
+    "id,measured_on,weight_kg,waist_cm,systolic,diastolic,"
+    "heart_rate_bpm,resting_heart_rate_bpm,hrv_ms,note,source"
+)
 
 
 def list_metrics(user_id: str) -> list[dict]:

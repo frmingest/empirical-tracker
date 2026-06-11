@@ -67,14 +67,15 @@ final class DashboardViewModel {
         updated.diet = focus
         if focus != .custom { updated.customMarkers = [] }
         accountRepo.settings = updated
-        try? await accountRepo.saveSettings(updated)
+        await persist(updated, rollbackTo: old)
     }
 
     func setCustomMarkers(_ markers: Set<String>) async {
-        var updated = accountRepo.settings
+        let old = accountRepo.settings
+        var updated = old
         updated.customMarkers = Array(markers).sorted()
         accountRepo.settings = updated
-        try? await accountRepo.saveSettings(updated)
+        await persist(updated, rollbackTo: old)
     }
 
     /// Seeds the custom marker set from the currently visible markers of a preset diet,
@@ -87,10 +88,26 @@ final class DashboardViewModel {
             let visible = filterByDiet(biomarkersRepo.results, diet: focus, customMarkers: [])
             seeded = Set(visible.map(\.biomarker.nameNo))
         }
-        var updated = accountRepo.settings
+        let old = accountRepo.settings
+        var updated = old
         updated.diet = .custom
         updated.customMarkers = Array(seeded).sorted()
         accountRepo.settings = updated
-        try? await accountRepo.saveSettings(updated)
+        await persist(updated, rollbackTo: old)
+    }
+
+    /// Persists optimistically-applied settings. On failure the local copy is rolled
+    /// back and the error recorded on the repository, so the filter doesn't silently
+    /// diverge from the server and flip back on the next launch.
+    private func persist(_ updated: UserSettings, rollbackTo previous: UserSettings) async {
+        do {
+            try await accountRepo.saveSettings(updated)
+        } catch let e as APIError {
+            accountRepo.settings = previous
+            accountRepo.error = e
+        } catch {
+            accountRepo.settings = previous
+            accountRepo.error = .networkError(error)
+        }
     }
 }

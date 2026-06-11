@@ -213,8 +213,15 @@ extension JSONDecoder {
         // microsecond `created_at` (e.g. on a freshly inserted custom_foods row) would
         // otherwise fail to decode and turn a *successful* write into a thrown error.
         // We therefore strip an arbitrary-length fractional component as a final fallback.
+        // Date-only strings are *calendar dates* (logged_on, measured_on, tested_at):
+        // they name a local day, not an instant, so parse them in the current time
+        // zone (→ local midnight). UTC parsing would land the value on the previous
+        // local day for negative-offset time zones wherever views group with
+        // `Calendar.current` (diary days, chart axes, the widget's "today" filter).
+        // Mirrors the encode side (`CalendarDate`).
         let dateOnly = ISO8601DateFormatter()
         dateOnly.formatOptions = [.withFullDate, .withDashSeparatorInDate]
+        dateOnly.timeZone = .current
         let isoFractional = ISO8601DateFormatter()
         isoFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let isoPlain = ISO8601DateFormatter()

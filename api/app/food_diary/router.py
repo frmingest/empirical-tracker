@@ -6,6 +6,7 @@ from pydantic import BaseModel, field_validator
 
 from app.auth import current_user_id
 from app.config import get_settings
+from app.dates import validate_calendar_date
 from app.food_diary import repository
 from app.food_sources import custom as custom_source
 from app.food_sources import food_catalogue, openfoodfacts, registry
@@ -31,6 +32,11 @@ class FoodEntryIn(BaseModel):
     source: str | None = None
     note: str | None = None
     ingredients: str | None = None
+
+    @field_validator("logged_on")
+    @classmethod
+    def _calendar_date(cls, v: str) -> str:
+        return validate_calendar_date(v)
 
     @field_validator("food_name")
     @classmethod

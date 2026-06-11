@@ -76,6 +76,22 @@ public struct DietEventPayload: Encodable, Sendable {
         self.endedOn = endedOn
         self.note = note
     }
+
+    enum CodingKeys: CodingKey {
+        case label, kind, startedOn, endedOn, note
+    }
+
+    /// `started_on` / `ended_on` are calendar dates (`yyyy-MM-dd`). Encoding them
+    /// as UTC timestamps would shift a midnight-local date to the previous day for
+    /// positive-offset time zones. See `CalendarDate`.
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(label, forKey: .label)
+        try c.encode(kind, forKey: .kind)
+        try c.encode(CalendarDate.string(from: startedOn), forKey: .startedOn)
+        try c.encodeIfPresent(endedOn.map(CalendarDate.string(from:)), forKey: .endedOn)
+        try c.encodeIfPresent(note, forKey: .note)
+    }
 }
 
 // MARK: - DietFocus

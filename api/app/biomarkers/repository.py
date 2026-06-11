@@ -119,10 +119,14 @@ def list_panels(user_id: str) -> list[dict]:
     if not panels_resp.data:
         return []
 
+    # Explicit limit: PostgREST silently caps unbounded selects at 1 000 rows,
+    # which would *undercount* panels for long histories (100 panels × 30 markers
+    # = 3 000 results). 100 000 is far above any realistic lifetime count.
     results_resp = (
         db.table("results")
         .select("panel_id,in_range")
         .eq("user_id", user_id)
+        .limit(100000)
         .execute()
     )
 

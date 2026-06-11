@@ -27,7 +27,10 @@ public final class FoodDiaryRepository {
         isLoading = true
         error = nil
         do {
-            let dateStr = ISO8601DateFormatter.dateOnly.string(from: date)
+            // Format the diary day in the *current* time zone (CalendarDate). A UTC
+            // formatter would resolve local midnight to the previous calendar day for
+            // positive-offset zones, fetching yesterday's entries as "today".
+            let dateStr = CalendarDate.string(from: date)
             let query = [URLQueryItem(name: "date", value: dateStr)]
             entries = try await client.request(.get("/food-diary", query: query))
         } catch let e as APIError {
@@ -127,14 +130,4 @@ public final class FoodDiaryRepository {
     public var entriesByMeal: [Meal: [FoodEntry]] {
         Dictionary(grouping: entries, by: \.meal)
     }
-}
-
-// MARK: - Date helper
-
-private extension ISO8601DateFormatter {
-    static let dateOnly: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withFullDate, .withDashSeparatorInDate]
-        return f
-    }()
 }

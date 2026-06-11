@@ -1,3 +1,4 @@
+import Core
 import Foundation
 
 /// One day's activity data, ready to POST to `/activity-metrics/batch`.
@@ -31,12 +32,13 @@ public struct ActivityMetricPayload: Encodable, Sendable {
         case source
     }
 
+    /// `measured_on` is the user's *local* calendar day: `measuredOn` is local
+    /// midnight (`Calendar.current.startOfDay`), so it must be formatted in the
+    /// current time zone. A UTC formatter shifts it to the previous day for every
+    /// positive-offset user (00:00 CEST = 22:00Z the day before). See `CalendarDate`.
     public func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
-        let fmt = ISO8601DateFormatter()
-        fmt.formatOptions = [.withFullDate]
-        fmt.timeZone = TimeZone(secondsFromGMT: 0)
-        try c.encode(fmt.string(from: measuredOn), forKey: .measuredOn)
+        try c.encode(CalendarDate.string(from: measuredOn), forKey: .measuredOn)
         try c.encodeIfPresent(steps, forKey: .steps)
         try c.encodeIfPresent(activeEnergyKcal, forKey: .activeEnergyKcal)
         try c.encodeIfPresent(exerciseMinutes, forKey: .exerciseMinutes)

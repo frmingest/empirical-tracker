@@ -22,7 +22,11 @@ def list_entries(user_id: str, day: str | None = None) -> list[dict]:
     )
     if day:
         query = query.eq("logged_on", day)
-    resp = query.order("logged_on", desc=True).execute()
+    # Explicit bound (PostgREST otherwise silently caps at 1 000): the iOS client
+    # always passes `day`, where dozens of rows is the realistic ceiling; the
+    # unfiltered path is kept bounded and newest-first rather than truncated
+    # arbitrarily mid-history.
+    resp = query.order("logged_on", desc=True).limit(10000).execute()
     return resp.data or []
 
 

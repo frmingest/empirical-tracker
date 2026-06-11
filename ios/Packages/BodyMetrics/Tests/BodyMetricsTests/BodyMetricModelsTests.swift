@@ -34,9 +34,9 @@ struct BodyMetricModelsTests {
         #expect(metric.note == "Down 13 kg.")
         #expect(metric.source == .manual)
 
-        let comps = Calendar(identifier: .gregorian).dateComponents(
-            in: TimeZone(identifier: "UTC")!, from: metric.measuredOn
-        )
+        // `measured_on` is a calendar date: it decodes to local midnight, so its
+        // components are asserted on the *local* calendar (see `CalendarDate`).
+        let comps = Calendar.current.dateComponents([.year, .month, .day], from: metric.measuredOn)
         #expect(comps.year == 2026 && comps.month == 6 && comps.day == 1)
     }
 
@@ -69,8 +69,10 @@ struct BodyMetricModelsTests {
     // MARK: - Encode (POST body)
 
     @Test func payloadEncodesSnakeCaseAndOmittedMetricsAsNull() throws {
-        let measured = Calendar(identifier: .gregorian).date(
-            from: DateComponents(timeZone: TimeZone(identifier: "UTC"), year: 2026, month: 6, day: 1)
+        // Local midnight — the HealthKit day-bucket anchor (`startOfDay`) that the
+        // payload must encode as that same local calendar day.
+        let measured = Calendar.current.date(
+            from: DateComponents(year: 2026, month: 6, day: 1)
         )!
         let payload = BodyMetricPayload(
             measuredOn: measured,
@@ -90,7 +92,8 @@ struct BodyMetricModelsTests {
         #expect(object["note"] as? String == "after fast")
         // Omitted optional metrics use `encodeIfPresent`, so the key is absent (not null).
         #expect(object["waist_cm"] == nil)
-        // Date is sent as an ISO-8601 string the backend parses as a date.
-        #expect((object["measured_on"] as? String)?.hasPrefix("2026-06-01") == true)
+        // The date is sent as the bare local calendar day (`yyyy-MM-dd`), never a
+        // UTC timestamp — a UTC instant would shift the day for non-UTC users.
+        #expect(object["measured_on"] as? String == "2026-06-01")
     }
 }
