@@ -211,6 +211,7 @@ final class MealPlanViewModel {
     func logToDiary(_ meal: PlannedMeal) async {
         do {
             try await repo.logToDiary(meal)
+            Haptics.success()
         } catch {
             errorMessage = error.localizedDescription
         }

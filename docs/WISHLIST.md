@@ -35,17 +35,23 @@ A clean, modular SwiftUI client over the existing FastAPI + Supabase backend —
 **Items shipped since this wishlist was written:**
 
 - ✅ **Doctor PDF report** (#5) — client-side selectable A4 report (`ReportShare/`).
-- ✅ **Onboarding / first-run** (#12) — profile-setup screen (height, weight, waist, units, or Apple Health sync).
+- ✅ **Onboarding / first-run** (#12) — profile-setup screen (height, weight, waist, units, or Apple Health sync) **and** the sample-data explore mode (`SampleData/` — browse a seeded dashboard from the auth screen or the empty Body tab).
 - ✅ **Body map glanceability** — anatomical silhouette with status pins + health-stats overlay is now the default Home view (ADR-030).
+- ✅ **Local reminders** (#2, first slice) — opt-in daily meal-log and weigh-in nudges plus the one-shot ~3-month lab-cadence nudge (`Reminders/`), armed from Settings or the import-success screen. Insight pushes ("LDL moved into Watch") remain open.
+- ✅ **Daily targets + protein g/kg** (#6, first slice) — energy target, protein target with g/kg quick-set from latest weight, and a carb ceiling, read against the diary totals card (`NutritionTargetsStore`). Device-local; sat-fat/sodium targets and widget rings remain open.
+- ✅ **Diary recents & copy-yesterday** — one-tap re-logging of recently logged products in the search sheet, and "copy yesterday's meals" on an empty day.
+- ✅ **Quiet habit feedback** — success haptics on logging actions and a muted streak / last-7-days line under the diary totals (no badges/levels by design).
 
 **Still-open gaps:**
 
 - No offline cache (every read hits the network; SwiftData deferred past Sprint 11).
-- No notifications/reminders, no widgets, no Siri/Shortcuts, no Apple Watch, no
-  Live Activities.
-- Deferred clinical value: derived ratios TG/HDL & AST:ALT, daily targets + protein
-  g/kg (body weight now stored — the blocker is removed), body-metric overlay on
-  biomarker charts; HealthKit covers only weight + BP (not body-fat / resting HR / sleep).
+- No insight notifications (new-result pushes), no Siri/Shortcuts, no Apple Watch,
+  no Live Activities. Widgets are planned (ADR-031).
+- No Sign in with Apple (needs the Apple Developer capability + Supabase provider
+  config alongside the code).
+- Deferred clinical value: derived ratios TG/HDL & AST:ALT, body-metric overlay on
+  biomarker charts; HealthKit covers weight + BP + heart metrics (not body-fat /
+  lean mass / sleep).
 
 ---
 
@@ -67,13 +73,14 @@ timely, which is the whole point of being native.
   First widgets: **Latest panel** + **Weight trend**. Lock Screen is **status-only**
   by default (special-category data), with an opt-in "Show values in widgets" toggle.
 
-### 2. Smart reminders & insight notifications (UserNotifications)
-- "Time to log dinner" / "log your morning weight" (diet-event aware).
-- "Your new Withings reading synced."
-- "It's been ~3 months — consider booking your next panel" (lab-cadence nudge).
-- **New-result insight:** "Your LDL moved into Watch on your latest panel" —
-  turns the existing `MarkerSignals` assessment into a push the moment data
-  arrives.
+### 2. Smart reminders & insight notifications (UserNotifications) ◐ Partially shipped
+- ✅ "Time to log today's meals" / "morning weigh-in" daily nudges (opt-in, time
+  configurable in Settings → Reminders; local-only, `Reminders/`).
+- ✅ "It's been ~3 months — consider a new panel" lab-cadence nudge, anchored to
+  the latest imported panel and offered right on the import-success screen.
+- Still open: "Your new Withings reading synced", and the **new-result insight**
+  ("Your LDL moved into Watch on your latest panel") — turning the existing
+  `MarkerSignals` assessment into a push the moment data arrives.
 
 ### 3. Apple Watch companion + complications
 - Quick-log weight/BP from the wrist, a next-panel countdown, and a macro-ring
@@ -95,12 +102,13 @@ timely, which is the whole point of being native.
 values / trend graphs / both, and shares via the system share sheet. Rendered via
 SwiftUI `ImageRenderer` → `CGContext`. Carries disclaimers on every page.
 
-### 6. Daily targets & protein g/kg (Sprint 9 follow-up)
-- Now that `body_metrics` stores weight, wire intake-vs-target rings into the
-  diary: energy, **protein in g/kg body weight** (renal-load concern), carbs,
-  saturated fat, sodium.
-- Makes the diary **actionable** rather than just a log; pairs with the widget
-  in #1.
+### 6. Daily targets & protein g/kg (Sprint 9 follow-up) ◐ Partially shipped
+- ✅ Energy target, **protein target with g/kg quick-set** from the latest stored
+  weight, and a carb ceiling — read against the diary totals card with a progress
+  bar / over-limit flag (`NutritionTargetsStore`, device-local, user-set only —
+  the app never recommends an intake).
+- Still open: saturated-fat and sodium targets, backend sync of targets across
+  devices, and the intake-vs-target widget ring (pairs with #1 / ADR-031).
 
 ### 7. Derived ratios (Sprint 8 follow-up)
 - **TG/HDL** (insulin-resistance surrogate) and **AST:ALT**, in a "Derived —
@@ -131,11 +139,12 @@ SwiftUI `ImageRenderer` → `CGContext`. Carries disclaimers on every page.
   text recognition to pre-fill results would widen adoption substantially — the
   current `.xlsx`-only path is a real ceiling.
 
-### 12. Onboarding ◐ Partially shipped
+### 12. Onboarding ✅ Shipped
 - **Profile setup** (height, weight, waist, units choice, optional Apple Health
-  sync) shipped as the first-run gate (`Onboarding/`). Still outstanding: a
-  **sample-data tour** so a brand-new user sees a populated dashboard before their
-  first panel import — currently new accounts land on an empty state.
+  sync) shipped as the first-run gate (`Onboarding/`), and the **sample-data
+  explore mode** shipped (`SampleData/`): a seeded, local-only dashboard reachable
+  from the auth screen and the empty Body tab, so a brand-new user sees the
+  diet-event ⇄ biomarker story before their first panel import.
 
 ---
 

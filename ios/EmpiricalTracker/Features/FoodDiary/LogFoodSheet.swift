@@ -216,18 +216,19 @@ struct LogFoodSheet: View {
     private func submit() async {
         guard let grams else { return }
         let note = noteText.trimmingCharacters(in: .whitespaces).isEmpty ? nil : noteText
-        let payload: FoodEntryPayload
 
         if let item {
-            payload = FoodEntryPayload(
+            let payload = FoodEntryPayload(
                 loggedOn: viewModel.selectedDate,
                 meal: meal,
                 item: item,
                 quantityG: grams,
                 note: note
             )
+            // Product-backed logs feed the recents buffer for one-tap re-logging.
+            await viewModel.log(payload, recentItem: item, quantityG: grams)
         } else {
-            payload = FoodEntryPayload(
+            let payload = FoodEntryPayload(
                 loggedOn: viewModel.selectedDate,
                 meal: meal,
                 foodName: freeTextName.trimmingCharacters(in: .whitespaces),
@@ -240,8 +241,8 @@ struct LogFoodSheet: View {
                 sodiumMg: Self.parse(sodiumText),
                 note: note
             )
+            await viewModel.log(payload)
         }
-        await viewModel.log(payload)
         dismiss()
     }
 

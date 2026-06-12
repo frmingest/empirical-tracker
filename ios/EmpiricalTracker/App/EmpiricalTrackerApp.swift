@@ -16,7 +16,13 @@ struct EmpiricalTrackerApp: App {
                 // (e.g. Norwegian decimal commas) regardless of the system region.
                 .environment(\.locale, env.settings.language.locale)
                 // Restore the session silently before the first frame is committed.
-                .task { await env.authStore.restoreSession() }
+                .task {
+                    await env.authStore.restoreSession()
+                    // Keep local reminders aligned with preferences across launches
+                    // (e.g. after the user changes notification permission in iOS
+                    // Settings, or a one-shot lab nudge has fired).
+                    await env.syncReminders()
+                }
         }
     }
 }

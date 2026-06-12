@@ -7,6 +7,7 @@ import SwiftUI
 struct FoodDiaryView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var viewModel: FoodDiaryViewModel?
+    @State private var isTargetsPresented = false
 
     var body: some View {
         NavigationStack {
@@ -22,7 +23,11 @@ struct FoodDiaryView: View {
             .toolbar { toolbarContent }
             .task {
                 if viewModel == nil {
-                    viewModel = FoodDiaryViewModel(repo: env.foodDiary)
+                    viewModel = FoodDiaryViewModel(
+                        repo: env.foodDiary,
+                        recents: env.recentFoods,
+                        activity: env.loggingActivity
+                    )
                     await viewModel?.load()
                 }
             }
@@ -41,6 +46,9 @@ struct FoodDiaryView: View {
                 if let vm = viewModel {
                     EditFoodEntrySheet(viewModel: vm, entry: entry)
                 }
+            }
+            .sheet(isPresented: $isTargetsPresented) {
+                NutritionTargetsSheet()
             }
             .alert(
                 String(localized: "food.error.title"),
@@ -111,14 +119,31 @@ struct FoodDiaryView: View {
                     .font(.headlineSmall)
             }
             .buttonStyle(.borderedProminent)
+            // Repetitive diets eat the same meals daily — offer yesterday's log
+            // as a one-tap starting point.
+            if vm.isToday {
+                Button {
+                    Task { await vm.copyPreviousDay() }
+                } label: {
+                    Label(String(localized: "food.copy_yesterday"), systemImage: "doc.on.doc")
+                        .font(.bodyMedium)
+                        .foregroundStyle(Color.accent)
+                }
+            }
         }
     }
 
     private func diaryList(_ vm: FoodDiaryViewModel) -> some View {
         List {
             Section {
-                DailyTotalsCard(totals: vm.dailyTotals)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                DailyTotalsCard(totals: vm.dailyTotals, targets: env.nutritionTargets) {
+                    isTargetsPresented = true
+                }
+                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                .listRowBackground(Color.clear)
+
+                StreakRecapRow(activity: env.loggingActivity)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 4, trailing: 20))
                     .listRowBackground(Color.clear)
             }
 
@@ -220,11 +245,14 @@ private struct MealSectionHeader: View {
 
 private struct DailyTotalsCard: View {
     let totals: DailyTotals
+    let targets: NutritionTargetsStore
+    let onEditTargets: () -> Void
 
     var body: some View {
         SoftCard {
             VStack(alignment: .leading, spacing: 16) {
-                // Hero row: a circular energy badge beside the day's headline number.
+                // Hero row: a circular energy badge beside the day's headline number,
+                // with the targets editor reachable from the trailing gauge button.
                 HStack(spacing: 16) {
                     CircleIconBadge("flame.fill", tint: .mealBreakfast, size: 56)
                     VStack(alignment: .leading, spacing: 2) {
@@ -236,15 +264,43 @@ private struct DailyTotalsCard: View {
                             .foregroundStyle(Color.textPrimary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
+                        if let target = targets.energyKcal {
+                            energyProgress(target: target)
+                        }
                     }
                     Spacer(minLength: 0)
+                    Button(action: onEditTargets) {
+                        Image(systemName: "gauge.with.needle")
+                            .font(.title3)
+                            .foregroundStyle(Color.accent)
+                    }
+                    .accessibilityLabel(String(localized: "food.targets.title"))
                 }
 
-                // Primary macros as soft tinted pills.
+                // Primary macros as soft tinted pills, read against any targets.
                 HStack(spacing: 8) {
-                    macroPill(String(localized: "food.macro.carbs"),   NutritionFormat.grams(totals.carbsG),   tint: .mealLunch)
-                    macroPill(String(localized: "food.macro.protein"), NutritionFormat.grams(totals.proteinG), tint: .mealDinner)
-                    macroPill(String(localized: "food.macro.fat"),     NutritionFormat.grams(totals.fatG),     tint: .mealSnack)
+                    macroPill(
+                        String(localized: "food.macro.carbs"),
+                        NutritionFormat.grams(totals.carbsG),
+                        tint: .mealLunch,
+                        subline: targets.carbsMaxG.map {
+                            String(localized: "food.targets.limit \(NutritionFormat.grams($0))")
+                        },
+                        isOver: targets.carbsMaxG.map { totals.carbsG > $0 } ?? false
+                    )
+                    macroPill(
+                        String(localized: "food.macro.protein"),
+                        NutritionFormat.grams(totals.proteinG),
+                        tint: .mealDinner,
+                        subline: targets.proteinG.map {
+                            String(localized: "food.targets.of \(NutritionFormat.grams($0))")
+                        }
+                    )
+                    macroPill(
+                        String(localized: "food.macro.fat"),
+                        NutritionFormat.grams(totals.fatG),
+                        tint: .mealSnack
+                    )
                 }
 
                 // Secondary nutrients on one muted line.
@@ -255,10 +311,37 @@ private struct DailyTotalsCard: View {
                 }
             }
         }
-        .accessibilityElement(children: .combine)
+        // `.contain` (not `.combine`) so the embedded targets button stays
+        // individually reachable by VoiceOver.
+        .accessibilityElement(children: .contain)
     }
 
-    private func macroPill(_ label: String, _ value: String, tint: Color) -> some View {
+    /// Thin capsule bar plus an "of …" caption beneath the hero energy figure.
+    private func energyProgress(target: Double) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.borderSubtle)
+                    Capsule()
+                        .fill(Color.accent)
+                        .frame(width: geo.size.width * min(1, totals.energyKcal / target))
+                }
+            }
+            .frame(height: 5)
+            Text(String(localized: "food.targets.of \(NutritionFormat.energy(target))"))
+                .font(.labelSmall)
+                .foregroundStyle(Color.textMuted)
+        }
+        .padding(.top, 3)
+    }
+
+    private func macroPill(
+        _ label: String,
+        _ value: String,
+        tint: Color,
+        subline: String? = nil,
+        isOver: Bool = false
+    ) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(label)
                 .font(.labelSmall)
@@ -268,6 +351,22 @@ private struct DailyTotalsCard: View {
                 .foregroundStyle(Color.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
+            if let subline {
+                // Colour alone never carries the signal — an exceeded ceiling pairs
+                // the tint change with a warning icon (design-system rule).
+                HStack(spacing: 3) {
+                    if isOver {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.labelSmall)
+                            .foregroundStyle(Color.outRange)
+                    }
+                    Text(subline)
+                        .font(.labelSmall)
+                        .foregroundStyle(isOver ? Color.outRange : Color.textMuted)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
@@ -285,6 +384,40 @@ private struct DailyTotalsCard: View {
                 .foregroundStyle(Color.textSecondary)
         }
         .lineLimit(1)
+    }
+}
+
+// MARK: - Streak recap row
+
+/// One quiet, muted line of habit feedback under the totals card — a streak when
+/// one exists, and how many of the last 7 days had a log. No badges, no levels.
+private struct StreakRecapRow: View {
+    let activity: LoggingActivityStore
+
+    var body: some View {
+        let streak = activity.currentStreak
+        let last7 = activity.daysLoggedLast7
+        if last7 > 0 {
+            HStack(spacing: 6) {
+                Image(systemName: "flame")
+                    .font(.labelSmall)
+                    .foregroundStyle(Color.mealBreakfast)
+                    .accessibilityHidden(true)
+                if streak >= 2 {
+                    Text(String(localized: "food.streak.days \(streak)"))
+                        .font(.labelSmall)
+                        .foregroundStyle(Color.textSecondary)
+                    Text(verbatim: "·")
+                        .font(.labelSmall)
+                        .foregroundStyle(Color.textMuted)
+                }
+                Text(String(localized: "food.streak.week \(last7)"))
+                    .font(.labelSmall)
+                    .foregroundStyle(Color.textMuted)
+                Spacer(minLength: 0)
+            }
+            .accessibilityElement(children: .combine)
+        }
     }
 }
 

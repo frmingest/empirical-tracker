@@ -8,7 +8,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Biotrack"
+            "value" : "Empirical Tracker"
           }
         }
       }
@@ -35,13 +35,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Biotrack uses the camera to scan food barcodes and photograph nutrition labels. Barcode data is looked up online; label photos are processed for text only and never stored on our servers."
+            "value" : "Empirical Tracker uses the camera to scan food barcodes and photograph nutrition labels. Barcode data is looked up online; label photos are processed for text only and never stored on our servers."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Biotrack bruker kameraet til å skanne strekkoder på mat og fotografere næringsinnholdsetiketter. Strekkodedata slås opp på nettet, og etikettbilder behandles kun for tekst og lagres aldri på serverne våre."
+            "value" : "Empirical Tracker bruker kameraet til å skanne strekkoder på mat og fotografere næringsinnholdsetiketter. Strekkodedata slås opp på nettet, og etikettbilder behandles kun for tekst og lagres aldri på serverne våre."
           }
         }
       }
@@ -53,13 +53,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Biotrack reads your weight, blood pressure, and heart metrics (resting heart rate, heart-rate variability, average heart rate) from Apple Health — including readings your Withings devices write there via Health Mate — and your activity (steps, active energy, exercise minutes), so it can chart them alongside your blood biomarkers and diet events and show how active you were around diet changes. It only reads the data types you enable, and never writes to Apple Health."
+            "value" : "Empirical Tracker reads your weight, blood pressure, and heart metrics (resting heart rate, heart-rate variability, average heart rate) from Apple Health — including readings your Withings devices write there via Health Mate — and your activity (steps, active energy, exercise minutes), so it can chart them alongside your blood biomarkers and diet events and show how active you were around diet changes. It only reads the data types you enable, and never writes to Apple Health."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Biotrack leser vekt, blodtrykk og hjertemål (hvilepuls, hjertefrekvensvariasjon, gjennomsnittspuls) fra Apple Helse – inkludert målinger som Withings-enhetene dine skriver dit via Health Mate – og aktiviteten din (skritt, aktiv energi, treningsminutter), slik at de kan vises sammen med blodbiomarkørene og kostholdshendelsene dine og vise hvor aktiv du var rundt kostholdsendringer. Appen leser bare datatypene du aktiverer, og skriver aldri til Apple Helse."
+            "value" : "Empirical Tracker leser vekt, blodtrykk og hjertemål (hvilepuls, hjertefrekvensvariasjon, gjennomsnittspuls) fra Apple Helse – inkludert målinger som Withings-enhetene dine skriver dit via Health Mate – og aktiviteten din (skritt, aktiv energi, treningsminutter), slik at de kan vises sammen med blodbiomarkørene og kostholdshendelsene dine og vise hvor aktiv du var rundt kostholdsendringer. Appen leser bare datatypene du aktiverer, og skriver aldri til Apple Helse."
           }
         }
       }
@@ -71,13 +71,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Biotrack can read a nutrition label photo from your library to extract nutrition facts for your diary. The photo is processed for text only and never stored."
+            "value" : "Empirical Tracker can read a nutrition label photo from your library to extract nutrition facts for your diary. The photo is processed for text only and never stored."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Biotrack kan lese et bilde av en næringsinnholdsetikett fra biblioteket ditt for å hente næringsinnhold til dagboken din. Bildet behandles kun for tekst og lagres aldri."
+            "value" : "Empirical Tracker kan lese et bilde av en næringsinnholdsetikett fra biblioteket ditt for å hente næringsinnhold til dagboken din. Bildet behandles kun for tekst og lagres aldri."
           }
         }
       }

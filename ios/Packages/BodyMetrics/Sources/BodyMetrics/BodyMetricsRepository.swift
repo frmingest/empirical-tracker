@@ -140,6 +140,10 @@ public final class BodyMetricsRepository {
     public var isLoading = false
     public var error: APIError?
 
+    /// When true, the repository serves only its seeded in-memory data and skips
+    /// network fetches — used by the sample-data explore mode and previews.
+    public var isLocalOnly = false
+
     private let client: APIClient
 
     public init(client: APIClient) {
@@ -147,6 +151,7 @@ public final class BodyMetricsRepository {
     }
 
     public func load() async {
+        guard !isLocalOnly else { return }
         guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }

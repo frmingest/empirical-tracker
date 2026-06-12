@@ -10,6 +10,7 @@ struct AuthView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var vm = SignInViewModel()
     @State private var legalURL: URL?
+    @State private var isSampleExplorePresented = false
     @FocusState private var focus: Field?
 
     private enum Field: Hashable { case email, password, confirmPassword }
@@ -20,6 +21,7 @@ struct AuthView: View {
                 headerSection
                 formCard
                 modeToggle
+                sampleDataButton
                 #if DEBUG
                 demoButton
                 #endif
@@ -34,6 +36,9 @@ struct AuthView: View {
         .sheet(item: $legalURL) { url in
             SafariSheet(url: url)
                 .ignoresSafeArea()
+        }
+        .fullScreenCover(isPresented: $isSampleExplorePresented) {
+            SampleDataExploreView()
         }
     }
 
@@ -226,6 +231,22 @@ struct AuthView: View {
         .accessibilityLabel(String(localized: vm.mode == .signUp
                                    ? "auth.toggle.have_account.a11y"
                                    : "auth.toggle.no_account.a11y"))
+    }
+
+    // MARK: - Sample data
+
+    /// Lets a visitor browse a seeded dashboard before committing to an account —
+    /// the value proposition shown, not described. Entirely local; see
+    /// `SampleDataExploreView`.
+    private var sampleDataButton: some View {
+        Button {
+            isSampleExplorePresented = true
+        } label: {
+            Label(String(localized: "auth.sample"), systemImage: "sparkles")
+                .font(.bodyMedium)
+                .foregroundStyle(Color.accent)
+        }
+        .accessibilityLabel(String(localized: "auth.sample.a11y"))
     }
 
     // MARK: - Demo (debug only)
