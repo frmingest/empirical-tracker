@@ -40,6 +40,10 @@ struct DashboardView: View {
     // Sprint 6 — share biomarker report as PDF
     @State private var isReportSharePresented = false
 
+    // Sample-data explore mode, offered from the empty state so a new user can see
+    // a populated dashboard before their first lab import.
+    @State private var isSampleExplorePresented = false
+
     // Sprint 3 — marker drill-down
     @State private var selectedMarker: BiomarkerWithSeries?
     // Category graph view — pushed when a category header is tapped.
@@ -98,9 +102,13 @@ struct DashboardView: View {
                 patientEmail: env.authStore.email
             )
         }
+        // Present sample-data explore mode (offered from the empty state)
+        .fullScreenCover(isPresented: $isSampleExplorePresented) {
+            SampleDataExploreView()
+        }
         // Handle .xlsx files opened from Files / Mail / AirDrop
         .onOpenURL { url in
-            guard url.pathExtension.lowercased() == "xlsx" else { return }
+            guard url.pathExtension.lowercased() == "xlsx", !env.isSampleData else { return }
             if importViewModel == nil {
                 importViewModel = ImportViewModel(
                     biomarkersRepo: env.biomarkers,
@@ -126,10 +134,16 @@ struct DashboardView: View {
                 scrollContent(vm)
             }
         case .bodyMap:
-            DashboardBodyMapView(
-                onSelectCategory: { category in selectedCategory = category },
-                onSelectMarker:   { marker   in selectedMarker   = marker   }
-            )
+            // An all-grey silhouette gives a new user no next step — show the
+            // directive empty state (import / explore sample data) instead.
+            if !vm.hasData && !vm.isLoading {
+                emptyState
+            } else {
+                DashboardBodyMapView(
+                    onSelectCategory: { category in selectedCategory = category },
+                    onSelectMarker:   { marker   in selectedMarker   = marker   }
+                )
+            }
         }
     }
 
@@ -208,11 +222,28 @@ struct DashboardView: View {
     // MARK: - Empty / skeleton states
 
     private var emptyState: some View {
-        EmptyStateView(
-            icon: "tray",
-            title: String(localized: "dashboard.emptyTitle"),
-            message: String(localized: "dashboard.emptyMessage")
-        )
+        VStack(spacing: 0) {
+            EmptyStateView(
+                icon: "tray",
+                title: String(localized: "dashboard.emptyTitle"),
+                message: String(localized: "dashboard.emptyMessage"),
+                action: .init(label: String(localized: "dashboard.empty.import")) {
+                    importViewModel?.reset()
+                    importViewModel?.isPresented = true
+                }
+            )
+            if !env.isSampleData {
+                Button {
+                    isSampleExplorePresented = true
+                } label: {
+                    Label(String(localized: "dashboard.empty.sample"), systemImage: "sparkles")
+                        .font(.bodyMedium)
+                        .foregroundStyle(Color.accent)
+                }
+                .padding(.bottom, 32)
+            }
+        }
+        .background(Color.bgBase)
     }
 
     private var noResultsForFilter: some View {
@@ -254,16 +285,18 @@ struct DashboardView: View {
             .foregroundStyle(Color.accent)
             .disabled(viewModel?.hasData != true)
         }
-        // Import button
-        ToolbarItem(placement: .topBarTrailing) {
-            Button {
-                importViewModel?.reset()
-                importViewModel?.isPresented = true
-            } label: {
-                Image(systemName: "square.and.arrow.down")
-                    .accessibilityLabel("Import blood test")
+        // Import button (hidden in sample mode — there is no account to import into)
+        if !env.isSampleData {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    importViewModel?.reset()
+                    importViewModel?.isPresented = true
+                } label: {
+                    Image(systemName: "square.and.arrow.down")
+                        .accessibilityLabel("Import blood test")
+                }
+                .foregroundStyle(Color.accent)
             }
-            .foregroundStyle(Color.accent)
         }
     }
 }

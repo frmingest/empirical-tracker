@@ -32,6 +32,22 @@ public final class AppEnvironment {
     /// gates `ProfileSetupView` after consent.
     public let userProfile: UserProfileStore
 
+    /// Opt-in local reminder preferences (meal / weigh-in / lab cadence). Scheduled
+    /// on-device via `ReminderScheduler`; nothing reaches the backend.
+    public let reminders = ReminderPreferencesStore()
+
+    /// Optional daily intake targets the diary totals are read against (energy,
+    /// protein incl. g/kg quick-set, carb ceiling). Device-local (WISHLIST #6).
+    public let nutritionTargets = NutritionTargetsStore()
+
+    /// Device-local buffer of recently logged foods for one-tap re-logging in the
+    /// food search sheet.
+    public let recentFoods = RecentFoodsStore()
+
+    /// Device-local "did I log today?" record behind the quiet streak / last-7-days
+    /// line in the food diary.
+    public let loggingActivity = LoggingActivityStore()
+
     // MARK: - Networking
 
     public let client: APIClient
@@ -64,6 +80,12 @@ public final class AppEnvironment {
     let withingsCloudState: WithingsCloudState
 
     let widgetStore = WidgetDataStore()
+
+    /// True when this environment is the seeded, local-only sample-data world
+    /// (see `sampleData()`). Views use it to hide actions that need a real account
+    /// (lab import), and the widget write-through is suppressed so sample numbers
+    /// never reach the Home Screen.
+    public private(set) var isSampleData = false
 
     // MARK: - Convenience passthrough
 
@@ -130,6 +152,29 @@ public final class AppEnvironment {
         AppEnvironment(authService: MockAuthService())
     }
 
+    // MARK: - Sample-data factory
+
+    /// A self-contained environment seeded with `MockData` and pinned to local-only
+    /// repositories, so a brand-new user can browse a populated dashboard — the
+    /// diet-event ⇄ biomarker correlation story — before importing a single panel.
+    /// Nothing in this environment ever reaches the network or the real account.
+    public static func sampleData() -> AppEnvironment {
+        let env = AppEnvironment(authService: MockAuthService())
+        env.isSampleData = true
+
+        env.biomarkers.isLocalOnly      = true
+        env.dietEvents.isLocalOnly      = true
+        env.account.isLocalOnly         = true
+        env.bodyMetrics.isLocalOnly     = true
+        env.activityMetrics.isLocalOnly = true
+
+        env.biomarkers.results      = MockData.biomarkerSeries
+        env.dietEvents.events       = MockData.dietEvents
+        env.bodyMetrics.metrics     = MockData.bodyMetrics
+        env.activityMetrics.metrics = MockData.activityMetrics
+        return env
+    }
+
     // MARK: - Convenience
 
     /// Signs out and clears the local health-data consent flag and profile so the
@@ -139,6 +184,17 @@ public final class AppEnvironment {
         await authStore.signOut()
         consent.reset()
         userProfile.reset()
+    }
+
+    /// Re-arms the local reminders from current preferences. The lab-cadence nudge is
+    /// anchored to the most recent panel in memory; when panels haven't been fetched
+    /// yet the scheduler keeps the previously stored fire date.
+    public func syncReminders() async {
+        guard !isSampleData else { return }
+        await ReminderScheduler.sync(
+            prefs: reminders,
+            latestPanelDate: biomarkers.panels.map(\.testedAt).max()
+        )
     }
 
     /// Called on every app foreground to refresh the primary read paths.
@@ -151,6 +207,7 @@ public final class AppEnvironment {
 
     /// Writes the latest snapshot to the App Group container and reloads widget timelines.
     public func writeWidgetSnapshot() async {
+        guard !isSampleData else { return }
         await bodyMetrics.load()
         let todayEntries = foodDiary.entries.filter {
             Calendar.current.isDateInToday($0.loggedOn)

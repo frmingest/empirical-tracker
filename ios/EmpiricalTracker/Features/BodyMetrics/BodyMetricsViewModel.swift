@@ -36,11 +36,19 @@ final class BodyMetricsViewModel {
     private let repo: BodyMetricsRepository
     private let dietEventsRepo: DietEventsRepository
     let activityRepo: ActivityMetricsRepository
+    /// Device-local logging-day record behind the diary's streak line; nil in previews.
+    private let loggingActivity: LoggingActivityStore?
 
-    init(repo: BodyMetricsRepository, dietEventsRepo: DietEventsRepository, activityRepo: ActivityMetricsRepository) {
+    init(
+        repo: BodyMetricsRepository,
+        dietEventsRepo: DietEventsRepository,
+        activityRepo: ActivityMetricsRepository,
+        loggingActivity: LoggingActivityStore? = nil
+    ) {
         self.repo = repo
         self.dietEventsRepo = dietEventsRepo
         self.activityRepo = activityRepo
+        self.loggingActivity = loggingActivity
     }
 
     // MARK: - Passthrough (observed via the repository)
@@ -211,6 +219,8 @@ final class BodyMetricsViewModel {
         )
         do {
             try await repo.create(payload)
+            loggingActivity?.recordToday()
+            Haptics.success()
             resetForm()
             isFormPresented = false
         } catch {

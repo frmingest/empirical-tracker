@@ -24,6 +24,7 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 appearanceSection(settings: settings)
+                ReminderSettingsSection()
                 dataSection
                 devicesSection
                 accountSection

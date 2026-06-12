@@ -41,6 +41,15 @@ public final class FoodDiaryRepository {
         isLoading = false
     }
 
+    /// Fetches one day's entries **without** touching the repository's published
+    /// state — used by "copy yesterday" to read the previous day while the selected
+    /// day stays loaded.
+    public func fetchEntries(date: Date) async throws -> [FoodEntry] {
+        let dateStr = CalendarDate.string(from: date)
+        let query = [URLQueryItem(name: "date", value: dateStr)]
+        return try await client.request(.get("/food-diary", query: query))
+    }
+
     // MARK: - Create
 
     public func create(_ payload: FoodEntryPayload) async throws {

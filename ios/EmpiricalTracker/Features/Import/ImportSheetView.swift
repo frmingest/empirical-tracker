@@ -9,9 +9,12 @@ import UniformTypeIdentifiers
 ///   2. Uploading — indeterminate/determinate progress ring.
 ///   3. Result — success summary or error with retry.
 struct ImportSheetView: View {
+    @Environment(AppEnvironment.self) private var env
     @Bindable var viewModel: ImportViewModel
     @State private var isDocumentPickerPresented = false
     @State private var isDocumentImportPresented = false
+    @State private var labReminderJustSet = false
+    @State private var labReminderDenied = false
 
     var body: some View {
         NavigationStack {
@@ -266,6 +269,7 @@ struct ImportSheetView: View {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 56))
                 .foregroundStyle(Color.inRange)
+                .onAppear { Haptics.success() }
 
             VStack(spacing: 6) {
                 Text("Import complete")
@@ -305,6 +309,8 @@ struct ImportSheetView: View {
                 .padding(.horizontal, 24)
             }
 
+            nextPanelSection
+
             Button("Done") { viewModel.dismiss() }
                 .buttonStyle(PrimaryButtonStyle())
                 .padding(.horizontal, 32)
@@ -312,6 +318,63 @@ struct ImportSheetView: View {
             Spacer()
         }
         .padding()
+    }
+
+    /// The "second-panel moment": one panel can't draw a trend line, so after an
+    /// import set the expectation that the next panel is what unlocks trends — and
+    /// offer to arm the ~3-month lab-cadence reminder right here.
+    @ViewBuilder
+    private var nextPanelSection: some View {
+        VStack(spacing: 12) {
+            if env.biomarkers.panels.count <= 1 {
+                Label {
+                    Text(String(localized: "import.success.first_panel"))
+                        .font(.bodySmall)
+                        .foregroundStyle(Color.textSecondary)
+                        .multilineTextAlignment(.leading)
+                } icon: {
+                    Image(systemName: "chart.xyaxis.line")
+                        .foregroundStyle(Color.accent)
+                }
+            }
+
+            if env.reminders.labReminderEnabled || labReminderJustSet {
+                Label(String(localized: "import.success.remind.scheduled"), systemImage: "checkmark.circle")
+                    .font(.bodySmall)
+                    .foregroundStyle(Color.inRange)
+            } else if labReminderDenied {
+                Label(String(localized: "settings.reminders.denied.message"), systemImage: "bell.slash")
+                    .font(.bodySmall)
+                    .foregroundStyle(Color.textMuted)
+            } else {
+                Button {
+                    armLabReminder()
+                } label: {
+                    Label(String(localized: "import.success.remind"), systemImage: "bell")
+                        .font(.headlineSmall)
+                        .foregroundStyle(Color.accent)
+                }
+            }
+        }
+        .padding(.horizontal, 24)
+        // A re-import moves the latest draw date — keep an armed reminder anchored.
+        .task {
+            if env.reminders.labReminderEnabled {
+                await env.syncReminders()
+            }
+        }
+    }
+
+    private func armLabReminder() {
+        Task {
+            guard await ReminderScheduler.requestAuthorization() else {
+                labReminderDenied = true
+                return
+            }
+            env.reminders.labReminderEnabled = true
+            await env.syncReminders()
+            labReminderJustSet = true
+        }
     }
 
     private func summaryRow(label: String, value: String, color: Color) -> some View {

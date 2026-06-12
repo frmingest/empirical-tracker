@@ -11,6 +11,10 @@ public final class DietEventsRepository {
     public var isLoading = false
     public var error: APIError?
 
+    /// When true, the repository serves only its seeded in-memory data and skips
+    /// network fetches — used by the sample-data explore mode and previews.
+    public var isLocalOnly = false
+
     private let client: APIClient
 
     public init(client: APIClient) {
@@ -20,6 +24,7 @@ public final class DietEventsRepository {
     // MARK: - Fetch
 
     public func load() async {
+        guard !isLocalOnly else { return }
         isLoading = true
         error = nil
         do {

@@ -182,6 +182,21 @@ struct FoodSearchSheet: View {
                 .transition(.opacity)
         } else {
             List {
+                // One-tap re-logging for the foods this user actually eats — shown
+                // while the search field is empty.
+                if trimmedQuery.isEmpty && !viewModel.recentFoods.isEmpty {
+                    Section(String(localized: "food.recent.title")) {
+                        ForEach(viewModel.recentFoods) { recent in
+                            Button {
+                                selectedItem = recent.asFoodItem()
+                            } label: {
+                                FoodResultRow(item: recent.asFoodItem())
+                            }
+                            .listRowBackground(Color.bgCard)
+                        }
+                    }
+                }
+
                 ForEach(viewModel.searchResults) { item in
                     Button {
                         selectedItem = item
@@ -208,7 +223,8 @@ struct FoodSearchSheet: View {
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .overlay {
-                if viewModel.searchResults.isEmpty && trimmedQuery.isEmpty {
+                if viewModel.searchResults.isEmpty && trimmedQuery.isEmpty
+                    && viewModel.recentFoods.isEmpty {
                     ContentUnavailableView(
                         String(localized: "food.search.empty.title"),
                         systemImage: "magnifyingglass",

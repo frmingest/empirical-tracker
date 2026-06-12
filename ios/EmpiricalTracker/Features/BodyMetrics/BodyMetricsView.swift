@@ -34,7 +34,8 @@ struct BodyMetricsView: View {
                     viewModel = BodyMetricsViewModel(
                         repo: env.bodyMetrics,
                         dietEventsRepo: env.dietEvents,
-                        activityRepo: env.activityMetrics
+                        activityRepo: env.activityMetrics,
+                        loggingActivity: env.loggingActivity
                     )
                     await viewModel?.load()
                 }

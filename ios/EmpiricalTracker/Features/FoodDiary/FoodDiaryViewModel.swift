@@ -32,10 +32,20 @@ final class FoodDiaryViewModel {
     // MARK: - Dependencies
 
     let repo: FoodDiaryRepository
+    /// Device-local recents buffer; nil in contexts that don't surface recents.
+    private let recents: RecentFoodsStore?
+    /// Device-local logging-day record behind the streak line; nil in previews.
+    private let activity: LoggingActivityStore?
     private var searchTask: Task<Void, Never>?
 
-    init(repo: FoodDiaryRepository) {
+    init(
+        repo: FoodDiaryRepository,
+        recents: RecentFoodsStore? = nil,
+        activity: LoggingActivityStore? = nil
+    ) {
         self.repo = repo
+        self.recents = recents
+        self.activity = activity
     }
 
     // MARK: - Passthrough (observed via the repository)
@@ -47,6 +57,7 @@ final class FoodDiaryViewModel {
     var isLoading: Bool                 { repo.isLoading }
     var isSearching: Bool               { repo.isSearching }
     var hasEntries: Bool                { !repo.entries.isEmpty }
+    var recentFoods: [RecentFoodsStore.RecentFood] { recents?.items ?? [] }
 
     var isToday: Bool {
         Calendar.current.isDateInToday(selectedDate)
@@ -124,11 +135,57 @@ final class FoodDiaryViewModel {
     // MARK: - Persistence
 
     /// Logs a food, then reloads the day so totals and meal sections stay consistent.
-    func log(_ payload: FoodEntryPayload) async {
+    /// Product-backed logs (`recentItem` non-nil) are recorded in the recents buffer
+    /// for one-tap re-logging.
+    func log(_ payload: FoodEntryPayload, recentItem: FoodItem? = nil, quantityG: Double? = nil) async {
         do {
             try await repo.create(payload)
+            if let recentItem, let quantityG {
+                recents?.record(item: recentItem, quantityG: quantityG)
+            }
+            activity?.recordToday()
+            Haptics.success()
             await load()
             isAddPresented = false
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Copies every entry of the previous day onto the selected day — the
+    /// lowest-friction path for repetitive diets. Reads the previous day without
+    /// disturbing the loaded day, then re-creates each entry with its provenance.
+    func copyPreviousDay() async {
+        guard let previous = Calendar.current.date(byAdding: .day, value: -1, to: selectedDate) else { return }
+        do {
+            let previousEntries = try await repo.fetchEntries(date: previous)
+            guard !previousEntries.isEmpty else {
+                errorMessage = String(localized: "food.copy_yesterday.empty")
+                return
+            }
+            for entry in previousEntries {
+                let payload = FoodEntryPayload(
+                    loggedOn: selectedDate,
+                    meal: entry.meal,
+                    foodName: entry.foodName,
+                    brand: entry.brand,
+                    barcode: entry.barcode,
+                    quantityG: entry.quantityG,
+                    energyKcal: entry.energyKcal,
+                    carbsG: entry.carbsG,
+                    proteinG: entry.proteinG,
+                    fatG: entry.fatG,
+                    saturatedFatG: entry.saturatedFatG,
+                    sodiumMg: entry.sodiumMg,
+                    source: entry.source,
+                    note: entry.note,
+                    ingredients: entry.ingredients
+                )
+                try await repo.create(payload)
+            }
+            activity?.recordToday()
+            Haptics.success()
+            await load()
         } catch {
             errorMessage = error.localizedDescription
         }

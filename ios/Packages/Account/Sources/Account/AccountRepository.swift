@@ -11,6 +11,10 @@ public final class AccountRepository {
     public var isLoading = false
     public var error: APIError?
 
+    /// When true, settings live only in memory and are never fetched or persisted —
+    /// used by the sample-data explore mode and previews.
+    public var isLocalOnly = false
+
     private let client: APIClient
 
     public init(client: APIClient) {
@@ -20,6 +24,7 @@ public final class AccountRepository {
     // MARK: - Settings
 
     public func loadSettings() async {
+        guard !isLocalOnly else { return }
         isLoading = true
         defer { isLoading = false }
         do {
@@ -33,6 +38,7 @@ public final class AccountRepository {
 
     public func saveSettings(_ updated: UserSettings) async throws {
         settings = updated
+        guard !isLocalOnly else { return }
         try await client.requestEmpty(.put("/settings", body: updated))
     }
 
