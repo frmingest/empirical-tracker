@@ -23,8 +23,10 @@ This applies to all changes — code, docs, migrations, single-file edits.
 
 (◐ = partially shipped: the Sprint 6 doctor-PDF report shipped on iOS (selectable
 categories/markers, latest values and/or trend graphs, shared via the system sheet);
-Sprint 8 Medium markers / derived ratios, and Sprint 9 daily targets remain — see
-`docs/SOLUTION.md`. The
+Sprint 8 Medium markers / derived ratios remain — see
+`docs/SOLUTION.md`. Sprint 9 daily intake targets shipped a first slice (energy,
+protein g/kg, carb ceiling — `NutritionTargetsStore`, device-local); saturated-fat/
+sodium targets and cross-device sync remain. The
 Sprint 9 whole-foods source shipped (Matvaretabellen + USDA, macros — ADR-018);
 its micronutrient phase is deferred to a future ADR. Sprint 10 shipped
 weight/waist/BP tracking; the *optional* body-metric-on-biomarker-timeline
