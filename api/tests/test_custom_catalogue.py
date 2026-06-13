@@ -66,22 +66,25 @@ def test_donate_keeps_only_factual_fields_and_drops_identifiers():
     assert "donated_at" in donated
 
 
-def test_donate_upserts_on_barcode_to_dedupe():
+def test_donate_upserts_on_normalised_barcode_to_dedupe():
     service = _fluent()
     custom.donate_to_catalogue(service, _public_row())
+    # ADR-034: barcoded rows merge on the normalised GTIN-14, not the raw barcode.
     service.upsert.assert_called_once()
-    assert service.upsert.call_args.kwargs["on_conflict"] == "barcode"
+    assert service.upsert.call_args.kwargs["on_conflict"] == "barcode_norm"
     service.insert.assert_not_called()
 
 
-def test_donate_inserts_when_no_barcode():
+def test_donate_upserts_barcodeless_on_dedup_key():
     service = _fluent()
     row = _public_row()
     row["barcode"] = None
     custom.donate_to_catalogue(service, row)
-    # No barcode → cannot dedupe, so a plain insert (NULL barcodes stay distinct).
-    service.insert.assert_called_once()
-    service.upsert.assert_not_called()
+    # ADR-034: barcodeless rows now merge cross-user on the name|brand|serving
+    # key instead of piling up as fresh inserts.
+    service.upsert.assert_called_once()
+    assert service.upsert.call_args.kwargs["on_conflict"] == "dedup_key"
+    service.insert.assert_not_called()
 
 
 # ── delete: donate-then-delete vs hard-delete ───────────────────────────────────
@@ -178,7 +181,7 @@ def test_create_private_food_is_not_mirrored(mock_db, mock_service):
 
 @patch("app.food_sources.custom.get_service_supabase")
 @patch("app.food_sources.custom.get_supabase")
-def test_create_barcodeless_public_food_inserts_and_links(mock_db, mock_service):
+def test_create_barcodeless_public_food_merges_on_dedup_key_and_links(mock_db, mock_service):
     stored = {**_public_row(), "barcode": None, "catalogue_id": None}
     user_db = _fluent(execute_data=[stored])
     service_db = _fluent(execute_data=[{"id": "cat9"}])
@@ -187,9 +190,11 @@ def test_create_barcodeless_public_food_inserts_and_links(mock_db, mock_service)
 
     custom.create_custom_food("u1", {"food_name": "Brand X Bar", "is_public": True})
 
-    # No barcode → plain insert, then the twin id is linked back.
-    service_db.insert.assert_called_once()
-    service_db.upsert.assert_not_called()
+    # ADR-034: barcodeless → upsert on the name|brand|serving key (cross-user
+    # merge), then the twin id is linked back.
+    service_db.upsert.assert_called_once()
+    assert service_db.upsert.call_args.kwargs["on_conflict"] == "dedup_key"
+    service_db.insert.assert_not_called()
     update_args = [c.args[0] for c in user_db.update.call_args_list]
     assert {"catalogue_id": "cat9"} in update_args
 
