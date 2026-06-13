@@ -103,9 +103,11 @@ struct CategoryGraphsView: View {
     private func graphs(for group: BiomarkerGroup) -> some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 16) {
-                categorySummary(for: group.category)
+                CategorySummaryView(category: group.category)
                 ForEach(group.items) { item in
-                    chartCard(item)
+                    BiomarkerChartCard(item: item, dietEvents: events(for: item)) {
+                        onSelectMarker(item)
+                    }
                 }
                 categoryStepper
                     .padding(.top, 8)
@@ -113,70 +115,6 @@ struct CategoryGraphsView: View {
             .padding(16)
             // Reset scroll to top when switching categories.
             .id(category)
-        }
-    }
-
-    /// Plain-language intro for the active category, shown above the charts so
-    /// non-medical readers understand what these markers mean for their body.
-    private func categorySummary(for category: BiomarkerCategory) -> some View {
-        Label {
-            Text(category.summary)
-                .font(.bodySmall)
-                .foregroundStyle(Color.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        } icon: {
-            Image(systemName: "info.circle")
-                .foregroundStyle(Color.accent)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.bgElevated, in: RoundedRectangle(cornerRadius: 10))
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("About \(category.displayName): \(category.summary)")
-    }
-
-    private func chartCard(_ item: BiomarkerWithSeries) -> some View {
-        Button {
-            onSelectMarker(item)
-        } label: {
-            CardView {
-                VStack(alignment: .leading, spacing: 12) {
-                    chartHeader(item)
-                    BiomarkerTrendChart(marker: item, dietEvents: events(for: item))
-                        .frame(height: 200)
-                }
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityHint("Opens full history")
-    }
-
-    private func chartHeader(_ item: BiomarkerWithSeries) -> some View {
-        let info = item.biomarker
-        return HStack(alignment: .firstTextBaseline, spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(shortBiomarkerLabel(info.nameEn ?? info.nameNo))
-                    .font(.headlineSmall)
-                    .foregroundStyle(Color.textPrimary)
-                    .lineLimit(1)
-                if let latest = item.latestResult {
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text(formattedValue(latest.value))
-                            .font(.numericMedium)
-                            .foregroundStyle(Color.textPrimary)
-                        if let unit = info.unit {
-                            Text(unit)
-                                .font(.labelSmall)
-                                .foregroundStyle(Color.textMuted)
-                        }
-                    }
-                }
-            }
-            Spacer(minLength: 8)
-            StatusBadgeView(status: badgeStatus(item))
-            Image(systemName: "chevron.right")
-                .font(.labelSmall)
-                .foregroundStyle(Color.textMuted)
         }
     }
 
@@ -253,22 +191,6 @@ struct CategoryGraphsView: View {
     private func outOfRangeCount(in cat: BiomarkerCategory) -> Int {
         groups.first { $0.category == cat }?
             .items.filter { $0.latestResult?.inRange == false }.count ?? 0
-    }
-
-    private func badgeStatus(_ marker: BiomarkerWithSeries) -> StatusBadgeView.Status {
-        switch MarkerSignals.assessment(for: marker) {
-        case .inRange:    return .inRange
-        case .outOfRange: return .outOfRange
-        case .watch:      return .watch
-        case .unknown:    return .unknown
-        }
-    }
-
-    private func formattedValue(_ v: Double) -> String {
-        if v == v.rounded() && abs(v) < 1_000 {
-            return String(format: "%.0f", v)
-        }
-        return String(format: "%.1f", v)
     }
 }
 

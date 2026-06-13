@@ -2,9 +2,10 @@ import Biomarkers
 import Core
 import SwiftUI
 
-/// Interactive body map showing biomarker regions as tappable hotspot pins.
-/// Each pin's color reflects the worst-case assessment across all markers in
-/// that region. Tapping opens a sheet listing those markers.
+/// Interactive body map showing biomarker regions as tappable areas directly
+/// over the relevant anatomy. Each area's outline color reflects the
+/// worst-case assessment across all markers in that region. Tapping pushes
+/// `OrganDetailView` with the organ illustration and trend graphs.
 struct BodyMapView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
@@ -43,17 +44,17 @@ struct BodyMapView: View {
             .navigationDestination(item: $selectedMarker) { marker in
                 BiomarkerDetailView(initialMarker: marker)
             }
+            .navigationDestination(item: $selectedRegion) { region in
+                OrganDetailView(region: region) { marker in
+                    selectedMarker = marker
+                }
+            }
         }
         .task {
             if viewModel == nil {
                 viewModel = BodyMapViewModel(biomarkersRepo: env.biomarkers)
             }
             await viewModel?.load()
-        }
-        .sheet(item: $selectedRegion) { region in
-            BodyRegionSheet(region: region) { marker in
-                selectedMarker = marker
-            }
         }
         .alert(
             "Error",
@@ -73,6 +74,7 @@ struct BodyMapView: View {
     private func bodyCanvas(_ vm: BodyMapViewModel) -> some View {
         BodyMapCanvas(
             regions: vm.regions,
+            biologicalSex: env.userProfile.biologicalSex,
             silhouetteOpacity: 0.22,
             bottomReserve: 84
         ) { region in
