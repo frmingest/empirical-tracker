@@ -78,7 +78,7 @@ struct BodyMapView: View {
             silhouetteOpacity: 0.22,
             bottomReserve: 84
         ) { region in
-            selectedRegion = region
+            selectedRegion = vm.detailRegion(for: region.id) ?? region
         }
     }
 }

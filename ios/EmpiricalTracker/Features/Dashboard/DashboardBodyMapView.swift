@@ -80,7 +80,7 @@ struct DashboardBodyMapView: View {
                     silhouetteOpacity: 0.18,
                     bottomReserve: 0
                 ) { region in
-                    selectedRegion = region
+                    selectedRegion = vm.detailRegion(for: region.id) ?? region
                 }
 
                 // Stat panels overlaid at the top of the canvas only

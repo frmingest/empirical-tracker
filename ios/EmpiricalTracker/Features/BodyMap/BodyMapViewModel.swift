@@ -3,8 +3,28 @@ import Core
 import Foundation
 import Observation
 
+/// Which margin a region's pin is parked in, beside the silhouette. The pin
+/// floats in the open space on this side and a leader line connects it back to
+/// the region's anatomical anchor on the body.
+enum BodySide {
+    case left
+    case right
+}
+
 /// Body-region grouping shown on the Body Map.
-struct BodyRegion: Identifiable {
+///
+/// `Hashable` is identity-based (by `id`) so `navigationDestination(item:)`
+/// keeps tracking the same pushed screen even as `items` refresh underneath
+/// it (e.g. after a delete-all or fresh import).
+struct BodyRegion: Identifiable, Hashable {
+    static func == (lhs: BodyRegion, rhs: BodyRegion) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
     let id: String
     let label: String
     let systemImage: String
@@ -15,10 +35,13 @@ struct BodyRegion: Identifiable {
     /// Optional second illustration shown alongside the primary one (e.g.
     /// lungs beside the heart for the cardio-respiratory region).
     let secondaryOrganImage: String?
-    /// Tappable hit-area over the silhouette, in body-relative coordinates
-    /// (0–1, origin = top-left of the *body* bounding box — see
-    /// `BodyMapCanvas.bodyMinX/MaxX/MinY/MaxY`).
-    let hitRect: CGRect
+    /// Anatomical anchor within the body figure (0–1, origin = top-left). This
+    /// is where the leader line points; the pin itself is parked in the margin.
+    let relativeX: Double
+    let relativeY: Double
+    /// Margin the pin is parked in. Regions are split roughly evenly between the
+    /// two sides so neither column gets crowded.
+    let side: BodySide
     let categories: [BiomarkerCategory]
     var items: [BiomarkerWithSeries] = []
 
@@ -67,7 +90,28 @@ final class BodyMapViewModel {
     /// (A previous stored-property version went stale on delete and only
     /// refreshed after a logout/login rebuilt the view model.)
     var regions: [BodyRegion] {
-        distribute(biomarkersRepo.results)
+        let year = showLatestOnly ? latestYear(in: biomarkersRepo.results) : nil
+        return distribute(biomarkersRepo.results, year: year)
+    }
+
+    /// The region for `OrganDetailView`: includes only markers that were
+    /// actually tested in the latest round (when "Latest results" is on,
+    /// matching what's highlighted on the silhouette), but — unlike `regions`
+    /// — keeps each marker's *full* measurement history so its trend chart
+    /// plots every result, not just the latest year's single point.
+    func detailRegion(for id: String) -> BodyRegion? {
+        guard var region = regionLayout.first(where: { $0.id == id }) else { return nil }
+        let cal = Calendar.current
+        let cats = region.categories
+        let year = showLatestOnly ? latestYear(in: biomarkersRepo.results) : nil
+
+        region.items = biomarkersRepo.results
+            .filter { cats.contains(biomarkerCategory(for: $0.biomarker.nameNo)) }
+            .filter { item in
+                guard let year else { return true }
+                return item.series.contains { cal.component(.year, from: $0.testedAt) == year }
+            }
+        return region
     }
 
     func load() async {
@@ -99,9 +143,8 @@ final class BodyMapViewModel {
             .max()
     }
 
-    private func distribute(_ results: [BiomarkerWithSeries]) -> [BodyRegion] {
+    private func distribute(_ results: [BiomarkerWithSeries], year: Int?) -> [BodyRegion] {
         let cal = Calendar.current
-        let year = showLatestOnly ? latestYear(in: results) : nil
 
         var updated = regionLayout
         for i in updated.indices {
@@ -121,17 +164,17 @@ final class BodyMapViewModel {
 
     private static func makeRegions() -> [BodyRegion] {
         [
-            // ── Neck ──────────────────────────────────────────────────────
             BodyRegion(
                 id: "thyroid",
                 label: "Thyroid",
                 systemImage: "waveform.path.ecg",
                 primaryOrganImage: "OrganThyroid",
                 secondaryOrganImage: nil,
-                hitRect: CGRect(x: 0.36, y: 0.095, width: 0.28, height: 0.065),
+                relativeX: 0.50,
+                relativeY: 0.155,
+                side: .left,
                 categories: [.thyroid]
             ),
-            // ── Chest ─────────────────────────────────────────────────────
             // Heart sits beside the otherwise-unused lungs illustration —
             // both live in the chest, and cardio + respiratory markers are
             // commonly read together.
@@ -141,10 +184,11 @@ final class BodyMapViewModel {
                 systemImage: "heart.fill",
                 primaryOrganImage: "OrganHeart",
                 secondaryOrganImage: "OrganLungs",
-                hitRect: CGRect(x: 0.22, y: 0.165, width: 0.56, height: 0.14),
+                relativeX: 0.36,
+                relativeY: 0.285,
+                side: .left,
                 categories: [.lipids, .cbc]
             ),
-            // ── Upper abdomen ────────────────────────────────────────────
             // Liver sits under the right rib cage, which appears on the
             // *left* side of a front-facing figure.
             BodyRegion(
@@ -153,7 +197,9 @@ final class BodyMapViewModel {
                 systemImage: "drop.fill",
                 primaryOrganImage: "OrganLiver",
                 secondaryOrganImage: nil,
-                hitRect: CGRect(x: 0.20, y: 0.31, width: 0.29, height: 0.10),
+                relativeX: 0.64,
+                relativeY: 0.345,
+                side: .right,
                 categories: [.liver]
             ),
             // Metabolism (glucose, insulin) is driven by the gut/pancreas —
@@ -165,17 +211,20 @@ final class BodyMapViewModel {
                 systemImage: "bolt.fill",
                 primaryOrganImage: "OrganDigestive",
                 secondaryOrganImage: nil,
-                hitRect: CGRect(x: 0.51, y: 0.31, width: 0.29, height: 0.10),
+                relativeX: 0.50,
+                relativeY: 0.41,
+                side: .left,
                 categories: [.metabolic]
             ),
-            // ── Mid abdomen ──────────────────────────────────────────────
             BodyRegion(
                 id: "renal",
                 label: "Kidneys",
                 systemImage: "circle.hexagongrid.fill",
                 primaryOrganImage: "OrganKidneys",
                 secondaryOrganImage: nil,
-                hitRect: CGRect(x: 0.18, y: 0.42, width: 0.31, height: 0.10),
+                relativeX: 0.50,
+                relativeY: 0.48,
+                side: .right,
                 categories: [.renal]
             ),
             // Nutrient absorption happens along the gut, so it shares the
@@ -186,10 +235,11 @@ final class BodyMapViewModel {
                 systemImage: "leaf.fill",
                 primaryOrganImage: "OrganDigestive",
                 secondaryOrganImage: nil,
-                hitRect: CGRect(x: 0.51, y: 0.42, width: 0.31, height: 0.10),
+                relativeX: 0.24,
+                relativeY: 0.38,
+                side: .left,
                 categories: [.nutrients]
             ),
-            // ── Lower abdomen / pelvis ───────────────────────────────────
             // Electrolyte balance is regulated by the kidneys, so it shares
             // the kidneys illustration until a dedicated adrenal/muscular
             // image is added.
@@ -199,7 +249,9 @@ final class BodyMapViewModel {
                 systemImage: "bolt.heart.fill",
                 primaryOrganImage: "OrganKidneys",
                 secondaryOrganImage: nil,
-                hitRect: CGRect(x: 0.18, y: 0.53, width: 0.31, height: 0.09),
+                relativeX: 0.76,
+                relativeY: 0.46,
+                side: .right,
                 categories: [.electrolytes]
             ),
             // No dedicated organ illustration yet — OrganDetailView falls
@@ -210,7 +262,9 @@ final class BodyMapViewModel {
                 systemImage: "ellipsis.circle.fill",
                 primaryOrganImage: "",
                 secondaryOrganImage: nil,
-                hitRect: CGRect(x: 0.51, y: 0.53, width: 0.31, height: 0.09),
+                relativeX: 0.50,
+                relativeY: 0.82,
+                side: .right,
                 categories: [.other]
             ),
         ]
