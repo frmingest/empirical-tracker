@@ -166,7 +166,17 @@ custom_foods      A user-authored food         "Home-made bone broth | per-100g 
 recipes           A user-authored recipe       "Ribeye & eggs | ingredients | servings"       (ADR-024/028)
 lab_imports       A staged PDF/photo import    "pending_review | extracted JSON | source pdf" (ADR-032)
 activity_metrics  Daily activity (one/day)     "2026-06-08 | 9 240 steps | 410 kcal | 32 min" (ADR-033)
+food_catalogue    Anonymous donated-food twin  "Rema Kyllingfilet | verified true | x3 corroborated" (ADR-027/029/034/035)
+recipe_catalogue  Anonymous donated-recipe twin "Ribeye & eggs | ingredients | servings"      (ADR-028/029)
 ```
+
+`food_catalogue` and `recipe_catalogue` are the **only** tables without a `user_id` —
+they hold anonymised twins of `custom_foods` / `recipes` rows the owner marked
+public, donated at create/edit time (ADR-029) and deduplicated by a generated key
+so the same product converges on one row across users (ADR-034). A `verified`
+flag and bare `contributor_count` (ADR-035) let two-or-more independent donations
+"lock in" a corroborated record and rank it first in search, without storing any
+contributor identity.
 
 Schema evolutions worth knowing (all in `api/supabase/migrations/`):
 
@@ -186,6 +196,15 @@ Schema evolutions worth knowing (all in `api/supabase/migrations/`):
   `on delete cascade`, `pending_review → applied | discarded` lifecycle, ADR-032).
 - **`021_activity_metrics.sql`** — the daily-grain `activity_metrics` table (steps,
   active energy, exercise minutes), upserted on `(user_id, measured_on)` (ADR-033).
+- **`022_activity_metrics_energy_float.sql`** — `active_energy_kcal` to `double
+  precision` so the Supabase REST API returns a JSON number, fixing a silent
+  iOS decode failure that showed "–" on the activity cards.
+- **`024_catalogue_dedup_keys.sql` / `025_catalogue_master_record.sql`** —
+  generated dedup keys (`barcode_norm`, `dedup_key`) plus unique indexes so the
+  same donated product converges on one `food_catalogue` row regardless of who
+  donates it (ADR-034); and a bare `contributor_count` + generated `verified`
+  flag with an atomic `donate_catalogue` RPC that protects a verified record from
+  being overwritten by a later donation (ADR-035).
 
 > Two migrations share the `019_` prefix (`food_entries_ingredients` and
 > `lab_imports`) — they landed on parallel branches; they touch different tables and
@@ -310,12 +329,49 @@ web's manual barcode field. Sourcing and accuracy limits: [`NUTRITION_DATA.md`](
 All third-party data is reached through the authenticated **backend proxy** — never
 called directly from the device.
 
+**Quick add, recents & copy-yesterday:** `RecentFoodsStore` tracks a device-local
+`useCount` per product; when the search box is empty, a **"Quick add"** section
+surfaces the top-5 most-used foods in both the diary search sheet and the meal-plan
+picker — one tap logs (or schedules) the product at its last-used quantity, with a
+trailing button to open the prefilled sheet and adjust. The same store backs a
+**recents** list for one-tap re-logging, and an empty day offers **"Copy yesterday's
+meals"**. Only product-backed logs feed these buffers — free-text entries are
+deliberately not recorded, to keep provenance honest.
+
+**Daily intake targets (WISHLIST #6, first slice):** an optional, user-set **energy
+target**, **protein target** (with a g/kg-of-body-weight quick-set from the latest
+stored weight, unblocked by ADR-017), and a **carb ceiling** (`NutritionTargetsStore`,
+device-local `UserDefaults`). The diary totals card reads today's totals against
+them with a progress bar and an icon-paired over-limit flag. As with every other
+number in the app, this is the user's **own** figure — the app never derives or
+recommends an intake target. Saturated-fat/sodium targets, backend sync across
+devices, and a widget ring are noted follow-ups.
+
+**Quiet habit feedback:** success **haptics** (`Common/Haptics.swift`) on food,
+body-metric, import, and plan-logging actions, plus a muted **streak / "N of last 7
+days logged"** line under the diary totals, derived from a 90-day rolling window of
+logged calendar days (`Common/LoggingActivityStore.swift`, device-local — not part of
+the GDPR export, which covers backend data only). No badges, levels, or celebrations
+by design.
+
 ### Meal plans & calendar (ADR-012, 020)
 
 The forward-looking half of the diary: a Monday→Sunday **week calendar** with per-day
 energy totals, **named plans** that group scheduled meals, and a **"Log to diary"**
 action that copies a planned meal into the diary for its date. Deleting a plan keeps its
 meals; deleting a meal keeps the plan.
+
+A usability-driven redesign reworked the surface around that model: a **plan-scope
+chip bar** (replacing a buried toolbar filter) is always reachable to switch, create,
+or manage plans; the **week overview** shows per-day energy at a glance; **day
+detail** groups scheduled meals by meal slot with a per-slot add; **"Log to diary"**
+is now an inline per-meal action; and **"Move to day/meal"** reschedules a planned
+meal (client-side recreate-then-delete via the additive
+`PlannedMealPayload(rescheduling:)`, preserving its nutrition, provenance, and
+done-state). An empty-state explainer and a **"How plans work"** sheet
+(`MealPlanHowItWorksSheet`) teach the model to first-time users. Scheduling a planned
+meal also feeds the food diary's most-used list (above). All new copy is localized
+(en + nb).
 
 ### Body & activity metrics + Withings (ADR-017, 021, 022, 023, 033)
 
@@ -400,6 +456,13 @@ Two overlay panels sit on the canvas:
 A bottom legend explains the four status colours. Lives in
 `ios/EmpiricalTracker/Features/Dashboard/DashboardBodyMapView.swift`.
 
+`DashboardBodyMapView` loads its own `bodyMetrics` / `activityMetrics` /
+`healthSyncState` and calls the same idempotent `healthSyncState.refreshOnAppear()`
+the Trends tab uses, so the HR/HRV/weight panels populate on first launch instead of
+showing `--` until the user has visited Trends. When there is **no data at all**, the
+body-map empty state is now **actionable** — an import CTA plus "Explore with sample
+data" (below) — instead of an all-grey silhouette.
+
 ### Doctor PDF report (Sprint 6 follow-up — shipped on iOS)
 
 A **selectable, printable A4 PDF report** for sharing with a clinician (Mail, AirDrop,
@@ -409,6 +472,50 @@ user picks whole categories and/or individual markers and chooses **latest value
 `CGContext` (no new dependency, works offline, reuses the in-app chart). It carries the
 same disclaimers: a cover note and a "decision-support, not medical advice" footer on
 every page. Lives in `ios/EmpiricalTracker/Features/ReportShare/`.
+
+### Sample-data explore mode (WISHLIST #12)
+
+"Explore with sample data" — offered on the auth screen and from the empty Body
+tab — opens the real Dashboard (body map, biomarker grid, detail charts with
+diet-event overlays) against a seeded, **local-only** `AppEnvironment.sampleData()`
+(`Features/SampleData/`). A persistent banner makes it unmistakable that the data
+isn't the user's own. Repositories carry an `isLocalOnly` flag so the sample world
+never makes a network call and the WidgetKit write-through is suppressed, so sample
+numbers never reach the Home Screen. This turns "time to first insight" from
+"whenever your next lab panel arrives" into seconds, for a brand-new account.
+
+### Local reminders (WISHLIST #2, first slice)
+
+Opt-in, **on-device** reminders configured in **Settings → Reminders**
+(`Features/Reminders/`), armed via `UNUserNotificationCenter` with no push
+infrastructure or server state:
+
+- a daily **"log today's meals"** nudge,
+- a daily **morning weigh-in** nudge, and
+- a one-shot **lab-cadence nudge** (`ReminderScheduler.labCadenceDays = 90`) anchored
+  to the latest imported panel — because a single panel can't draw a trend, the
+  import-success screen now sets that expectation directly and offers "Remind me in
+  about 3 months" inline.
+
+Each reminder has a stable identifier so re-syncing preferences replaces rather than
+stacks notifications. New-result push notifications ("Your LDL moved into Watch")
+remain open (see [`WISHLIST.md`](WISHLIST.md) #2).
+
+### Common food catalogue — dedup & master record (ADR-034, ADR-035)
+
+Backend-only quality work on the anonymous `food_catalogue` donated by ADR-029: every
+donated row now gets a **deterministic dedup key** — `barcode_norm` (GTIN-14,
+collapsing UPC-A/EAN-13/leading-zero variants of one barcode) for barcoded products,
+or `dedup_key` (`name|brand|serving`) for barcodeless ones — with a unique index, so
+the same product converges on **one row** regardless of who donates it (ADR-034).
+On top of that, an atomic `donate_catalogue` RPC tracks a bare, user-unlinkable
+**`contributor_count`** and a generated **`verified`** flag (`count >= 2`): an
+unverified record is updated by the newest non-null donation (never nulling a known
+value), while a **verified record's facts are frozen** — later donations can only
+corroborate (bump the count), not silently overwrite it (ADR-035). Catalogue search
+and barcode lookup now rank `verified` rows first, then by `contributor_count`. The
+shared `FoodItem` wire shape is unchanged — the trust signal is delivered as ranking,
+not a new field; a visible "verified" badge in the iOS picker is a noted follow-up.
 
 ---
 
@@ -434,8 +541,11 @@ addressed across a sequence of ADRs.
   measured" section (ADR-015).
 - **Further markers** — fasting insulin / C-peptide, fasting glucose, hs-CRP, AST/ASAT
   (ADR-015).
-- **Daily intake targets / needs**, including **protein in g/kg body weight** — unblocked
-  now that body weight is stored (ADR-016 / ADR-017).
+- **Daily intake targets / needs** — ✅ first slice shipped: an optional energy
+  target, **protein target in g/kg body weight** (unblocked now that body weight is
+  stored — ADR-016 / ADR-017), and a carb ceiling, read against the diary totals
+  (`NutritionTargetsStore`, device-local). Still open: saturated-fat / sodium
+  targets, backend sync across devices, and an intake-vs-target widget ring.
 - **Whole-food micronutrients** — carry the `micronutrients` map through to storage and
   intake totals, then wire selected micronutrients to their biomarker counterparts
   (iron→ferritin, B12, vitamin D, magnesium). This closes the diet ⇄ biomarker loop and
@@ -457,17 +567,24 @@ addressed across a sequence of ADRs.
 **Complete:** the read path / dashboard, biomarker detail with clinical signals, Excel
 import & panel timeline, **multi-format lab import — PDF & photo, on-device → review →
 apply (ADR-032)**, diet events, the **food diary with barcode scanning (ADR-019)**,
-**meal plans & calendar (ADR-020)**, **body metrics (ADR-021)**, the **Apple HealthKit
+**quick-add / recents / copy-yesterday and daily intake targets** (energy, protein
+g/kg, carb ceiling — WISHLIST #6 first slice), **quiet habit feedback** (haptics +
+streak line), the redesigned **meal plans & calendar (ADR-012, 020)** — plan-scope
+chip bar, week overview, per-slot day detail, inline "Log to diary", move to day/meal,
+**body metrics (ADR-021)**, the **Apple HealthKit
 Withings bridge (ADR-022, extended)** — weight + BP **plus heart metrics** (resting HR,
 HRV, average HR), deduped by sample UUID, **iPhone activity metrics** (steps, active
 energy, exercise minutes — ADR-033, day-key UPSERT), the **doctor PDF
 report**, **account / GDPR surface** (Sprint 11 — Delete account + Export data in
-Settings), **sign-up flow + first-run onboarding**, **custom-food and recipe
-anonymise-on-delete** (ADR-027, ADR-028), **proactive catalogue donation** (ADR-029),
-the **body-map dashboard** (ADR-030 — anatomical silhouette as default Body-tab view
-with health-stats and BP overlay panels, BMI derivation, and category drill-down), and
-the **four-tab floating shell** (Body / Nutrition / Trends / Settings — Diary, Plan and
-Recipes merged under Nutrition).
+Settings), **sign-up flow + first-run onboarding**, **sample-data explore mode**
+(WISHLIST #12) and **local reminders** (WISHLIST #2 first slice), **custom-food and
+recipe anonymise-on-delete** (ADR-027, ADR-028), **proactive catalogue donation**
+(ADR-029) with **deterministic dedup keys and a verified master-record lifecycle**
+(ADR-034, ADR-035), the **body-map dashboard** (ADR-030 — anatomical silhouette as
+default Body-tab view with health-stats and BP overlay panels, BMI derivation, category
+drill-down, and an actionable empty state that loads HealthKit data on first launch and
+offers the sample-data explore mode), and the **four-tab floating shell** (Body /
+Nutrition / Trends / Settings — Diary, Plan and Recipes merged under Nutrition).
 
 **In progress:** the **Withings Cloud connection (ADR-023)** — the iOS connect/disconnect/
 "Sync now" flow is shipped and self-gates until the backend `/withings/*` endpoints (OAuth
@@ -523,12 +640,15 @@ Weight trend; Lock Screen status-only by default).
 | `ios/EmpiricalTracker/Features/BodyMap/` | Anatomical silhouette, body-region pins, region sheet (ADR-030) |
 | `ios/EmpiricalTracker/Features/CategoryGraphs/` | Per-category multi-chart view, pushed from body map or category header |
 | `ios/EmpiricalTracker/Features/BiomarkerDetail/` | Trend chart, clinical signals, confounder notes, manual entry |
-| `ios/EmpiricalTracker/Features/FoodDiary/` | Diary, multi-source search, barcode scanner |
-| `ios/EmpiricalTracker/Features/MealPlans/` | Weekly calendar + plan management |
+| `ios/EmpiricalTracker/Features/FoodDiary/` | Diary, multi-source search, barcode scanner, recents/quick-add (`RecentFoodsStore`), daily intake targets (`NutritionTargetsStore`) |
+| `ios/EmpiricalTracker/Features/MealPlans/` | Weekly calendar + plan management (plan-scope chips, week overview, per-slot day detail, "How plans work") |
 | `ios/EmpiricalTracker/Features/BodyMetrics/` | Trends tab — body/heart-metric log + charts, HealthSync + WithingsCloud sections |
 | `ios/EmpiricalTracker/Features/ReportShare/` | Client-side doctor PDF report |
 | `ios/EmpiricalTracker/Features/Consent/` | Health-data consent gate (versioned `ConsentStore`) |
 | `ios/EmpiricalTracker/Features/Onboarding/` | First-run profile setup (height/weight/waist + units, or Apple Health) |
+| `ios/EmpiricalTracker/Features/SampleData/` | "Explore with sample data" — Dashboard against a seeded, local-only `AppEnvironment` |
+| `ios/EmpiricalTracker/Features/Reminders/` | Local meal/weigh-in/lab-cadence reminders (`ReminderScheduler`, `ReminderPreferencesStore`) |
+| `ios/EmpiricalTracker/Features/Common/` | Cross-feature helpers — `Haptics`, `LoggingActivityStore` (streak / last-7-days) |
 
 ---
 
