@@ -51,8 +51,16 @@ COMMENT ON COLUMN food_catalogue.dedup_key IS
 -- survivor's own facts are kept as-is (no cross-row coalescing) and exact-key
 -- only (no fuzzy near-duplicate matching); both are deferred to the
 -- master-record follow-up ADR.
+--
+-- The dupe map is recomputed inline as a CTE in BOTH statements rather than held
+-- in a TEMP table: a temp table is session-scoped, and the Supabase SQL editor
+-- runs each statement on a fresh pooled connection, so a temp table created in
+-- one "Run" is gone by the next. Recomputing is safe here — the UPDATE only
+-- touches custom_foods.catalogue_id, so the ranking over food_catalogue is
+-- identical for the DELETE that follows.
 
-CREATE TEMP TABLE _cat_dupe_map AS
+-- Keep the ADR-029 back-pointers valid: losers' twins are about to disappear, so
+-- point the user rows that referenced them at the survivor that remains.
 WITH ranked AS (
     SELECT
         id,
@@ -72,22 +80,42 @@ WITH ranked AS (
                 id ASC
         ) AS survivor_id
     FROM food_catalogue
+),
+dupe_map AS (
+    SELECT id, survivor_id FROM ranked WHERE id <> survivor_id
 )
-SELECT id, survivor_id
-FROM ranked
-WHERE id <> survivor_id;
-
--- Keep the ADR-029 back-pointers valid: losers' twins are about to disappear, so
--- point the user rows that referenced them at the survivor that remains.
 UPDATE custom_foods cf
 SET    catalogue_id = m.survivor_id
-FROM   _cat_dupe_map m
+FROM   dupe_map m
 WHERE  cf.catalogue_id = m.id;
 
+-- Delete the losers. Same ranking, recomputed (food_catalogue is unchanged by the
+-- UPDATE above).
+WITH ranked AS (
+    SELECT
+        id,
+        first_value(id) OVER (
+            PARTITION BY coalesce(barcode_norm, dedup_key)
+            ORDER BY
+                ( (energy_kcal     IS NOT NULL)::int
+                + (carbs_g         IS NOT NULL)::int
+                + (protein_g       IS NOT NULL)::int
+                + (fat_g           IS NOT NULL)::int
+                + (saturated_fat_g IS NOT NULL)::int
+                + (sodium_mg       IS NOT NULL)::int
+                + (serving_g       IS NOT NULL)::int
+                + (ingredients     IS NOT NULL)::int
+                + (brand           IS NOT NULL)::int ) DESC,
+                donated_at ASC,
+                id ASC
+        ) AS survivor_id
+    FROM food_catalogue
+),
+dupe_map AS (
+    SELECT id, survivor_id FROM ranked WHERE id <> survivor_id
+)
 DELETE FROM food_catalogue
-WHERE  id IN (SELECT id FROM _cat_dupe_map);
-
-DROP TABLE _cat_dupe_map;
+WHERE  id IN (SELECT id FROM dupe_map);
 
 -- ── 3. Swap raw-barcode uniqueness for the normalised keys ──────────────────────
 -- Full (non-partial) unique indexes on nullable columns: Postgres treats NULLs as
