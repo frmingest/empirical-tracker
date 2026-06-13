@@ -8,6 +8,9 @@
 [ADR-029](029-proactive-catalogue-donation.md) — keeps the anonymisation
 boundary and the `is_public` consent gate; changes only *how the donated twin is
 keyed* so the same product stops piling up.
+**Followed by:** [ADR-035](035-catalogue-master-record-lifecycle.md) — the
+deferred master-record *lifecycle* this ADR names below (corroboration count,
+`verified` master flag, conflict policy replacing last-writer-wins).
 
 ---
 
