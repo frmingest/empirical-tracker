@@ -215,14 +215,25 @@ def delete_custom_food(user_id: str, food_id: str) -> None:
 # ── Anonymising donation (ADR-027) ──────────────────────────────────────────────
 
 
+def _conflict_target(row: dict) -> str:
+    """The ``food_catalogue`` dedup key this row upserts on (ADR-034).
+
+    Barcoded rows merge on the normalised GTIN-14 (``barcode_norm``); barcodeless
+    rows merge on the ``name|brand|serving`` natural key (``dedup_key``). Both are
+    generated columns the DB derives from the factual fields we send, so the
+    payload never names them — only ``ON CONFLICT`` does.
+    """
+    return "barcode_norm" if row.get("barcode") else "dedup_key"
+
+
 def donate_to_catalogue(service_db, row: dict) -> None:
     """Copy a public custom food's factual fields into ``food_catalogue``.
 
     Keeps only the factual product columns (``_CATALOGUE_FIELDS``), dropping
     ``user_id`` / ``created_at`` / ``ocr_raw`` so the result is anonymous, not
-    merely pseudonymous (GDPR Recital 26). Upserts on ``barcode`` so re-donating
-    the same product updates its facts instead of piling up duplicates;
-    barcodeless rows are simply inserted (NULL barcodes stay distinct).
+    merely pseudonymous (GDPR Recital 26). Upserts on the row's normalised dedup
+    key (ADR-034) so re-donating the same product — by anyone — updates its facts
+    instead of piling up duplicates, for barcoded and barcodeless rows alike.
 
     This is the one-shot donate used by the deletion safety net (a public row
     that was never mirrored at create/update time). The proactive create/update
@@ -233,11 +244,9 @@ def donate_to_catalogue(service_db, row: dict) -> None:
     """
     facts = {k: row.get(k) for k in _CATALOGUE_FIELDS}
     facts["donated_at"] = date.today().isoformat()
-    table = service_db.table("food_catalogue")
-    if row.get("barcode"):
-        table.upsert(facts, on_conflict="barcode").execute()
-    else:
-        table.insert(facts).execute()
+    service_db.table("food_catalogue").upsert(
+        facts, on_conflict=_conflict_target(row)
+    ).execute()
 
 
 def sync_catalogue(user_db, user_id: str, row: dict) -> None:
@@ -249,12 +258,12 @@ def sync_catalogue(user_db, user_id: str, row: dict) -> None:
     ``user_id`` / ``created_at`` / ``ocr_raw`` are never copied), so what lands
     in the catalogue is anonymous product data, not personal data.
 
-    Dedupe strategy:
-      * **Barcoded** items upsert on ``barcode`` — the same product donated by
-        different users merges into one factual row (cross-user catalogue).
-      * **Barcodeless** items have no natural key, so the first donation records
-        the twin's id back on ``custom_foods.catalogue_id`` and later edits
-        update that row in place instead of piling up duplicates.
+    Dedupe strategy (ADR-034): both barcoded and barcodeless items now have a
+    deterministic key and upsert on it, so the same product donated by different
+    users merges into one factual row (a genuine cross-user catalogue):
+      * **Barcoded** items merge on the normalised GTIN-14 (``barcode_norm``).
+      * **Barcodeless** items merge on the ``name|brand|serving`` natural key
+        (``dedup_key``).
 
     The catalogue write runs on the service-role client; the back-pointer write
     runs on the caller's RLS-scoped ``user_db`` (it is the user's own row).
@@ -264,28 +273,21 @@ def sync_catalogue(user_db, user_id: str, row: dict) -> None:
         return
     service_db = get_service_supabase()
     facts = {k: row.get(k) for k in _CATALOGUE_FIELDS}
-    table = service_db.table("food_catalogue")
     catalogue_id = row.get("catalogue_id")
 
-    if row.get("barcode"):
-        resp = table.upsert(
+    resp = (
+        service_db.table("food_catalogue")
+        .upsert(
             {**facts, "donated_at": date.today().isoformat()},
-            on_conflict="barcode",
-        ).execute()
-        twin_id = (resp.data or [{}])[0].get("id")
-    elif catalogue_id:
-        # Update the existing twin in place; keep its original donated_at.
-        table.update(facts).eq("id", catalogue_id).execute()
-        twin_id = catalogue_id
-    else:
-        resp = table.insert(
-            {**facts, "donated_at": date.today().isoformat()}
-        ).execute()
-        twin_id = (resp.data or [{}])[0].get("id")
+            on_conflict=_conflict_target(row),
+        )
+        .execute()
+    )
+    twin_id = (resp.data or [{}])[0].get("id")
 
-    # Record the de-identified back-pointer so future edits update this same twin
-    # and reads can dedupe the live row against it. Forward-only: it lives on the
-    # user's row and dies with it (ADR-029).
+    # Record the de-identified back-pointer so reads can dedupe the live row
+    # against its twin. Forward-only: it lives on the user's row and dies with it
+    # (ADR-029).
     if twin_id and twin_id != catalogue_id and row.get("id"):
         (
             user_db.table("custom_foods")
