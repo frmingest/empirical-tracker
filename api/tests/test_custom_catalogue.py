@@ -17,10 +17,15 @@ def _fluent(execute_data=None):
     m.execute.return_value = MagicMock(data=execute_data)
     for method in (
         "table", "select", "eq", "ilike", "delete",
-        "insert", "update", "upsert", "limit",
+        "insert", "update", "upsert", "limit", "order", "rpc",
     ):
         getattr(m, method).return_value = m
     return m
+
+
+def _rpc_facts(mock_client):
+    """The de-identified facts payload passed to the donate_catalogue RPC."""
+    return mock_client.rpc.call_args.args[1]["p_facts"]
 
 
 def _public_row():
@@ -50,7 +55,7 @@ def test_donate_keeps_only_factual_fields_and_drops_identifiers():
     service = _fluent()
     custom.donate_to_catalogue(service, _public_row())
 
-    donated = service.upsert.call_args.args[0]
+    donated = _rpc_facts(service)
     # Factual product fields survive.
     assert donated["food_name"] == "Brand X Bar"
     assert donated["barcode"] == "737"
@@ -66,24 +71,35 @@ def test_donate_keeps_only_factual_fields_and_drops_identifiers():
     assert "donated_at" in donated
 
 
-def test_donate_upserts_on_normalised_barcode_to_dedupe():
+def test_donate_goes_through_donate_catalogue_rpc():
     service = _fluent()
     custom.donate_to_catalogue(service, _public_row())
-    # ADR-034: barcoded rows merge on the normalised GTIN-14, not the raw barcode.
-    service.upsert.assert_called_once()
-    assert service.upsert.call_args.kwargs["on_conflict"] == "barcode_norm"
+    # ADR-035: donation runs through the atomic RPC (upsert + conflict policy +
+    # corroboration count), not a plain table upsert/insert.
+    service.rpc.assert_called_once()
+    assert service.rpc.call_args.args[0] == "donate_catalogue"
+    service.upsert.assert_not_called()
     service.insert.assert_not_called()
 
 
-def test_donate_upserts_barcodeless_on_dedup_key():
+def test_donate_forwards_prior_catalogue_id_for_corroboration_count():
+    service = _fluent()
+    row = {**_public_row(), "catalogue_id": "cat-existing"}
+    custom.donate_to_catalogue(service, row)
+    # ADR-035: the donor's CURRENT back-pointer is passed so the RPC can tell a new
+    # corroboration (newly linking row) from a re-sync — without storing identity.
+    assert service.rpc.call_args.args[1]["p_prior_catalogue_id"] == "cat-existing"
+
+
+def test_donate_barcodeless_still_goes_through_rpc():
     service = _fluent()
     row = _public_row()
     row["barcode"] = None
     custom.donate_to_catalogue(service, row)
-    # ADR-034: barcodeless rows now merge cross-user on the name|brand|serving
-    # key instead of piling up as fresh inserts.
-    service.upsert.assert_called_once()
-    assert service.upsert.call_args.kwargs["on_conflict"] == "dedup_key"
+    # ADR-034/035: the SQL function picks dedup_key internally; the barcodeless
+    # row still merges cross-user via the same RPC, never a fresh insert.
+    service.rpc.assert_called_once()
+    assert _rpc_facts(service)["barcode"] is None
     service.insert.assert_not_called()
 
 
@@ -100,7 +116,7 @@ def test_delete_public_food_donates_then_deletes(mock_db, mock_service):
     custom.delete_custom_food("u1", "f1")
 
     # Donated on the service-role client, then erased on the user client.
-    service_db.upsert.assert_called_once()
+    service_db.rpc.assert_called_once()
     user_db.delete.assert_called_once()
 
 
@@ -136,7 +152,7 @@ def test_donate_public_foods_donates_each_public_row():
     service = _fluent(execute_data=rows)
     n = custom.donate_public_foods(service, "u1")
     assert n == 2
-    assert service.upsert.call_count == 2
+    assert service.rpc.call_count == 2
     # Filtered to public rows only.
     eq_calls = [c.args for c in service.eq.call_args_list]
     assert ("is_public", True) in eq_calls
@@ -157,9 +173,9 @@ def test_create_public_food_mirrors_to_catalogue(mock_db, mock_service):
         "u1", {"food_name": "Brand X Bar", "barcode": "737", "is_public": True}
     )
 
-    # Donated to the catalogue at create time (barcode → upsert), de-identified.
-    service_db.upsert.assert_called_once()
-    donated = service_db.upsert.call_args.args[0]
+    # Donated to the catalogue at create time via the RPC, de-identified.
+    service_db.rpc.assert_called_once()
+    donated = _rpc_facts(service_db)
     assert "user_id" not in donated and "ocr_raw" not in donated
     # The de-identified back-pointer is recorded on the user's own row.
     update_args = [c.args[0] for c in user_db.update.call_args_list]
@@ -190,10 +206,11 @@ def test_create_barcodeless_public_food_merges_on_dedup_key_and_links(mock_db, m
 
     custom.create_custom_food("u1", {"food_name": "Brand X Bar", "is_public": True})
 
-    # ADR-034: barcodeless → upsert on the name|brand|serving key (cross-user
-    # merge), then the twin id is linked back.
-    service_db.upsert.assert_called_once()
-    assert service_db.upsert.call_args.kwargs["on_conflict"] == "dedup_key"
+    # ADR-034/035: barcodeless → merges cross-user via the RPC (SQL picks dedup_key
+    # internally), then the twin id is linked back.
+    service_db.rpc.assert_called_once()
+    assert service_db.rpc.call_args.args[0] == "donate_catalogue"
+    assert _rpc_facts(service_db)["barcode"] is None
     service_db.insert.assert_not_called()
     update_args = [c.args[0] for c in user_db.update.call_args_list]
     assert {"catalogue_id": "cat9"} in update_args
@@ -223,7 +240,7 @@ def test_donate_public_foods_skips_already_mirrored():
     n = custom.donate_public_foods(service, "u1")
     # Only the un-mirrored row is donated by the safety net.
     assert n == 1
-    service.upsert.assert_called_once()
+    service.rpc.assert_called_once()
 
 
 # ── read side: anonymous food_catalogue source ──────────────────────────────────
@@ -250,6 +267,18 @@ def test_catalogue_search_is_unscoped(mock_db):
     # No user_id scoping — the donated catalogue is shared (no such column).
     eq_cols = [c.args[0] for c in db.eq.call_args_list]
     assert "user_id" not in eq_cols
+
+
+@patch("app.food_sources.food_catalogue.get_supabase")
+def test_catalogue_search_orders_verified_master_first(mock_db):
+    db = _fluent(execute_data=[{"id": "c1", "food_name": "Bar"}])
+    mock_db.return_value = db
+    asyncio.run(food_catalogue.search_products("bar"))
+    # ADR-035: the trusted master record (verified, then most corroborated) is
+    # surfaced first; the registry preserves this block order into "all" search.
+    ordered = [(c.args[0], c.kwargs.get("desc")) for c in db.order.call_args_list]
+    assert ("verified", True) in ordered
+    assert ("contributor_count", True) in ordered
 
 
 @patch("app.food_sources.food_catalogue.get_supabase")

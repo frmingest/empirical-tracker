@@ -215,38 +215,47 @@ def delete_custom_food(user_id: str, food_id: str) -> None:
 # ── Anonymising donation (ADR-027) ──────────────────────────────────────────────
 
 
-def _conflict_target(row: dict) -> str:
-    """The ``food_catalogue`` dedup key this row upserts on (ADR-034).
+def _donate(service_db, row: dict) -> dict:
+    """Run the anonymising donation through the ``donate_catalogue`` RPC (ADR-035).
 
-    Barcoded rows merge on the normalised GTIN-14 (``barcode_norm``); barcodeless
-    rows merge on the ``name|brand|serving`` natural key (``dedup_key``). Both are
-    generated columns the DB derives from the factual fields we send, so the
-    payload never names them — only ``ON CONFLICT`` does.
+    Builds the scrubbed factual payload (only ``_CATALOGUE_FIELDS`` survive —
+    ``user_id`` / ``created_at`` / ``ocr_raw`` are never copied, so the result is
+    anonymous, not merely pseudonymous; GDPR Recital 26) and hands it to the SQL
+    function, which atomically: chooses the dedup key (``barcode_norm`` for
+    barcoded rows, ``dedup_key`` for barcodeless — ADR-034), applies the
+    conflict policy (a verified record's facts are protected; otherwise newest
+    non-null wins), and bumps the bare corroboration counter when this donor row
+    is *newly* linking to the record. ``p_prior_catalogue_id`` — the donor's
+    current back-pointer — is how the function tells a new corroboration from a
+    re-sync; no contributor identity is sent or stored.
+
+    Returns the resulting catalogue row (so callers can read the twin ``id``).
     """
-    return "barcode_norm" if row.get("barcode") else "dedup_key"
+    facts = {k: row.get(k) for k in _CATALOGUE_FIELDS}
+    facts["donated_at"] = date.today().isoformat()
+    resp = service_db.rpc(
+        "donate_catalogue",
+        {"p_facts": facts, "p_prior_catalogue_id": row.get("catalogue_id")},
+    ).execute()
+    twin = resp.data
+    if isinstance(twin, list):
+        twin = twin[0] if twin else {}
+    return twin if isinstance(twin, dict) else {}
 
 
 def donate_to_catalogue(service_db, row: dict) -> None:
     """Copy a public custom food's factual fields into ``food_catalogue``.
 
-    Keeps only the factual product columns (``_CATALOGUE_FIELDS``), dropping
-    ``user_id`` / ``created_at`` / ``ocr_raw`` so the result is anonymous, not
-    merely pseudonymous (GDPR Recital 26). Upserts on the row's normalised dedup
-    key (ADR-034) so re-donating the same product — by anyone — updates its facts
-    instead of piling up duplicates, for barcoded and barcodeless rows alike.
-
-    This is the one-shot donate used by the deletion safety net (a public row
-    that was never mirrored at create/update time). The proactive create/update
-    path uses :func:`sync_catalogue`, which also records the back-pointer.
+    The one-shot donate used by the deletion safety net (a public row that was
+    never mirrored at create/update time). De-identifies and merges via
+    :func:`_donate` / the ``donate_catalogue`` RPC (ADR-034/035); the proactive
+    create/update path uses :func:`sync_catalogue`, which also records the
+    back-pointer.
 
     Runs on the **service-role** client — the one sanctioned service-role data
     path (ADR-026) — because ``food_catalogue`` is writable only by that role.
     """
-    facts = {k: row.get(k) for k in _CATALOGUE_FIELDS}
-    facts["donated_at"] = date.today().isoformat()
-    service_db.table("food_catalogue").upsert(
-        facts, on_conflict=_conflict_target(row)
-    ).execute()
+    _donate(service_db, row)
 
 
 def sync_catalogue(user_db, user_id: str, row: dict) -> None:
@@ -258,12 +267,15 @@ def sync_catalogue(user_db, user_id: str, row: dict) -> None:
     ``user_id`` / ``created_at`` / ``ocr_raw`` are never copied), so what lands
     in the catalogue is anonymous product data, not personal data.
 
-    Dedupe strategy (ADR-034): both barcoded and barcodeless items now have a
-    deterministic key and upsert on it, so the same product donated by different
-    users merges into one factual row (a genuine cross-user catalogue):
+    Dedupe + lifecycle (ADR-034/035): both barcoded and barcodeless items have a
+    deterministic key and merge on it through the ``donate_catalogue`` RPC, so the
+    same product donated by different users converges on one factual row (a genuine
+    cross-user catalogue):
       * **Barcoded** items merge on the normalised GTIN-14 (``barcode_norm``).
       * **Barcodeless** items merge on the ``name|brand|serving`` natural key
         (``dedup_key``).
+    The RPC also corroborates (bumps the bare contributor counter) when this row
+    is newly linking, and protects a ``verified`` record's facts (ADR-035).
 
     The catalogue write runs on the service-role client; the back-pointer write
     runs on the caller's RLS-scoped ``user_db`` (it is the user's own row).
@@ -272,18 +284,9 @@ def sync_catalogue(user_db, user_id: str, row: dict) -> None:
     if not row.get("is_public"):
         return
     service_db = get_service_supabase()
-    facts = {k: row.get(k) for k in _CATALOGUE_FIELDS}
     catalogue_id = row.get("catalogue_id")
 
-    resp = (
-        service_db.table("food_catalogue")
-        .upsert(
-            {**facts, "donated_at": date.today().isoformat()},
-            on_conflict=_conflict_target(row),
-        )
-        .execute()
-    )
-    twin_id = (resp.data or [{}])[0].get("id")
+    twin_id = _donate(service_db, row).get("id")
 
     # Record the de-identified back-pointer so reads can dedupe the live row
     # against its twin. Forward-only: it lives on the user's row and dies with it

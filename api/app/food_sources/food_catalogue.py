@@ -21,7 +21,7 @@ from app.food_sources.base import SOURCE_CATALOGUE, FoodItem, make_food_item
 _COLUMNS = (
     "id,food_name,brand,barcode,"
     "energy_kcal,carbs_g,protein_g,fat_g,saturated_fat_g,sodium_mg,serving_g,"
-    "ingredients"
+    "ingredients,verified,contributor_count"
 )
 
 
@@ -56,12 +56,18 @@ async def search_products(query: str, page_size: int = 20) -> list[FoodItem]:
 
     Unscoped by design: the donated facts are anonymous and shared, so every
     authenticated user sees the whole catalogue (the table has no ``user_id``).
+    Ordered so the trusted master record surfaces first (ADR-035): ``verified``
+    rows (corroborated by ≥2 independent contributors), then by corroboration
+    count. The registry merges catalogue results as an ordered block, so this
+    ranking carries through to the "all" search.
     """
     db = get_supabase()
     resp = (
         db.table("food_catalogue")
         .select(_COLUMNS)
         .ilike("food_name", f"%{query}%")
+        .order("verified", desc=True)
+        .order("contributor_count", desc=True)
         .limit(page_size)
         .execute()
     )
@@ -69,12 +75,18 @@ async def search_products(query: str, page_size: int = 20) -> list[FoodItem]:
 
 
 async def lookup_barcode(barcode: str) -> FoodItem | None:
-    """Exact barcode match against the donated catalogue (barcode is unique)."""
+    """Exact barcode match against the donated catalogue.
+
+    Prefers the trusted master record (ADR-035) if the raw barcode somehow maps to
+    more than one row (raw ``barcode`` is no longer unique — ``barcode_norm`` is).
+    """
     db = get_supabase()
     resp = (
         db.table("food_catalogue")
         .select(_COLUMNS)
         .eq("barcode", barcode)
+        .order("verified", desc=True)
+        .order("contributor_count", desc=True)
         .limit(1)
         .execute()
     )
