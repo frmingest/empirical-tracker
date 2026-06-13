@@ -3,26 +3,22 @@ import Core
 import Foundation
 import Observation
 
-/// Which margin a region's pin is parked in, beside the silhouette. The pin
-/// floats in the open space on this side and a leader line connects it back to
-/// the region's anatomical anchor on the body.
-enum BodySide {
-    case left
-    case right
-}
-
 /// Body-region grouping shown on the Body Map.
 struct BodyRegion: Identifiable {
     let id: String
     let label: String
     let systemImage: String
-    /// Anatomical anchor within the body figure (0–1, origin = top-left). This
-    /// is where the leader line points; the pin itself is parked in the margin.
-    let relativeX: Double
-    let relativeY: Double
-    /// Margin the pin is parked in. Regions are split roughly evenly between the
-    /// two sides so neither column gets crowded.
-    let side: BodySide
+    /// Asset name of the organ illustration shown at the top of
+    /// `OrganDetailView`. Empty string when no dedicated illustration exists
+    /// yet — the view falls back to a large `systemImage` glyph.
+    let primaryOrganImage: String
+    /// Optional second illustration shown alongside the primary one (e.g.
+    /// lungs beside the heart for the cardio-respiratory region).
+    let secondaryOrganImage: String?
+    /// Tappable hit-area over the silhouette, in body-relative coordinates
+    /// (0–1, origin = top-left of the *body* bounding box — see
+    /// `BodyMapCanvas.bodyMinX/MaxX/MinY/MaxY`).
+    let hitRect: CGRect
     let categories: [BiomarkerCategory]
     var items: [BiomarkerWithSeries] = []
 
@@ -125,76 +121,96 @@ final class BodyMapViewModel {
 
     private static func makeRegions() -> [BodyRegion] {
         [
+            // ── Neck ──────────────────────────────────────────────────────
             BodyRegion(
                 id: "thyroid",
                 label: "Thyroid",
                 systemImage: "waveform.path.ecg",
-                relativeX: 0.50,
-                relativeY: 0.155,
-                side: .left,
+                primaryOrganImage: "OrganThyroid",
+                secondaryOrganImage: nil,
+                hitRect: CGRect(x: 0.36, y: 0.095, width: 0.28, height: 0.065),
                 categories: [.thyroid]
             ),
+            // ── Chest ─────────────────────────────────────────────────────
+            // Heart sits beside the otherwise-unused lungs illustration —
+            // both live in the chest, and cardio + respiratory markers are
+            // commonly read together.
             BodyRegion(
                 id: "lipids_cbc",
                 label: "Heart & Blood",
                 systemImage: "heart.fill",
-                relativeX: 0.36,
-                relativeY: 0.285,
-                side: .left,
+                primaryOrganImage: "OrganHeart",
+                secondaryOrganImage: "OrganLungs",
+                hitRect: CGRect(x: 0.22, y: 0.165, width: 0.56, height: 0.14),
                 categories: [.lipids, .cbc]
             ),
+            // ── Upper abdomen ────────────────────────────────────────────
+            // Liver sits under the right rib cage, which appears on the
+            // *left* side of a front-facing figure.
             BodyRegion(
                 id: "liver",
                 label: "Liver",
                 systemImage: "drop.fill",
-                relativeX: 0.64,
-                relativeY: 0.345,
-                side: .right,
+                primaryOrganImage: "OrganLiver",
+                secondaryOrganImage: nil,
+                hitRect: CGRect(x: 0.20, y: 0.31, width: 0.29, height: 0.10),
                 categories: [.liver]
             ),
+            // Metabolism (glucose, insulin) is driven by the gut/pancreas —
+            // shares the digestive illustration with Nutrients below until a
+            // dedicated pancreas image is added.
             BodyRegion(
                 id: "metabolic",
                 label: "Metabolism",
                 systemImage: "bolt.fill",
-                relativeX: 0.50,
-                relativeY: 0.41,
-                side: .left,
+                primaryOrganImage: "OrganDigestive",
+                secondaryOrganImage: nil,
+                hitRect: CGRect(x: 0.51, y: 0.31, width: 0.29, height: 0.10),
                 categories: [.metabolic]
             ),
+            // ── Mid abdomen ──────────────────────────────────────────────
             BodyRegion(
                 id: "renal",
                 label: "Kidneys",
                 systemImage: "circle.hexagongrid.fill",
-                relativeX: 0.50,
-                relativeY: 0.48,
-                side: .right,
+                primaryOrganImage: "OrganKidneys",
+                secondaryOrganImage: nil,
+                hitRect: CGRect(x: 0.18, y: 0.42, width: 0.31, height: 0.10),
                 categories: [.renal]
             ),
+            // Nutrient absorption happens along the gut, so it shares the
+            // digestive illustration with Metabolism above.
             BodyRegion(
                 id: "nutrients",
                 label: "Nutrients",
                 systemImage: "leaf.fill",
-                relativeX: 0.24,
-                relativeY: 0.38,
-                side: .left,
+                primaryOrganImage: "OrganDigestive",
+                secondaryOrganImage: nil,
+                hitRect: CGRect(x: 0.51, y: 0.42, width: 0.31, height: 0.10),
                 categories: [.nutrients]
             ),
+            // ── Lower abdomen / pelvis ───────────────────────────────────
+            // Electrolyte balance is regulated by the kidneys, so it shares
+            // the kidneys illustration until a dedicated adrenal/muscular
+            // image is added.
             BodyRegion(
                 id: "electrolytes",
                 label: "Electrolytes",
                 systemImage: "bolt.heart.fill",
-                relativeX: 0.76,
-                relativeY: 0.46,
-                side: .right,
+                primaryOrganImage: "OrganKidneys",
+                secondaryOrganImage: nil,
+                hitRect: CGRect(x: 0.18, y: 0.53, width: 0.31, height: 0.09),
                 categories: [.electrolytes]
             ),
+            // No dedicated organ illustration yet — OrganDetailView falls
+            // back to a large systemImage glyph for this region.
             BodyRegion(
                 id: "other",
                 label: "Other",
                 systemImage: "ellipsis.circle.fill",
-                relativeX: 0.50,
-                relativeY: 0.82,
-                side: .right,
+                primaryOrganImage: "",
+                secondaryOrganImage: nil,
+                hitRect: CGRect(x: 0.51, y: 0.53, width: 0.31, height: 0.09),
                 categories: [.other]
             ),
         ]

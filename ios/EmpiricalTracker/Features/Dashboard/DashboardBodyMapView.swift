@@ -45,8 +45,8 @@ struct DashboardBodyMapView: View {
             // and a 5-minute window, so visiting both tabs won't double-sync.
             await env.healthSyncState.refreshOnAppear()
         }
-        .sheet(item: $selectedRegion) { region in
-            BodyRegionSheet(region: region) { marker in
+        .navigationDestination(item: $selectedRegion) { region in
+            OrganDetailView(region: region) { marker in
                 onSelectMarker(marker)
             }
         }
@@ -76,6 +76,7 @@ struct DashboardBodyMapView: View {
             ZStack(alignment: .top) {
                 BodyMapCanvas(
                     regions: vm.regions,
+                    biologicalSex: env.userProfile.biologicalSex,
                     silhouetteOpacity: 0.18,
                     bottomReserve: 0
                 ) { region in
