@@ -151,6 +151,12 @@ enum NutritionFormat {
         return "\(Int(mg.rounded())) \(String(localized: "food.unit.mg"))"
     }
 
+    /// A bare quantity for prefilling an editable grams field, e.g. "120" or
+    /// "37.5" — no unit, trailing-zero free so the text field reads cleanly.
+    static func quantityField(_ g: Double) -> String {
+        g.formatted(.number.precision(.fractionLength(0...1)).grouping(.never))
+    }
+
     /// Compact one-line macro summary with a single trailing unit, e.g. "C 8 · P 8 · F 17 g".
     /// Values round to whole grams so diary rows stay on a single, scannable line — the
     /// per-item detail keeps full precision. When every macro is missing the whole summary

@@ -24,10 +24,13 @@ struct ScheduleMealSheet: View {
 
     // MARK: - Init
 
-    init(viewModel: MealPlanViewModel, item: FoodItem) {
+    init(viewModel: MealPlanViewModel, item: FoodItem, initialQuantityG: Double? = nil) {
         self.viewModel = viewModel
         self.item = item
         _freeTextName = State(initialValue: item.name)
+        if let initialQuantityG {
+            _quantityText = State(initialValue: NutritionFormat.quantityField(initialQuantityG))
+        }
     }
 
     init(viewModel: MealPlanViewModel, freeTextName: String) {

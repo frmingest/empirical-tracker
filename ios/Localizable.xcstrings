@@ -1,6 +1,330 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "food.quickadd.title" : {
+      "comment" : "Section header above the list of most-used products offered for one-tap logging.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quick add"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hurtigvalg"
+          }
+        }
+      }
+    },
+    "food.quickadd.edit" : {
+      "comment" : "Accessibility label for the button that opens the quantity sheet to adjust a quick-add item before logging.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adjust quantity"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Juster mengde"
+          }
+        }
+      }
+    },
+    "food.quickadd.row %@ %@" : {
+      "comment" : "Accessibility label for a quick-add row. First placeholder is the product name, second is its last-used quantity and energy.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$@. Double-tap to add."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$@. Dobbelttrykk for å legge til."
+          }
+        }
+      }
+    },
+    "plan.meal.add" : {
+      "comment" : "Label on the slim button that adds a food to an empty meal slot on the plan day.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add food"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til mat"
+          }
+        }
+      }
+    },
+    "plan.slot.add %@" : {
+      "comment" : "Accessibility label for the per-slot add button. Placeholder is the meal slot name, e.g. Breakfast.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add to %@"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til i %@"
+          }
+        }
+      }
+    },
+    "plan.move.day" : {
+      "comment" : "Menu label that opens a submenu to reschedule a planned meal to a different day.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move to day"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flytt til dag"
+          }
+        }
+      }
+    },
+    "plan.move.meal" : {
+      "comment" : "Menu label that opens a submenu to move a planned meal to a different meal slot.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move to meal"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flytt til måltid"
+          }
+        }
+      }
+    },
+    "plan.howitworks.button" : {
+      "comment" : "Accessibility label / button title that opens the explainer describing how meal plans work.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How meal plans work"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slik fungerer måltidsplaner"
+          }
+        }
+      }
+    },
+    "plan.howitworks.title" : {
+      "comment" : "Navigation title of the sheet explaining how meal plans work.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How meal plans work"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slik fungerer måltidsplaner"
+          }
+        }
+      }
+    },
+    "plan.howitworks.intro" : {
+      "comment" : "Intro paragraph of the meal-plan explainer sheet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A meal plan lets you map out what you'll eat ahead of time, then log it to your diary when you actually eat it."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En måltidsplan lar deg planlegge hva du skal spise på forhånd, og logge det i dagboken når du faktisk spiser det."
+          }
+        }
+      }
+    },
+    "plan.howitworks.step1.title" : {
+      "comment" : "Title of the first step in the meal-plan explainer.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plan by day and meal"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planlegg etter dag og måltid"
+          }
+        }
+      }
+    },
+    "plan.howitworks.step1.body" : {
+      "comment" : "Body of the first step in the meal-plan explainer.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick a day, then add foods to breakfast, lunch, dinner or snack. Tap a slot's plus to add straight into it."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Velg en dag, og legg til mat under frokost, lunsj, middag eller snack. Trykk på pluss i et måltid for å legge til der."
+          }
+        }
+      }
+    },
+    "plan.howitworks.step2.title" : {
+      "comment" : "Title of the second step in the meal-plan explainer.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Log it when you eat"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Logg når du spiser"
+          }
+        }
+      }
+    },
+    "plan.howitworks.step2.body" : {
+      "comment" : "Body of the second step in the meal-plan explainer.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When you eat a planned meal, tap the fork icon to log it to your food diary — its nutrition carries over automatically."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Når du spiser et planlagt måltid, trykk på gaffelikonet for å logge det i matdagboken – næringsinnholdet følger med automatisk."
+          }
+        }
+      }
+    },
+    "plan.howitworks.step3.title" : {
+      "comment" : "Title of the third step in the meal-plan explainer.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Group with named plans"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grupper med navngitte planer"
+          }
+        }
+      }
+    },
+    "plan.howitworks.step3.body" : {
+      "comment" : "Body of the third step in the meal-plan explainer.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create named plans such as a Carnivore week to organise meals, then filter the calendar to one plan at a time."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lag navngitte planer som en Carnivore-uke for å organisere måltider, og filtrer kalenderen til én plan om gangen."
+          }
+        }
+      }
+    },
+    "plan.empty.explainer.title" : {
+      "comment" : "Title of the empty-state card shown when the plan week has no meals.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plan your week"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planlegg uken"
+          }
+        }
+      }
+    },
+    "plan.empty.explainer.message" : {
+      "comment" : "Body of the empty-state card shown when the plan week has no meals.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Map out meals ahead of time, then log them to your diary as you eat. Add your first meal to get started."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planlegg måltider på forhånd, og logg dem i dagboken etter hvert som du spiser. Legg til ditt første måltid for å komme i gang."
+          }
+        }
+      }
+    },
     "" : {
 
     },
