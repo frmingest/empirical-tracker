@@ -2,21 +2,24 @@ import Biomarkers
 import Core
 import SwiftUI
 
-/// Shared, fully responsive silhouette + tappable organ-area canvas used by
-/// both the Dashboard body-map panel and the full-screen Body Map.
+/// Shared, fully responsive silhouette + hotspot-pin canvas used by both the
+/// Dashboard body-map panel and the full-screen Body Map.
+///
+/// Layout idea: the body itself is a small target, so the pins are *not* drawn
+/// on the anatomy (where they overlap and crowd). Instead each pin is parked in
+/// the open margin beside the figure — left or right per `region.side` — and a
+/// thin leader line connects it back to a small status-coloured dot at the
+/// region's anatomical anchor on the body.
 ///
 /// The figure shown matches the user's `biologicalSex` (male/female; any
-/// other value falls back to the male figure). Each `BodyRegion` defines a
-/// rectangular `hitRect`, in body-relative coordinates, that sits directly
-/// over the anatomy it represents — tapping it opens `OrganDetailView`
-/// instead of the old margin pin + leader line.
+/// other value falls back to the male figure).
 ///
 /// Scaling rules (the whole point of this view):
 /// - The figure is **aspect-fit** into the available space, bounded by *both*
 ///   width and height, so it grows to use the vertical room on tall screens
 ///   instead of capping at a fixed width and floating in empty space.
-/// - Every hit-area's size is derived from the figure size, so the
-///   area-to-body proportion stays constant across every device size.
+/// - Every pin's size is derived from the figure width, so the pin-to-body
+///   proportion stays constant across every device size.
 /// - A single `maxFigureWidth` keeps the figure from becoming oversized on iPad.
 struct BodyMapCanvas: View {
     let regions: [BodyRegion]
@@ -30,7 +33,7 @@ struct BodyMapCanvas: View {
     var bottomReserve: CGFloat = 0
     /// When set, only regions whose status matches stay fully opaque; the rest
     /// dim back. Driven by the dashboard's status-summary chips so tapping a
-    /// status spotlights exactly those hit-areas on the body.
+    /// status spotlights exactly those pins on the body.
     var highlightedAssessment: MarkerSignals.Assessment? = nil
     var onSelect: (BodyRegion) -> Void
 
@@ -44,9 +47,9 @@ struct BodyMapCanvas: View {
     /// The body silhouette assets have transparent padding around the figure:
     /// the *visible body* occupies only this sub-rect of the image (measured
     /// from each asset's alpha channel; male and female bounds are close
-    /// enough to share one box). `BodyRegion.hitRect` is authored relative to
-    /// this box (0–1 across the body itself), so it lands on the right
-    /// anatomy instead of out in the empty padding.
+    /// enough to share one box). Region anchors are authored relative to this
+    /// box (0–1 across the body itself), so they land on the right anatomy
+    /// instead of out in the empty padding.
     private let bodyMinX: CGFloat = 0.26
     private let bodyMaxX: CGFloat = 0.74
     private let bodyMinY: CGFloat = 0.065
@@ -56,21 +59,36 @@ struct BodyMapCanvas: View {
         biologicalSex == .female ? "BodySilhouetteFemale" : "BodySilhouetteMale"
     }
 
+    // Cache placement math so it only recalculates when canvas size changes.
+    @State private var cachedPlacements: [PinPlacement] = []
+    @State private var cachedSize: CGSize = .zero
+    @State private var cachedBottomReserve: CGFloat = -1
+
     var body: some View {
         GeometryReader { geo in
             let size = geo.size
 
+            // Recompute geometry only when layout inputs change.
             let availableWidth  = max(size.width  - edgeInset * 2, 1)
             let availableHeight = max(size.height - edgeInset * 2 - bottomReserve, 1)
             let figureWidth  = min(availableWidth, availableHeight * aspect, maxFigureWidth)
             let figureHeight = figureWidth / aspect
             let originX = (size.width  - figureWidth)  / 2
             let originY = max((size.height - bottomReserve - figureHeight) / 2, edgeInset)
+            let bodyWidth   = figureWidth * (bodyMaxX - bodyMinX)
+            let pinDiameter = min(max(bodyWidth * 0.11, 11), 22)
 
-            let bodyLeft   = originX + figureWidth  * bodyMinX
-            let bodyTop    = originY + figureHeight * bodyMinY
-            let bodyWidth  = figureWidth  * (bodyMaxX - bodyMinX)
-            let bodyHeight = figureHeight * (bodyMaxY - bodyMinY)
+            let placements: [PinPlacement] = {
+                if size == cachedSize && bottomReserve == cachedBottomReserve && !cachedPlacements.isEmpty {
+                    return cachedPlacements
+                }
+                return makePlacements(
+                    canvasSize: size,
+                    originX: originX, originY: originY,
+                    figureWidth: figureWidth, figureHeight: figureHeight,
+                    pinDiameter: pinDiameter
+                )
+            }()
 
             ZStack(alignment: .topLeading) {
                 Image(silhouetteAssetName)
@@ -84,22 +102,54 @@ struct BodyMapCanvas: View {
                         y: originY + figureHeight / 2
                     )
 
-                ForEach(regions) { region in
-                    let live = regions.first { $0.id == region.id } ?? region
-                    let rect = CGRect(
-                        x: bodyLeft + live.hitRect.minX * bodyWidth,
-                        y: bodyTop  + live.hitRect.minY * bodyHeight,
-                        width:  live.hitRect.width  * bodyWidth,
-                        height: live.hitRect.height * bodyHeight
-                    )
-                    OrganHitArea(region: live, dimmed: isDimmed(live)) {
+                // Leader lines + anatomical anchor dots, drawn behind the pins.
+                // Live region lookup ensures year-filter changes (which mutate
+                // region items/assessments without changing canvas geometry) are
+                // reflected without invalidating the placement cache.
+                Canvas { ctx, _ in
+                    for placement in placements {
+                        let live = regions.first { $0.id == placement.region.id } ?? placement.region
+                        drawConnector(&ctx, placement: placement, liveRegion: live,
+                                      pinDiameter: pinDiameter, dimmed: isDimmed(live))
+                    }
+                }
+                .frame(width: size.width, height: size.height)
+                .allowsHitTesting(false)
+
+                ForEach(placements) { placement in
+                    let live = regions.first { $0.id == placement.region.id } ?? placement.region
+                    let dimmed = isDimmed(live)
+                    BodyMapHotspotPin(region: live, diameter: pinDiameter) {
                         onSelect(live)
                     }
-                    .frame(width: rect.width, height: rect.height)
-                    .position(x: rect.midX, y: rect.midY)
+                    .position(placement.pin)
+                    .opacity(dimmed ? 0.22 : 1)
+                    .animation(.easeInOut(duration: 0.2), value: dimmed)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onChange(of: size) { _, newSize in
+                cachedSize = newSize
+                cachedBottomReserve = bottomReserve
+                cachedPlacements = makePlacements(
+                    canvasSize: newSize,
+                    originX: originX, originY: originY,
+                    figureWidth: figureWidth, figureHeight: figureHeight,
+                    pinDiameter: pinDiameter
+                )
+            }
+            .onAppear {
+                if cachedPlacements.isEmpty {
+                    cachedSize = size
+                    cachedBottomReserve = bottomReserve
+                    cachedPlacements = makePlacements(
+                        canvasSize: size,
+                        originX: originX, originY: originY,
+                        figureWidth: figureWidth, figureHeight: figureHeight,
+                        pinDiameter: pinDiameter
+                    )
+                }
+            }
         }
     }
 
@@ -108,45 +158,165 @@ struct BodyMapCanvas: View {
         guard let highlighted = highlightedAssessment else { return false }
         return region.worstAssessment.legendOrder != highlighted.legendOrder
     }
+
+    // MARK: - Placement
+
+    /// A resolved pin: where it's parked in the margin (`pin`) and where its
+    /// leader line points on the body (`anchor`), both in canvas coordinates.
+    private struct PinPlacement: Identifiable {
+        let region: BodyRegion
+        let anchor: CGPoint
+        let pin: CGPoint
+        var id: String { region.id }
+    }
+
+    /// Build the two margin columns. Each side's pins are ordered by anatomical
+    /// height and then de-overlapped with a minimum vertical spacing so the
+    /// column stays legible even when several anchors sit close together.
+    private func makePlacements(
+        canvasSize: CGSize,
+        originX: CGFloat, originY: CGFloat,
+        figureWidth: CGFloat, figureHeight: CGFloat,
+        pinDiameter: CGFloat
+    ) -> [PinPlacement] {
+        let hitSize = max(pinDiameter * 1.45, 44)
+
+        let bodyLeftX  = originX + figureWidth * bodyMinX
+        let bodyRightX = originX + figureWidth * bodyMaxX
+
+        // Park each column in the centre of its margin, but clamp so the whole
+        // pin (and its tap target) stays on-screen and clear of the figure.
+        let leftColumnX = clamp(bodyLeftX / 2,
+                                min: hitSize / 2 + 2,
+                                max: bodyLeftX - hitSize * 0.35)
+        let rightColumnX = clamp((bodyRightX + canvasSize.width) / 2,
+                                 min: bodyRightX + hitSize * 0.35,
+                                 max: canvasSize.width - hitSize / 2 - 2)
+
+        let topBound    = originY + hitSize / 2
+        let bottomBound = originY + figureHeight - hitSize / 2
+        let spacing     = max(hitSize * 0.95, pinDiameter * 1.7)
+
+        func column(_ regions: [BodyRegion], x: CGFloat) -> [PinPlacement] {
+            // Anatomical anchor for each region, sorted top→bottom.
+            let anchored = regions.map { region -> (BodyRegion, CGPoint) in
+                let frameX = bodyMinX + region.relativeX * (bodyMaxX - bodyMinX)
+                let frameY = bodyMinY + region.relativeY * (bodyMaxY - bodyMinY)
+                let anchor = CGPoint(
+                    x: originX + figureWidth  * frameX,
+                    y: originY + figureHeight * frameY
+                )
+                return (region, anchor)
+            }
+            .sorted { $0.1.y < $1.1.y }
+
+            // Seed each pin at its anchor height, then push down to honour the
+            // minimum spacing; if the column overruns the bottom, lift it back up.
+            var ys = anchored.map { clamp($0.1.y, min: topBound, max: bottomBound) }
+            for i in ys.indices where i > 0 {
+                ys[i] = max(ys[i], ys[i - 1] + spacing)
+            }
+            if let last = ys.last, last > bottomBound {
+                let overflow = last - bottomBound
+                for i in ys.indices { ys[i] = max(ys[i] - overflow, topBound) }
+                for i in ys.indices where i > 0 {
+                    ys[i] = max(ys[i], ys[i - 1] + spacing)
+                }
+            }
+
+            return zip(anchored, ys).map { entry, y in
+                PinPlacement(region: entry.0, anchor: entry.1, pin: CGPoint(x: x, y: y))
+            }
+        }
+
+        return column(regions.filter { $0.side == .left },  x: leftColumnX)
+             + column(regions.filter { $0.side == .right }, x: rightColumnX)
+    }
+
+    /// Draw a dashed leader line from the pin's edge to a status-coloured dot at
+    /// the anatomical anchor. Accepts liveRegion so colour reflects the current
+    /// filter state rather than the cached placement's stale region snapshot.
+    private func drawConnector(
+        _ ctx: inout GraphicsContext,
+        placement: PinPlacement,
+        liveRegion: BodyRegion,
+        pinDiameter: CGFloat,
+        dimmed: Bool = false
+    ) {
+        let alpha = dimmed ? 0.22 : 1.0
+        let pin = placement.pin
+        let anchor = placement.anchor
+        let dx = anchor.x - pin.x
+        let dy = anchor.y - pin.y
+        let dist = max(hypot(dx, dy), 0.0001)
+        let ux = dx / dist
+        let uy = dy / dist
+
+        let dotRadius = max(pinDiameter * 0.16, 3)
+        let start = CGPoint(x: pin.x + ux * (pinDiameter / 2 + 3),
+                            y: pin.y + uy * (pinDiameter / 2 + 3))
+        let end = CGPoint(x: anchor.x - ux * dotRadius,
+                          y: anchor.y - uy * dotRadius)
+
+        var line = Path()
+        line.move(to: start)
+        line.addLine(to: end)
+        ctx.stroke(
+            line,
+            with: .color(Color.textMuted.opacity(0.45 * alpha)),
+            style: StrokeStyle(lineWidth: 1, lineCap: .round, dash: [3, 3])
+        )
+
+        let color = liveRegion.worstAssessment.pinColor
+        let dotRect = CGRect(x: anchor.x - dotRadius, y: anchor.y - dotRadius,
+                             width: dotRadius * 2, height: dotRadius * 2)
+        ctx.fill(Path(ellipseIn: dotRect), with: .color(color.opacity(alpha)))
+        ctx.stroke(Path(ellipseIn: dotRect), with: .color(.white.opacity(0.65 * alpha)), lineWidth: 0.5)
+    }
 }
 
-// MARK: - Organ hit area
+/// Clamp that tolerates an inverted `min`/`max` (which happens on very small
+/// canvases where the margins collapse): rather than trapping on a bad
+/// `ClosedRange`, it falls back to the midpoint so a pin still has a position.
+private func clamp(_ value: CGFloat, min lower: CGFloat, max upper: CGFloat) -> CGFloat {
+    if lower > upper { return (lower + upper) / 2 }
+    return Swift.min(Swift.max(value, lower), upper)
+}
 
-/// A tappable rectangle overlaid directly on the body region it represents.
-/// Shown as a soft, rounded outline with the region's icon and a small
-/// status-coloured dot so the user can see at a glance where to tap and what
-/// that area's overall status is.
-struct OrganHitArea: View {
+// MARK: - Hotspot pin
+
+/// A single tappable region pin. Every dimension is derived from `diameter`
+/// (handed down by `BodyMapCanvas`) so the pin scales with the silhouette.
+struct BodyMapHotspotPin: View {
     let region: BodyRegion
-    var dimmed: Bool = false
+    let diameter: CGFloat
     let onTap: () -> Void
 
     private var assessment: MarkerSignals.Assessment { region.worstAssessment }
 
+    private var hitSize: CGFloat { max(diameter * 1.45, 44) }
+
     var body: some View {
         Button(action: onTap) {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.textMuted.opacity(0.12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .strokeBorder(assessment.pinColor.opacity(0.55), lineWidth: 1.5)
-                )
-                .overlay(alignment: .topTrailing) {
-                    Circle()
-                        .fill(assessment.pinColor)
-                        .frame(width: 10, height: 10)
-                        .padding(4)
-                }
-                .overlay {
-                    Image(systemName: region.systemImage)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.textSecondary)
-                }
-                .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            ZStack {
+                Color.clear
+                    .frame(width: hitSize, height: hitSize)
+
+                Circle()
+                    .fill(assessment.pinColor)
+                    .frame(width: diameter, height: diameter)
+                    .shadow(color: assessment.pinColor.opacity(0.45), radius: diameter * 0.18, x: 0, y: 2)
+
+                Image(systemName: region.systemImage)
+                    .resizable()
+                    .scaledToFit()
+                    .fontWeight(.semibold)
+                    .frame(width: diameter * 0.42, height: diameter * 0.42)
+                    .foregroundStyle(.white)
+            }
+            .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .opacity(dimmed ? 0.22 : 1)
-        .animation(.easeInOut(duration: 0.2), value: dimmed)
         .accessibilityLabel("\(region.label): \(accessibilityStatus)")
         .accessibilityHint("Opens \(region.label) details")
     }
@@ -165,7 +335,8 @@ struct OrganHitArea: View {
 // MARK: - Status colour
 
 extension MarkerSignals.Assessment {
-    /// Shared status colour used by the hit-area outline and dot.
+    /// Shared status colour used by both the margin pin and its anatomical
+    /// anchor dot, so a region reads as one unit across the leader line.
     var pinColor: Color {
         switch self {
         case .outOfRange: return .outRange
