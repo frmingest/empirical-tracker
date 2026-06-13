@@ -4,7 +4,19 @@ import Foundation
 import Observation
 
 /// Body-region grouping shown on the Body Map.
-struct BodyRegion: Identifiable {
+///
+/// `Hashable` is identity-based (by `id`) so `navigationDestination(item:)`
+/// keeps tracking the same pushed screen even as `items` refresh underneath
+/// it (e.g. after a delete-all or fresh import).
+struct BodyRegion: Identifiable, Hashable {
+    static func == (lhs: BodyRegion, rhs: BodyRegion) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
     let id: String
     let label: String
     let systemImage: String
