@@ -2,17 +2,19 @@ import Core
 import MealPlans
 import SwiftUI
 
-/// The Plan tab (Sprint 7, ADR-012). Redesigned around a calendar-first layout: a
-/// rounded week strip sits above a "selected day" card that lists that day's
-/// planned meals. Multi-week navigation, per-day energy totals, named-plan
-/// filtering and the "Log to diary" promotion (reusing the Sprint 6 food pipeline)
-/// are all preserved; only the presentation changed.
+/// The Plan tab (Sprint 7, ADR-012). Redesigned for clarity: a visible plan-scope
+/// chip bar makes named plans discoverable, the week strip surfaces per-day energy
+/// at a glance, and the selected-day card groups meals by slot (Breakfast / Lunch /
+/// Dinner / Snack) with a per-slot add. "Log to diary" is a first-class inline
+/// action, and a "How plans work" explainer teaches the model. Multi-week
+/// navigation, the named-plan filter and the diary promotion are all preserved.
 struct MealPlanCalendarView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var viewModel: MealPlanViewModel?
     /// The day whose meals are shown in the detail card. Always a member of the
     /// view model's currently-loaded week.
     @State private var selectedDay = Calendar.current.startOfDay(for: .now)
+    @State private var isHowItWorksPresented = false
 
     var body: some View {
         NavigationStack {
@@ -28,7 +30,7 @@ struct MealPlanCalendarView: View {
             .toolbar { toolbarContent }
             .task {
                 if viewModel == nil {
-                    viewModel = MealPlanViewModel(repo: env.mealPlans)
+                    viewModel = MealPlanViewModel(repo: env.mealPlans, recents: env.recentFoods)
                     await viewModel?.load()
                     selectedDay = clamp(.now, into: viewModel?.week)
                 }
@@ -49,6 +51,9 @@ struct MealPlanCalendarView: View {
                     MealPlanManagerSheet(viewModel: vm)
                 }
             }
+            .sheet(isPresented: $isHowItWorksPresented) {
+                MealPlanHowItWorksSheet()
+            }
             .alert(
                 String(localized: "plan.error.title"),
                 isPresented: Binding(
@@ -68,9 +73,13 @@ struct MealPlanCalendarView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
-            if let vm = viewModel {
-                PlanFilterMenu(viewModel: vm)
+            Button {
+                isHowItWorksPresented = true
+            } label: {
+                Image(systemName: "questionmark.circle")
+                    .accessibilityLabel(String(localized: "plan.howitworks.button"))
             }
+            .foregroundStyle(Color.accent)
         }
         ToolbarItem(placement: .topBarTrailing) {
             Button {
@@ -92,14 +101,25 @@ struct MealPlanCalendarView: View {
         } else {
             ScrollView {
                 VStack(spacing: 16) {
-                    WeekCalendarCard(
+                    // Always shown so "Manage plans" (and creating the first named
+                    // plan) stays reachable even before any plan exists.
+                    PlanScopeBar(viewModel: vm)
+
+                    WeekOverviewCard(
                         viewModel: vm,
                         selectedDay: $selectedDay,
                         onShift: { offset in await shiftWeek(by: offset, vm: vm) },
                         onToday: { await goToToday(vm) }
                     )
 
-                    SelectedDayCard(viewModel: vm, day: selectedDay)
+                    if vm.isWeekEmpty {
+                        PlanEmptyExplainer(
+                            onAdd: { vm.beginAdd(on: selectedDay, meal: .breakfast) },
+                            onLearnMore: { isHowItWorksPresented = true }
+                        )
+                    } else {
+                        DayDetailCard(viewModel: vm, day: selectedDay)
+                    }
 
                     DisclaimerFooter()
                         .padding(.horizontal, 4)
@@ -136,36 +156,51 @@ struct MealPlanCalendarView: View {
     }
 }
 
-// MARK: - Plan filter menu
+// MARK: - Plan scope bar
 
-private struct PlanFilterMenu: View {
+/// Horizontal chip row that surfaces the named-plan filter (previously buried in a
+/// toolbar menu). "All" plus one chip per plan, then a trailing "Manage" button.
+private struct PlanScopeBar: View {
     @Bindable var viewModel: MealPlanViewModel
 
     var body: some View {
-        Menu {
-            Picker(String(localized: "plan.filter.title"), selection: $viewModel.selectedPlanId) {
-                Text(String(localized: "plan.filter.all")).tag(String?.none)
-                ForEach(viewModel.plans) { plan in
-                    Text(plan.name).tag(String?.some(plan.id))
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                PillChip(
+                    String(localized: "plan.filter.all"),
+                    isSelected: viewModel.selectedPlanId == nil
+                ) {
+                    withAnimation(.snappy(duration: 0.2)) { viewModel.selectedPlanId = nil }
                 }
+
+                ForEach(viewModel.plans) { plan in
+                    PillChip(plan.name, isSelected: viewModel.selectedPlanId == plan.id) {
+                        withAnimation(.snappy(duration: 0.2)) { viewModel.selectedPlanId = plan.id }
+                    }
+                }
+
+                Button {
+                    viewModel.isPlanManagerPresented = true
+                } label: {
+                    Label(String(localized: "plan.manage"), systemImage: "folder")
+                        .font(.headlineSmall)
+                        .foregroundStyle(Color.accent)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 9)
+                        .background(Color.accent.opacity(0.10), in: Capsule())
+                }
+                .buttonStyle(.plain)
             }
-            Divider()
-            Button {
-                viewModel.isPlanManagerPresented = true
-            } label: {
-                Label(String(localized: "plan.manage"), systemImage: "folder")
-            }
-        } label: {
-            Image(systemName: viewModel.selectedPlanId == nil ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
-                .accessibilityLabel(String(localized: "plan.filter.title"))
+            .padding(.horizontal, 2)
         }
-        .tint(Color.accent)
     }
 }
 
-// MARK: - Week calendar card
+// MARK: - Week overview card
 
-private struct WeekCalendarCard: View {
+/// Enriched week strip: each day cell shows its number and a compact energy total
+/// so the week reads at a glance. Keeps the month header + prev/next/"today".
+private struct WeekOverviewCard: View {
     let viewModel: MealPlanViewModel
     @Binding var selectedDay: Date
     let onShift: (Int) async -> Void
@@ -234,21 +269,26 @@ private struct WeekCalendarCard: View {
     private func dayCell(_ day: Date) -> some View {
         let isSelected = Calendar.current.isDate(day, inSameDayAs: selectedDay)
         let isToday = Calendar.current.isDateInToday(day)
-        let hasMeals = !viewModel.meals(on: day).isEmpty
+        let kcal = viewModel.energyTotal(on: day)
+        let count = viewModel.mealCount(on: day)
 
         return Button {
             withAnimation(.snappy(duration: 0.2)) { selectedDay = day }
         } label: {
-            VStack(spacing: 4) {
+            VStack(spacing: 3) {
                 Text(day.formatted(.dateTime.day()))
                     .font(.headlineMedium)
                     .foregroundStyle(dayColor(isSelected: isSelected, isToday: isToday))
-                Circle()
-                    .fill(hasMeals ? (isSelected ? Color.white : Color.accent) : Color.clear)
-                    .frame(width: 5, height: 5)
+                // Compact energy when the day has meals; a fixed-height blank
+                // keeps every cell the same size so the grid stays even.
+                Text(count > 0 ? compactKcal(kcal) : " ")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(isSelected ? Color.white.opacity(0.85) : Color.textMuted)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+            .padding(.vertical, 7)
             .background {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.accent)
@@ -260,8 +300,20 @@ private struct WeekCalendarCard: View {
             .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(day.formatted(.dateTime.weekday(.wide).day().month(.wide)))
+        .accessibilityLabel(accessibilityLabel(day: day, count: count, kcal: kcal))
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+
+    private func accessibilityLabel(day: Date, count: Int, kcal: Double) -> String {
+        let date = day.formatted(.dateTime.weekday(.wide).day().month(.wide))
+        guard count > 0 else { return date }
+        return "\(date), \(count) meals, \(NutritionFormat.energy(kcal))"
+    }
+
+    /// "640" or "1.2k" — keeps the tiny cell label legible.
+    private func compactKcal(_ kcal: Double) -> String {
+        guard kcal >= 1000 else { return "\(Int(kcal.rounded()))" }
+        return "\((kcal / 1000).formatted(.number.precision(.fractionLength(1))))k"
     }
 
     private func dayColor(isSelected: Bool, isToday: Bool) -> Color {
@@ -270,41 +322,22 @@ private struct WeekCalendarCard: View {
         return .textPrimary
     }
 
-    private var monthTitle: String {
-        selectedDay.formatted(.dateTime.month(.wide))
-    }
-
-    private var yearTitle: String {
-        selectedDay.formatted(.dateTime.year())
-    }
+    private var monthTitle: String { selectedDay.formatted(.dateTime.month(.wide)) }
+    private var yearTitle: String { selectedDay.formatted(.dateTime.year()) }
 }
 
-// MARK: - Selected day card
+// MARK: - Selected day card (grouped by meal slot)
 
-private struct SelectedDayCard: View {
+private struct DayDetailCard: View {
     let viewModel: MealPlanViewModel
     let day: Date
 
-    private var meals: [PlannedMeal] { viewModel.meals(on: day) }
-
     var body: some View {
         SoftCard {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 18) {
                 header
-
-                if meals.isEmpty {
-                    emptyRow
-                } else {
-                    VStack(spacing: 10) {
-                        ForEach(meals) { meal in
-                            PlannedMealRow(
-                                meal: meal,
-                                onToggleDone: { Task { await viewModel.toggleDone(meal) } },
-                                onLogToDiary: { Task { await viewModel.logToDiary(meal) } },
-                                onDelete: { Task { await viewModel.delete(meal) } }
-                            )
-                        }
-                    }
+                ForEach(viewModel.slots(on: day), id: \.self) { slot in
+                    MealSlotSection(viewModel: viewModel, day: day, slot: slot)
                 }
             }
         }
@@ -312,38 +345,87 @@ private struct SelectedDayCard: View {
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(day.formatted(.dateTime.day().month(.wide).year()))
+            Text(day.formatted(.dateTime.weekday(.wide).day().month(.wide)))
                 .font(.headlineLarge)
                 .foregroundStyle(Color.textPrimary)
             Spacer()
-            if !meals.isEmpty {
-                Text(NutritionFormat.energy(viewModel.energyTotal(on: day)))
+            let total = viewModel.energyTotal(on: day)
+            if total > 0 {
+                Text(NutritionFormat.energy(total))
                     .font(.numericSmall)
                     .foregroundStyle(Color.textSecondary)
             }
-            Button {
-                viewModel.beginAdd(on: day, meal: .breakfast)
-            } label: {
-                Image(systemName: "plus.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(Color.accent)
+        }
+    }
+}
+
+// MARK: - Meal slot section
+
+/// One meal slot (Breakfast / Lunch / Dinner / Snack) on a day: a header that
+/// colour-codes the slot and totals its energy, a per-slot "+", and the slot's
+/// meals (or a slim "add food" prompt when empty).
+private struct MealSlotSection: View {
+    let viewModel: MealPlanViewModel
+    let day: Date
+    let slot: Meal
+
+    private var meals: [PlannedMeal] { viewModel.meals(on: day, slot: slot) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Label(slot.localizedName, systemImage: slot.icon)
+                    .labelStyle(.titleAndIcon)
+                    .font(.headlineSmall)
+                    .foregroundStyle(slot.tint)
+                Spacer(minLength: 0)
+                let kcal = viewModel.energyTotal(on: day, slot: slot)
+                if kcal > 0 {
+                    Text(NutritionFormat.energy(kcal))
+                        .font(.labelMedium)
+                        .foregroundStyle(Color.textMuted)
+                }
+                Button {
+                    viewModel.beginAdd(on: day, meal: slot)
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(Color.accent)
+                }
+                .accessibilityLabel(String(localized: "plan.slot.add \(slot.localizedName)"))
             }
-            .accessibilityLabel(String(localized: "plan.day.add"))
+
+            if meals.isEmpty {
+                emptyRow
+            } else {
+                ForEach(meals) { meal in
+                    PlannedMealRow(
+                        meal: meal,
+                        weekDays: viewModel.week.days,
+                        onToggleDone: { Task { await viewModel.toggleDone(meal) } },
+                        onLogToDiary: { Task { await viewModel.logToDiary(meal) } },
+                        onMove: { date, slot in Task { await viewModel.move(meal, toDate: date, slot: slot) } },
+                        onDelete: { Task { await viewModel.delete(meal) } }
+                    )
+                }
+            }
         }
     }
 
     private var emptyRow: some View {
         Button {
-            viewModel.beginAdd(on: day, meal: .breakfast)
+            viewModel.beginAdd(on: day, meal: slot)
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: "plus.circle")
-                Text(String(localized: "plan.day.add"))
+                Image(systemName: "plus")
+                Text(String(localized: "plan.meal.add"))
                 Spacer()
             }
-            .font(.bodyMedium)
-            .foregroundStyle(Color.accent)
-            .padding(.vertical, 12)
+            .font(.bodySmall)
+            .foregroundStyle(Color.textMuted)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 10)
+            .background(Color.bgElevated, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -353,8 +435,10 @@ private struct SelectedDayCard: View {
 
 private struct PlannedMealRow: View {
     let meal: PlannedMeal
+    let weekDays: [Date]
     let onToggleDone: () -> Void
     let onLogToDiary: () -> Void
+    let onMove: (Date, Meal) -> Void
     let onDelete: () -> Void
 
     var body: some View {
@@ -380,14 +464,6 @@ private struct PlannedMealRow: View {
                         .foregroundStyle(Color.textPrimary)
                 }
                 HStack(spacing: 8) {
-                    Label {
-                        Text(meal.meal.localizedName)
-                    } icon: {
-                        Image(systemName: meal.meal.icon)
-                    }
-                    .labelStyle(.titleAndIcon)
-                    .font(.labelSmall)
-                    .foregroundStyle(meal.meal.tint)
                     if let q = meal.quantityG {
                         Text(NutritionFormat.grams(q))
                             .font(.bodySmall)
@@ -400,15 +476,42 @@ private struct PlannedMealRow: View {
                 }
             }
 
+            // "Log to diary" promoted to a first-class inline action (was buried
+            // in the overflow menu). Dimmed once already logged/done.
+            Button(action: onLogToDiary) {
+                Image(systemName: "fork.knife")
+                    .font(.bodyMedium)
+                    .foregroundStyle(meal.done ? Color.textMuted : Color.accent)
+                    .frame(width: 32, height: 32)
+                    .background((meal.done ? Color.textMuted : Color.accent).opacity(0.12), in: Circle())
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(String(localized: "plan.log_to_diary"))
+
             Menu {
-                Button {
-                    onLogToDiary()
+                Menu {
+                    ForEach(weekDays, id: \.self) { d in
+                        Button(d.formatted(.dateTime.weekday(.wide).day())) {
+                            onMove(d, meal.meal)
+                        }
+                    }
                 } label: {
-                    Label(String(localized: "plan.log_to_diary"), systemImage: "fork.knife")
+                    Label(String(localized: "plan.move.day"), systemImage: "calendar")
                 }
-                Button(role: .destructive) {
-                    onDelete()
+                Menu {
+                    ForEach([Meal.breakfast, .lunch, .dinner, .snack]) { s in
+                        Button {
+                            onMove(meal.scheduledOn, s)
+                        } label: {
+                            Label(s.localizedName, systemImage: s.icon)
+                        }
+                    }
                 } label: {
+                    Label(String(localized: "plan.move.meal"), systemImage: "arrow.up.arrow.down")
+                }
+                Divider()
+                Button(role: .destructive, action: onDelete) {
                     Label(String(localized: "common.delete"), systemImage: "trash")
                 }
             } label: {
@@ -444,6 +547,46 @@ private struct PlannedMealRow: View {
         parts.append(NutritionFormat.energy(meal.energyKcal))
         if meal.done { parts.append(String(localized: "plan.meal.done")) }
         return parts.joined(separator: ", ")
+    }
+}
+
+// MARK: - Empty / first-run explainer
+
+/// Shown when the visible week has no scheduled meals — explains the model in
+/// plain language and offers the two next steps (add a meal / learn more).
+private struct PlanEmptyExplainer: View {
+    let onAdd: () -> Void
+    let onLearnMore: () -> Void
+
+    var body: some View {
+        SoftCard {
+            VStack(spacing: 14) {
+                CircleIconBadge("calendar", tint: Color.accent, size: 52)
+                Text(String(localized: "plan.empty.explainer.title"))
+                    .font(.headlineLarge)
+                    .foregroundStyle(Color.textPrimary)
+                    .multilineTextAlignment(.center)
+                Text(String(localized: "plan.empty.explainer.message"))
+                    .font(.bodyMedium)
+                    .foregroundStyle(Color.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button(action: onAdd) {
+                    Label(String(localized: "plan.day.add"), systemImage: "plus")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(PrimaryButtonStyle())
+
+                Button(action: onLearnMore) {
+                    Text(String(localized: "plan.howitworks.button"))
+                        .font(.bodyMedium)
+                        .foregroundStyle(Color.accent)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+        }
     }
 }
 

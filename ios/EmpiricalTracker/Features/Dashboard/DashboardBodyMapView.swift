@@ -32,7 +32,18 @@ struct DashboardBodyMapView: View {
             if viewModel == nil {
                 viewModel = BodyMapViewModel(biomarkersRepo: env.biomarkers)
             }
+            // The silhouette's HR/HRV and weight panels read env.bodyMetrics /
+            // env.activityMetrics / env.healthSyncState — but those were only
+            // primed by the Trends tab. Prime them here too so the data is
+            // present on first launch without a detour through Trends.
+            async let bm: () = env.bodyMetrics.load()
+            async let am: () = env.activityMetrics.load()
             await viewModel?.load()
+            _ = await (bm, am)
+            // Top up from Apple Health + arm background observation. This is the
+            // same call the Trends tab uses; it self-guards on connection state
+            // and a 5-minute window, so visiting both tabs won't double-sync.
+            await env.healthSyncState.refreshOnAppear()
         }
         .sheet(item: $selectedRegion) { region in
             BodyRegionSheet(region: region) { marker in

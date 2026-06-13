@@ -58,6 +58,8 @@ final class FoodDiaryViewModel {
     var isSearching: Bool               { repo.isSearching }
     var hasEntries: Bool                { !repo.entries.isEmpty }
     var recentFoods: [RecentFoodsStore.RecentFood] { recents?.items ?? [] }
+    /// The user's most-used products, surfaced as one-tap quick-add defaults.
+    var topFoods: [RecentFoodsStore.RecentFood] { recents?.topUsed ?? [] }
 
     var isToday: Bool {
         Calendar.current.isDateInToday(selectedDate)
@@ -93,6 +95,22 @@ final class FoodDiaryViewModel {
         searchQuery = ""
         repo.searchResults = []
         isAddPresented = true
+    }
+
+    // MARK: - Quick add
+
+    /// One-tap log of a most-used product at the quantity it was last used,
+    /// into the meal slot the add-sheet is targeting. Reuses `log(_:recentItem:)`
+    /// so the recents buffer + use count update and the success haptic fires.
+    func quickLog(_ recent: RecentFoodsStore.RecentFood) async {
+        let item = recent.asFoodItem()
+        let payload = FoodEntryPayload(
+            loggedOn: selectedDate,
+            meal: addTargetMeal,
+            item: item,
+            quantityG: recent.lastQuantityG
+        )
+        await log(payload, recentItem: item, quantityG: recent.lastQuantityG)
     }
 
     // MARK: - Search (debounced ~400 ms; ignores stale responses via task cancellation)

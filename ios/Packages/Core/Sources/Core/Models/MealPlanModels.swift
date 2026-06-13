@@ -241,6 +241,29 @@ public struct PlannedMealPayload: Encodable, Sendable {
         self.planId       = planId
     }
 
+    /// Reschedules an existing planned meal onto a new day/slot, preserving its
+    /// stored nutrition totals, provenance (barcode / source / ingredients) and
+    /// plan grouping. Used by the client-side "Move": the calendar PATCH only
+    /// updates `done`, so a move is recreate-then-delete (ADR-012).
+    public init(rescheduling meal: PlannedMeal, toDate date: Date, slot: Meal) {
+        self.scheduledOn   = date
+        self.meal          = slot
+        self.foodName      = meal.foodName
+        self.brand         = meal.brand
+        self.barcode       = meal.barcode
+        self.quantityG     = meal.quantityG
+        self.energyKcal    = meal.energyKcal
+        self.carbsG        = meal.carbsG
+        self.proteinG      = meal.proteinG
+        self.fatG          = meal.fatG
+        self.saturatedFatG = meal.saturatedFatG
+        self.sodiumMg      = meal.sodiumMg
+        self.source        = meal.source
+        self.note          = meal.note
+        self.ingredients   = meal.ingredients
+        self.planId        = meal.planId
+    }
+
     enum CodingKeys: String, CodingKey {
         case scheduledOn, meal, foodName, brand, barcode, quantityG, energyKcal
         case carbsG, proteinG, fatG, saturatedFatG, sodiumMg, source, note, ingredients, planId

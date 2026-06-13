@@ -9,6 +9,9 @@ struct PlannedMealPickerSheet: View {
     @Bindable var viewModel: MealPlanViewModel
 
     @State private var selectedItem: FoodItem?
+    /// Quantity to prefill when `selectedItem` was opened from a quick-add row's
+    /// "edit" button; `nil` for an ordinary search result.
+    @State private var quickEditQuantityG: Double?
     @State private var isFreeText = false
     @State private var isScanning = false
     @State private var scanMessage: String?
@@ -32,7 +35,7 @@ struct PlannedMealPickerSheet: View {
                 }
             }
             .sheet(item: $selectedItem) { item in
-                ScheduleMealSheet(viewModel: viewModel, item: item)
+                ScheduleMealSheet(viewModel: viewModel, item: item, initialQuantityG: quickEditQuantityG)
             }
             .sheet(isPresented: $isFreeText) {
                 ScheduleMealSheet(viewModel: viewModel, freeTextName: trimmedQuery)
@@ -133,8 +136,26 @@ struct PlannedMealPickerSheet: View {
     @ViewBuilder
     private var resultsList: some View {
         List {
+            // Top-used products, one tap to schedule at the last-used quantity.
+            if trimmedQuery.isEmpty && !viewModel.topFoods.isEmpty {
+                Section(String(localized: "food.quickadd.title")) {
+                    ForEach(viewModel.topFoods) { recent in
+                        QuickAddRow(
+                            recent: recent,
+                            onAdd: { Task { await viewModel.quickSchedule(recent) } },
+                            onEdit: {
+                                quickEditQuantityG = recent.lastQuantityG
+                                selectedItem = recent.asFoodItem()
+                            }
+                        )
+                        .listRowBackground(Color.bgCard)
+                    }
+                }
+            }
+
             ForEach(viewModel.searchResults) { item in
                 Button {
+                    quickEditQuantityG = nil
                     selectedItem = item
                 } label: {
                     FoodResultRow(item: item)
@@ -159,7 +180,7 @@ struct PlannedMealPickerSheet: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .overlay {
-            if viewModel.searchResults.isEmpty && trimmedQuery.isEmpty {
+            if viewModel.searchResults.isEmpty && trimmedQuery.isEmpty && viewModel.topFoods.isEmpty {
                 ContentUnavailableView(
                     String(localized: "food.search.empty.title"),
                     systemImage: "magnifyingglass",

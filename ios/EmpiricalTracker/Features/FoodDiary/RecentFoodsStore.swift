@@ -30,6 +30,62 @@ public final class RecentFoodsStore {
         public let ingredients: String?
         public var lastQuantityG: Double
         public var lastUsedAt: Date
+        /// How many times this product has been logged. Drives the "most used"
+        /// quick-add ordering. Defaults to 1 when decoding buffers persisted
+        /// before this field existed (see `init(from:)`).
+        public var useCount: Int
+
+        public init(
+            code: String,
+            name: String,
+            brand: String?,
+            source: FoodSource,
+            energyKcal100g: Double?,
+            carbs100g: Double?,
+            protein100g: Double?,
+            fat100g: Double?,
+            saturatedFat100g: Double?,
+            sodium100g: Double?,
+            ingredients: String?,
+            lastQuantityG: Double,
+            lastUsedAt: Date,
+            useCount: Int
+        ) {
+            self.code = code
+            self.name = name
+            self.brand = brand
+            self.source = source
+            self.energyKcal100g = energyKcal100g
+            self.carbs100g = carbs100g
+            self.protein100g = protein100g
+            self.fat100g = fat100g
+            self.saturatedFat100g = saturatedFat100g
+            self.sodium100g = sodium100g
+            self.ingredients = ingredients
+            self.lastQuantityG = lastQuantityG
+            self.lastUsedAt = lastUsedAt
+            self.useCount = useCount
+        }
+
+        // Backward-compatible decode: `useCount` was added later, so buffers
+        // persisted before this release won't carry it — default those to 1.
+        public init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            code = try c.decode(String.self, forKey: .code)
+            name = try c.decode(String.self, forKey: .name)
+            brand = try c.decodeIfPresent(String.self, forKey: .brand)
+            source = try c.decode(FoodSource.self, forKey: .source)
+            energyKcal100g = try c.decodeIfPresent(Double.self, forKey: .energyKcal100g)
+            carbs100g = try c.decodeIfPresent(Double.self, forKey: .carbs100g)
+            protein100g = try c.decodeIfPresent(Double.self, forKey: .protein100g)
+            fat100g = try c.decodeIfPresent(Double.self, forKey: .fat100g)
+            saturatedFat100g = try c.decodeIfPresent(Double.self, forKey: .saturatedFat100g)
+            sodium100g = try c.decodeIfPresent(Double.self, forKey: .sodium100g)
+            ingredients = try c.decodeIfPresent(String.self, forKey: .ingredients)
+            lastQuantityG = try c.decode(Double.self, forKey: .lastQuantityG)
+            lastUsedAt = try c.decode(Date.self, forKey: .lastUsedAt)
+            useCount = try c.decodeIfPresent(Int.self, forKey: .useCount) ?? 1
+        }
 
         public func asFoodItem() -> FoodItem {
             FoodItem(
@@ -50,7 +106,18 @@ public final class RecentFoodsStore {
 
     public private(set) var items: [RecentFood] = []
 
+    /// The most-used products, surfaced as one-tap "quick add" defaults so
+    /// repetitive eaters skip the search entirely. Ordered by use count, then
+    /// recency as a tiebreaker.
+    public var topUsed: [RecentFood] {
+        items
+            .sorted { ($0.useCount, $0.lastUsedAt) > ($1.useCount, $1.lastUsedAt) }
+            .prefix(Self.topUsedLimit)
+            .map { $0 }
+    }
+
     private static let capacity = 20
+    private static let topUsedLimit = 5
     private static let key = "food.recents"
 
     public init() {
@@ -63,6 +130,9 @@ public final class RecentFoodsStore {
     /// Records a logged product at the head of the list, deduplicating on the
     /// product identity and capping the buffer.
     public func record(item: FoodItem, quantityG: Double) {
+        // Carry the running use count forward from any existing entry so the
+        // "most used" ordering reflects total logs, not just the latest.
+        let previousCount = items.first { $0.id == identity(of: item) }?.useCount ?? 0
         let recent = RecentFood(
             code: item.code,
             name: item.name,
@@ -76,7 +146,8 @@ public final class RecentFoodsStore {
             sodium100g: item.sodium100g,
             ingredients: item.ingredients,
             lastQuantityG: quantityG,
-            lastUsedAt: .now
+            lastUsedAt: .now,
+            useCount: previousCount + 1
         )
         items.removeAll { $0.id == recent.id }
         items.insert(recent, at: 0)
@@ -84,6 +155,12 @@ public final class RecentFoodsStore {
             items.removeLast(items.count - Self.capacity)
         }
         persist()
+    }
+
+    /// The `RecentFood.id` a freshly logged item would map to — used to find an
+    /// existing entry so its use count can be carried forward.
+    private func identity(of item: FoodItem) -> String {
+        "\(item.source.rawValue)|\(item.code)|\(item.name)|\(item.brand ?? "")"
     }
 
     private func persist() {

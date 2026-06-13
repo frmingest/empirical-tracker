@@ -7,6 +7,9 @@ struct FoodSearchSheet: View {
     @Bindable var viewModel: FoodDiaryViewModel
 
     @State private var selectedItem: FoodItem?
+    /// Quantity to prefill when `selectedItem` was opened from a quick-add row's
+    /// "edit" button; `nil` for an ordinary search result.
+    @State private var quickEditQuantityG: Double?
     @State private var isFreeText = false
     @State private var isScanning = false
     @State private var scanMessage: String?
@@ -35,9 +38,10 @@ struct FoodSearchSheet: View {
                     }
                 }
             }
-            // Quantity entry for a searched / scanned product.
+            // Quantity entry for a searched / scanned product (or a quick-add
+            // row's "edit", which prefills the last-used quantity).
             .sheet(item: $selectedItem) { item in
-                LogFoodSheet(viewModel: viewModel, item: item)
+                LogFoodSheet(viewModel: viewModel, item: item, initialQuantityG: quickEditQuantityG)
             }
             // Free-text entry (no product match).
             .sheet(isPresented: $isFreeText) {
@@ -182,12 +186,31 @@ struct FoodSearchSheet: View {
                 .transition(.opacity)
         } else {
             List {
+                // Top-used products, one tap to log at the last-used quantity —
+                // the fastest path for repetitive eaters. Shown while idle.
+                if trimmedQuery.isEmpty && !viewModel.topFoods.isEmpty {
+                    Section(String(localized: "food.quickadd.title")) {
+                        ForEach(viewModel.topFoods) { recent in
+                            QuickAddRow(
+                                recent: recent,
+                                onAdd: { Task { await viewModel.quickLog(recent) } },
+                                onEdit: {
+                                    quickEditQuantityG = recent.lastQuantityG
+                                    selectedItem = recent.asFoodItem()
+                                }
+                            )
+                            .listRowBackground(Color.bgCard)
+                        }
+                    }
+                }
+
                 // One-tap re-logging for the foods this user actually eats — shown
                 // while the search field is empty.
                 if trimmedQuery.isEmpty && !viewModel.recentFoods.isEmpty {
                     Section(String(localized: "food.recent.title")) {
                         ForEach(viewModel.recentFoods) { recent in
                             Button {
+                                quickEditQuantityG = nil
                                 selectedItem = recent.asFoodItem()
                             } label: {
                                 FoodResultRow(item: recent.asFoodItem())
@@ -199,6 +222,7 @@ struct FoodSearchSheet: View {
 
                 ForEach(viewModel.searchResults) { item in
                     Button {
+                        quickEditQuantityG = nil
                         selectedItem = item
                     } label: {
                         FoodResultRow(item: item)
@@ -338,6 +362,64 @@ private struct ShimmerRow: View {
             startPoint: .leading,
             endPoint: .trailing
         )
+    }
+}
+
+// MARK: - Quick-add row
+
+/// A most-used product rendered for one-tap logging. The row body adds the
+/// product instantly at its last-used quantity; the trailing button opens the
+/// quantity sheet to adjust first.
+struct QuickAddRow: View {
+    let recent: RecentFoodsStore.RecentFood
+    let onAdd: () -> Void
+    let onEdit: () -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Button(action: onAdd) {
+                HStack(spacing: 10) {
+                    CircleIconBadge("bolt.fill", tint: Color.accent, size: 30)
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 8) {
+                            Text(recent.name)
+                                .font(.bodyMedium)
+                                .foregroundStyle(Color.textPrimary)
+                                .lineLimit(1)
+                            FoodSourceBadge(source: recent.source)
+                        }
+                        Text(lastUsedSummary)
+                            .font(.bodySmall)
+                            .foregroundStyle(Color.textMuted)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            Button(action: onEdit) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.bodyMedium)
+                    .foregroundStyle(Color.accent)
+                    .frame(width: 32, height: 32)
+                    .background(Color.accent.opacity(0.12), in: Circle())
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(String(localized: "food.quickadd.edit"))
+        }
+        .padding(.vertical, 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(String(localized: "food.quickadd.row \(recent.name) \(lastUsedSummary)"))
+        .accessibilityAddTraits(.isButton)
+    }
+
+    /// "120 g · 240 kcal" — the last-used quantity and its scaled energy.
+    private var lastUsedSummary: String {
+        let energy = recent.energyKcal100g.map { $0 * recent.lastQuantityG / 100 }
+        return "\(NutritionFormat.grams(recent.lastQuantityG)) · \(NutritionFormat.energy(energy))"
     }
 }
 

@@ -26,11 +26,14 @@ struct LogFoodSheet: View {
 
     // MARK: - Init
 
-    init(viewModel: FoodDiaryViewModel, item: FoodItem) {
+    init(viewModel: FoodDiaryViewModel, item: FoodItem, initialQuantityG: Double? = nil) {
         self.viewModel = viewModel
         self.item = item
         _freeTextName = State(initialValue: item.name)
         _meal = State(initialValue: viewModel.addTargetMeal)
+        if let initialQuantityG {
+            _quantityText = State(initialValue: NutritionFormat.quantityField(initialQuantityG))
+        }
     }
 
     init(viewModel: FoodDiaryViewModel, freeTextName: String) {
