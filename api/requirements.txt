@@ -10,6 +10,7 @@ python-dotenv==1.0.1
 openpyxl==3.1.5
 python-multipart==0.0.20
 httpx==0.28.1  # runtime: Open Food Facts client (food diary) + test client
+beautifulsoup4==4.12.3  # runtime: recipe-URL import HTML parsing
 
 # dev / test
 pytest==8.3.4

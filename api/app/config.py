@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     max_upload_bytes: int = 10 * 1024 * 1024  # 10 MiB — xlsx biomarker imports
     max_xlsx_uncompressed_bytes: int = 200 * 1024 * 1024  # zip-bomb guard
     max_ocr_chars: int = 20_000  # nutrition-label OCR text sent to the LLM
+    max_recipe_page_bytes: int = 2 * 1024 * 1024  # 2 MiB cap on a fetched recipe page
+    max_recipe_html_chars: int = 20_000  # recipe page text sent to the LLM fallback
 
     # Rate limiting (ADR-026 F2). Per-user sliding-window limits, "requests/window
     # seconds". The standard limit covers ordinary endpoints; the expensive limit

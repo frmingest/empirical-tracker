@@ -77,6 +77,16 @@ public final class RecipesRepository {
         recipes.removeAll { $0.id == id }
     }
 
+    // MARK: - Import from URL
+
+    /// Fetches a recipe page and returns a `RecipePayload` preview for the
+    /// authoring form — nothing is persisted by this call. The user reviews and
+    /// edits the result, then saves it via `create`/`update` as normal.
+    public func importFromUrl(_ url: String) async throws -> RecipePayload {
+        struct Body: Encodable { let url: String }
+        return try await client.request(.post("/recipes/import-url", body: Body(url: url)))
+    }
+
     // MARK: - Favourite
 
     /// Stars / un-stars a recipe. Updates the cached copy in place so every screen

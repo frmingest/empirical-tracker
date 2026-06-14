@@ -523,3 +523,160 @@ def test_favorite_endpoint(mock_fav):
         mock_fav.assert_called_once_with("u1", "r1", True)
     finally:
         app.dependency_overrides.clear()
+
+
+# ── URL import: SSRF guard ──────────────────────────────────────────────────────────
+
+
+def test_is_public_host_rejects_private_and_loopback():
+    from app.recipes import url_parser
+
+    assert url_parser._is_public_host("127.0.0.1") is False
+    assert url_parser._is_public_host("localhost") is False
+    assert url_parser._is_public_host("10.0.0.5") is False
+    assert url_parser._is_public_host("169.254.169.254") is False  # cloud metadata
+
+
+def test_validate_url_rejects_bad_schemes_and_hosts():
+    from app.recipes import url_parser
+
+    for bad in ("ftp://example.com/recipe", "file:///etc/passwd", "http://127.0.0.1/recipe"):
+        try:
+            url_parser._validate_url(bad)
+            raise AssertionError(f"expected ValueError for {bad}")
+        except ValueError:
+            pass
+
+
+# ── URL import: JSON-LD extraction ──────────────────────────────────────────────────
+
+
+def test_extract_json_ld_recipe_finds_recipe_node():
+    from app.recipes import url_parser
+
+    html = """
+    <html><head>
+    <script type="application/ld+json">
+    {"@context": "https://schema.org", "@graph": [
+      {"@type": "WebPage", "name": "Some page"},
+      {"@type": "Recipe", "name": "Bacon-Wrapped Pork", "recipeIngredient": ["1 lb pork"],
+       "recipeInstructions": [{"@type": "HowToStep", "text": "Sear it"}],
+       "recipeYield": "4 servings", "recipeCategory": "Dinner",
+       "image": {"@type": "ImageObject", "url": "https://example.com/img.jpg"},
+       "nutrition": {"calories": "320 kcal", "proteinContent": "28 g",
+                      "fatContent": "22 g", "carbohydrateContent": "2 g"},
+       "description": "A weeknight favourite."}
+    ]}
+    </script>
+    </head><body></body></html>
+    """
+    node = url_parser._extract_json_ld_recipe(html)
+    assert node is not None
+    recipe = url_parser._json_ld_to_recipe(node)
+    assert recipe["title"] == "Bacon-Wrapped Pork"
+    assert recipe["category"] == "Dinner"
+    assert recipe["serving_size"] == "4 servings"
+    assert recipe["image_url"] == "https://example.com/img.jpg"
+    assert recipe["ingredients"] == ["1 lb pork"]
+    assert recipe["instructions"] == ["Sear it"]
+    assert recipe["calories_kcal"] == 320.0
+    assert recipe["protein_g"] == 28.0
+    assert recipe["fat_g"] == 22.0
+    assert recipe["carbs_g"] == 2.0
+    assert recipe["fact"] == "A weeknight favourite."
+    assert url_parser._is_usable(recipe) is True
+
+
+def test_extract_json_ld_recipe_returns_none_when_absent():
+    from app.recipes import url_parser
+
+    html = '<html><head><script type="application/ld+json">{"@type": "WebPage"}</script></head></html>'
+    assert url_parser._extract_json_ld_recipe(html) is None
+
+
+def test_to_float_parses_units_and_rejects_garbage():
+    from app.recipes import url_parser
+
+    assert url_parser._to_float("270 kcal") == 270.0
+    assert url_parser._to_float("12.5 g") == 12.5
+    assert url_parser._to_float(None) is None
+    assert url_parser._to_float("no numbers here") is None
+
+
+# ── URL import: end-to-end parse ────────────────────────────────────────────────────
+
+
+@patch("app.recipes.url_parser.fetch_html")
+def test_parse_recipe_url_uses_json_ld_when_usable(mock_fetch):
+    from app.recipes import url_parser
+
+    mock_fetch.return_value = """
+    <script type="application/ld+json">
+    {"@type": "Recipe", "name": "Pork Belly", "recipeIngredient": ["pork belly"],
+     "recipeInstructions": ["Sear it"]}
+    </script>
+    """
+    with patch("app.recipes.url_parser._parse_with_claude") as mock_claude:
+        result = url_parser.parse_recipe_url("https://example.com/recipe")
+    assert result["title"] == "Pork Belly"
+    assert result["ingredients"] == ["pork belly"]
+    mock_claude.assert_not_called()
+
+
+@patch("app.recipes.url_parser.fetch_html")
+@patch("app.recipes.url_parser._parse_with_claude")
+def test_parse_recipe_url_falls_back_to_claude_when_no_json_ld(mock_claude, mock_fetch):
+    from app.recipes import url_parser
+
+    mock_fetch.return_value = "<html><body><h1>Pork Belly</h1><p>1 lb pork belly</p></body></html>"
+    mock_claude.return_value = {
+        "title": "Pork Belly",
+        "category": "Dinner",
+        "image_url": None,
+        "serving_size": "4 servings",
+        "calories_kcal": None,
+        "protein_g": None,
+        "fat_g": None,
+        "carbs_g": None,
+        "ingredients": ["1 lb pork belly"],
+        "instructions": ["Roast it"],
+        "fact": None,
+    }
+    result = url_parser.parse_recipe_url("https://example.com/recipe")
+    assert result["title"] == "Pork Belly"
+    mock_claude.assert_called_once()
+
+
+# ── URL import: endpoint ─────────────────────────────────────────────────────────────
+
+
+@patch("app.recipes.url_parser.parse_recipe_url")
+def test_import_recipe_url_endpoint_ok(mock_parse):
+    mock_parse.return_value = {"title": "Pork Belly", "category": "Dinner", "ingredients": [], "instructions": []}
+    app.dependency_overrides[current_user_id] = lambda: "u1"
+    try:
+        res = client.post("/recipes/import-url", json={"url": "https://example.com/recipe"})
+        assert res.status_code == 200
+        assert res.json()["title"] == "Pork Belly"
+    finally:
+        app.dependency_overrides.clear()
+
+
+@patch("app.recipes.url_parser.parse_recipe_url")
+def test_import_recipe_url_endpoint_bad_url_returns_422(mock_parse):
+    mock_parse.side_effect = ValueError("URL must not point at a private or internal address")
+    app.dependency_overrides[current_user_id] = lambda: "u1"
+    try:
+        res = client.post("/recipes/import-url", json={"url": "http://127.0.0.1/recipe"})
+        assert res.status_code == 422
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_import_recipe_url_endpoint_rejects_empty_url():
+    app.dependency_overrides[current_user_id] = lambda: "u1"
+    try:
+        res = client.post("/recipes/import-url", json={"url": "  "})
+        assert res.status_code == 422
+    finally:
+        app.dependency_overrides.clear()

@@ -40,6 +40,22 @@ struct RecipesView: View {
                     RecipeFormView(viewModel: vm)
                 }
             }
+            .sheet(isPresented: Binding(
+                get: { viewModel?.isImportPresented ?? false },
+                set: { viewModel?.isImportPresented = $0 }
+            )) {
+                if let vm = viewModel {
+                    RecipeImportView(viewModel: vm)
+                }
+            }
+            .sheet(isPresented: Binding(
+                get: { viewModel?.importedRecipe != nil },
+                set: { if !$0 { viewModel?.importedRecipe = nil } }
+            )) {
+                if let vm = viewModel, let imported = vm.importedRecipe {
+                    RecipeFormView(viewModel: vm, prefill: imported)
+                }
+            }
             .alert(
                 String(localized: "recipes.error.title"),
                 isPresented: Binding(
@@ -59,8 +75,17 @@ struct RecipesView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
-            Button {
-                viewModel?.isCreatePresented = true
+            Menu {
+                Button {
+                    viewModel?.isCreatePresented = true
+                } label: {
+                    Label(String(localized: "recipes.create.title"), systemImage: "square.and.pencil")
+                }
+                Button {
+                    viewModel?.isImportPresented = true
+                } label: {
+                    Label(String(localized: "recipes.import.title"), systemImage: "link")
+                }
             } label: {
                 Image(systemName: "plus")
                     .accessibilityLabel(String(localized: "recipes.create.title"))

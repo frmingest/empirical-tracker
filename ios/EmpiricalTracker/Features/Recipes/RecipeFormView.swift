@@ -11,6 +11,9 @@ struct RecipeFormView: View {
     let viewModel: RecipesViewModel
     /// When set, the form edits this recipe instead of creating a new one.
     let editing: Recipe?
+    /// When set (and `editing` is nil), pre-fills a new recipe from a
+    /// `POST /recipes/import-url` preview for the user to review before saving.
+    let prefill: RecipePayload?
 
     @Environment(\.dismiss) private var dismiss
 
@@ -37,21 +40,22 @@ struct RecipeFormView: View {
 
     @State private var isSaving = false
 
-    init(viewModel: RecipesViewModel, editing: Recipe? = nil) {
+    init(viewModel: RecipesViewModel, editing: Recipe? = nil, prefill: RecipePayload? = nil) {
         self.viewModel = viewModel
         self.editing = editing
-        _title       = State(initialValue: editing?.title ?? "")
-        _category    = State(initialValue: editing?.category ?? "")
-        _imageUrl    = State(initialValue: editing?.imageUrl ?? "")
-        _servingSize = State(initialValue: editing?.servingSize ?? "")
-        _caloriesText = State(initialValue: Self.fmt(editing?.caloriesKcal))
-        _proteinText  = State(initialValue: Self.fmt(editing?.proteinG))
-        _fatText      = State(initialValue: Self.fmt(editing?.fatG))
-        _carbsText    = State(initialValue: Self.fmt(editing?.carbsG))
+        self.prefill = prefill
+        _title       = State(initialValue: editing?.title ?? prefill?.title ?? "")
+        _category    = State(initialValue: editing?.category ?? prefill?.category ?? "")
+        _imageUrl    = State(initialValue: editing?.imageUrl ?? prefill?.imageUrl ?? "")
+        _servingSize = State(initialValue: editing?.servingSize ?? prefill?.servingSize ?? "")
+        _caloriesText = State(initialValue: Self.fmt(editing?.caloriesKcal ?? prefill?.caloriesKcal))
+        _proteinText  = State(initialValue: Self.fmt(editing?.proteinG ?? prefill?.proteinG))
+        _fatText      = State(initialValue: Self.fmt(editing?.fatG ?? prefill?.fatG))
+        _carbsText    = State(initialValue: Self.fmt(editing?.carbsG ?? prefill?.carbsG))
         // Always keep one empty trailing row so there's a visible field to type into.
-        _ingredients  = State(initialValue: (editing?.ingredients ?? []) + [""])
-        _instructions = State(initialValue: (editing?.instructions ?? []) + [""])
-        _fact      = State(initialValue: editing?.fact ?? "")
+        _ingredients  = State(initialValue: (editing?.ingredients ?? prefill?.ingredients ?? []) + [""])
+        _instructions = State(initialValue: (editing?.instructions ?? prefill?.instructions ?? []) + [""])
+        _fact      = State(initialValue: editing?.fact ?? prefill?.fact ?? "")
         _isPublic  = State(initialValue: editing?.isPublic ?? false)
         _isPremium = State(initialValue: editing?.isPremium ?? false)
     }
@@ -59,6 +63,13 @@ struct RecipeFormView: View {
     var body: some View {
         NavigationStack {
             Form {
+                if prefill != nil && editing == nil {
+                    Section {
+                        Text(String(localized: "recipes.import.review.footer"))
+                            .font(.bodySmall)
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                }
                 identitySection
                 nutritionSection
                 listSection(
@@ -78,9 +89,7 @@ struct RecipeFormView: View {
                 factSection
                 visibilitySection
             }
-            .navigationTitle(String(localized: editing == nil
-                ? "recipes.create.title"
-                : "recipes.edit.title"))
+            .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -233,6 +242,18 @@ struct RecipeFormView: View {
                 .frame(maxWidth: 90)
             Text(unit).foregroundStyle(Color.textMuted)
         }
+    }
+
+    // MARK: - Title
+
+    private var navigationTitle: String {
+        if editing != nil {
+            return String(localized: "recipes.edit.title")
+        }
+        if prefill != nil {
+            return String(localized: "recipes.import.review.title")
+        }
+        return String(localized: "recipes.create.title")
     }
 
     // MARK: - Validation & save
