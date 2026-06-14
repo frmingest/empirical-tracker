@@ -31,9 +31,22 @@ from app.config import get_settings
 logger = logging.getLogger(__name__)
 
 _MODEL = "claude-haiku-4-5-20251001"
-_USER_AGENT = "EmpiricalTracker/1.0 (https://github.com/frmingest/empirical-tracker)"
 _TIMEOUT = 10.0
 _MAX_REDIRECTS = 5
+
+# Many recipe sites block non-browser User-Agents (e.g. via Cloudflare bot
+# protection), regardless of the request's intent. This is a normal desktop
+# Chrome UA + the `Accept`/`Accept-Language` headers a browser would send for a
+# page navigation — the request is on behalf of a single user importing a page
+# they're looking at, not bulk scraping.
+_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
 
 _SYSTEM = """\
 You are a recipe data extractor. You receive the visible text content of a recipe
@@ -128,28 +141,34 @@ def fetch_html(url: str) -> str:
     settings = get_settings()
     url = _validate_url(url)
 
-    with httpx.Client(timeout=_TIMEOUT, headers={"User-Agent": _USER_AGENT}) as client:
-        for _ in range(_MAX_REDIRECTS + 1):
-            with client.stream("GET", url, follow_redirects=False) as resp:
-                if resp.is_redirect:
-                    location = resp.headers.get("location")
-                    if not location:
-                        break
-                    url = _validate_url(urljoin(url, location))
-                    continue
-                resp.raise_for_status()
-                # Stream and cap the body — a malicious server could otherwise
-                # stall the connection open while sending unbounded data.
-                chunks: list[bytes] = []
-                total = 0
-                for chunk in resp.iter_bytes():
-                    chunks.append(chunk)
-                    total += len(chunk)
-                    if total >= settings.max_recipe_page_bytes:
-                        break
-                content = b"".join(chunks)[: settings.max_recipe_page_bytes]
-                return content.decode(resp.encoding or "utf-8", errors="replace")
-        raise ValueError("Too many redirects")
+    try:
+        with httpx.Client(timeout=_TIMEOUT, headers=_HEADERS) as client:
+            for _ in range(_MAX_REDIRECTS + 1):
+                with client.stream("GET", url, follow_redirects=False) as resp:
+                    if resp.is_redirect:
+                        location = resp.headers.get("location")
+                        if not location:
+                            break
+                        url = _validate_url(urljoin(url, location))
+                        continue
+                    if resp.status_code >= 400:
+                        raise ValueError(
+                            f"The recipe site returned an error (HTTP {resp.status_code})"
+                        )
+                    # Stream and cap the body — a malicious server could otherwise
+                    # stall the connection open while sending unbounded data.
+                    chunks: list[bytes] = []
+                    total = 0
+                    for chunk in resp.iter_bytes():
+                        chunks.append(chunk)
+                        total += len(chunk)
+                        if total >= settings.max_recipe_page_bytes:
+                            break
+                    content = b"".join(chunks)[: settings.max_recipe_page_bytes]
+                    return content.decode(resp.encoding or "utf-8", errors="replace")
+            raise ValueError("Too many redirects")
+    except httpx.HTTPError as exc:
+        raise ValueError(f"Could not reach that URL: {exc}") from exc
 
 
 # ── JSON-LD / schema.org extraction ────────────────────────────────────────────────
