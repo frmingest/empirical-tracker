@@ -55,156 +55,80 @@ struct DashboardBodyMapView: View {
     // MARK: - Canvas
 
     private func bodyCanvas(_ vm: BodyMapViewModel) -> some View {
-        // The bottom strip of this view sits behind the floating tab bar — the
-        // NavigationStack doesn't honour the safe-area inset RootView reserves
-        // for it, so anything anchored there gets hidden (this is why the old
-        // colour legend was moved to the top in PR #128). The filter lives at
-        // the top, beside the toolbar, for the same reason.
+        // Redesign (Option A): the two floating glass panels that used to sit
+        // *over* the silhouette's head/chest are gone. Their numbers now live in a
+        // single slim "vitals bar" anchored above the figure, so the canvas itself
+        // is free of overlays and the markers have room to breathe. The "Latest
+        // results" filter moved into the navigation toolbar (.principal) — it only
+        // appears in body-map mode because this view is only built in that mode.
         return VStack(spacing: 0) {
-            // ── Single "latest results" filter — top-anchored, always visible ──
-            HStack {
-                PillChip("Latest results", isSelected: vm.showLatestOnly) {
-                    vm.toggleLatestOnly()
-                }
-                Spacer(minLength: 0)
-            }
+            VitalsSummaryBar(
+                metrics: env.bodyMetrics.metrics,
+                heightCm: heightCm > 0 ? heightCm : nil,
+                lastSyncDate: env.healthSyncState.lastSyncDate,
+                isSyncing: env.healthSyncState.isSyncing
+            )
             .padding(.horizontal, 16)
             .padding(.top, 6)
-            .padding(.bottom, 2)
+            .padding(.bottom, 4)
 
-            // ── Silhouette canvas (takes all remaining vertical space) ──────
-            ZStack(alignment: .top) {
-                BodyMapCanvas(
-                    regions: vm.regions,
-                    biologicalSex: env.userProfile.biologicalSex,
-                    silhouetteOpacity: 0.18,
-                    bottomReserve: 0
-                ) { region in
-                    selectedRegion = vm.detailRegion(for: region.id) ?? region
-                }
-
-                // Stat panels overlaid at the top of the canvas only
-                HStack(alignment: .top) {
-                    HeartStatsPanel(
-                        metrics: env.bodyMetrics.metrics,
-                        lastSyncDate: env.healthSyncState.lastSyncDate,
-                        isSyncing: env.healthSyncState.isSyncing
-                    )
-                    .padding(.top, 12)
-                    .padding(.leading, 12)
-                    Spacer()
-                    BodyMetricsStatsPanel(
-                        metrics: env.bodyMetrics.metrics,
-                        heightCm: heightCm > 0 ? heightCm : nil
-                    )
-                    .padding(.top, 12)
-                    .padding(.trailing, 12)
-                }
-                .frame(maxWidth: .infinity)
+            // ── Silhouette canvas — no overlays, takes all remaining space ──
+            BodyMapCanvas(
+                regions: vm.regions,
+                biologicalSex: env.userProfile.biologicalSex,
+                silhouetteOpacity: 0.18,
+                bottomReserve: 0
+            ) { region in
+                selectedRegion = vm.detailRegion(for: region.id) ?? region
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.bgBase)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Picker("Results", selection: Binding(
+                    get: { vm.showLatestOnly },
+                    set: { wantLatest in
+                        if wantLatest != vm.showLatestOnly { vm.toggleLatestOnly() }
+                    }
+                )) {
+                    Text("Latest").tag(true)
+                    Text("All").tag(false)
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 180)
+                .accessibilityLabel("Results shown")
+            }
+        }
     }
 }
 
-// MARK: - Health stats panel
+// MARK: - Vitals summary bar
 
-/// Compact top-right panel always visible on the body-map dashboard.
-/// Rows show "--" when data hasn't loaded yet, which keeps the panel in the
-/// view hierarchy so @Observable tracking fires on first render.
-struct BodyMetricsStatsPanel: View {
+/// A single slim, full-width bar that replaces the two floating stat cards that
+/// used to overlay the silhouette. Heart metrics (tappable for an explanation),
+/// body metrics and the sync-freshness indicator all sit on one scannable line,
+/// so nothing covers the figure. The row scrolls horizontally on narrow devices
+/// rather than dropping any metric.
+struct VitalsSummaryBar: View {
     let metrics: [BodyMetric]
     let heightCm: Double?
-
-    private var sorted: [BodyMetric] { metrics.sorted { $0.measuredOn > $1.measuredOn } }
-    private var latestWeight: Double? { sorted.first { $0.weightKg != nil }?.weightKg }
-    private var latestWaist: Double?  { sorted.first { $0.waistCm  != nil }?.waistCm  }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(rows, id: \.label) { row in
-                BodyMetricsStatRow(icon: row.icon, label: row.label, value: row.value)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(Color.borderSubtle.opacity(0.5), lineWidth: 0.5)
-        )
-        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 3)
-        .frame(maxWidth: 140)
-    }
-
-    private struct StatRow {
-        let icon: String
-        let label: String
-        let value: String
-    }
-
-    private var rows: [StatRow] {
-        let heightVal = heightCm.map { String(format: "%.0f cm", $0) } ?? "--"
-        let weightVal = latestWeight.map { String(format: "%.1f kg", $0) } ?? "--"
-        let waistVal  = latestWaist.map  { String(format: "%.0f cm", $0) } ?? "--"
-
-        var bmiVal = "--"
-        if let hm = heightCm.map({ $0 / 100.0 }), let kg = latestWeight {
-            bmiVal = String(format: "%.1f", kg / (hm * hm))
-        }
-
-        return [
-            StatRow(icon: "ruler",         label: "Height", value: heightVal),
-            StatRow(icon: "scalemass",      label: "Weight", value: weightVal),
-            StatRow(icon: "circle.dashed",  label: "Waist",  value: waistVal),
-            StatRow(icon: "figure.stand",   label: "BMI",    value: bmiVal),
-        ]
-    }
-}
-
-private struct BodyMetricsStatRow: View {
-    let icon: String
-    let label: String
-    let value: String
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(Color.accent)
-                .frame(width: 14)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(label)
-                    .font(.labelSmall)
-                    .foregroundStyle(Color.textMuted)
-                Text(value)
-                    .font(.headlineSmall)
-                    .foregroundStyle(Color.textPrimary)
-            }
-        }
-    }
-}
-
-// MARK: - Heart stats panel (top-left)
-
-/// Compact panel showing latest resting heart rate and HRV from Apple Watch.
-/// Tapping the card opens a plain-language explanation of both metrics.
-struct HeartStatsPanel: View {
-    let metrics: [BodyMetric]
-    /// Freshness of the HealthKit-sourced data this card shows. Lives here — on
-    /// the card it actually describes — instead of as an orphan label adrift in
-    /// the bottom strip.
     var lastSyncDate: Date? = nil
     var isSyncing: Bool = false
 
-    @State private var showInfo = false
+    @State private var showHeartInfo = false
 
     private var sorted: [BodyMetric] { metrics.sorted { $0.measuredOn > $1.measuredOn } }
-
     private var latestRHR: Int? { sorted.first { $0.restingHeartRateBpm != nil }?.restingHeartRateBpm }
     private var latestHRV: Double? { sorted.first { $0.hrvMs != nil }?.hrvMs }
+    private var latestWeight: Double? { sorted.first { $0.weightKg != nil }?.weightKg }
+    private var latestWaist: Double? { sorted.first { $0.waistCm != nil }?.waistCm }
+
+    private var bmiText: String {
+        guard let h = heightCm.map({ $0 / 100.0 }), h > 0, let kg = latestWeight else { return "--" }
+        return String(format: "%.1f", kg / (h * h))
+    }
 
     private func hrColor(_ bpm: Int?) -> Color {
         guard let bpm else { return .textMuted }
@@ -212,63 +136,80 @@ struct HeartStatsPanel: View {
     }
 
     var body: some View {
-        Button { showInfo = true } label: {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 4) {
-                    HeartRow(
-                        icon: "heart.fill",
-                        label: "Resting HR",
-                        value: latestRHR.map { "\($0) BPM" } ?? "--",
-                        color: hrColor(latestRHR)
-                    )
-                    Spacer(minLength: 0)
-                    Image(systemName: "info.circle")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(Color.textMuted)
-                }
-                HeartRow(
-                    icon: "waveform.path.ecg",
-                    label: "HRV",
-                    value: latestHRV.map { String(format: "%.0f ms", $0) } ?? "--",
-                    color: .accent
-                )
+        CardView(padding: EdgeInsets(top: 10, leading: 14, bottom: 10, trailing: 14)) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 14) {
+                    // Heart group — one tap target opening the plain-language sheet.
+                    Button { showHeartInfo = true } label: {
+                        HStack(spacing: 14) {
+                            VitalCell(
+                                icon: "heart.fill",
+                                label: "Resting HR",
+                                value: latestRHR.map { "\($0) BPM" } ?? "--",
+                                iconColor: hrColor(latestRHR)
+                            )
+                            VitalCell(
+                                icon: "waveform.path.ecg",
+                                label: "HRV",
+                                value: latestHRV.map { String(format: "%.0f ms", $0) } ?? "--",
+                                iconColor: .accent
+                            )
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(Color.textMuted)
+                                .accessibilityHidden(true)
+                        }
+                    }
+                    .buttonStyle(.plain)
 
-                if isSyncing || lastSyncDate != nil {
-                    SyncFreshnessLabel(date: lastSyncDate, isSyncing: isSyncing)
-                        .padding(.top, 1)
+                    cellDivider
+
+                    VitalCell(icon: "scalemass", label: "Weight",
+                              value: latestWeight.map { String(format: "%.1f kg", $0) } ?? "--")
+                    VitalCell(icon: "figure.stand", label: "BMI", value: bmiText)
+                    VitalCell(icon: "ruler", label: "Height",
+                              value: heightCm.map { String(format: "%.0f cm", $0) } ?? "--")
+                    VitalCell(icon: "circle.dashed", label: "Waist",
+                              value: latestWaist.map { String(format: "%.0f cm", $0) } ?? "--")
+
+                    if isSyncing || lastSyncDate != nil {
+                        cellDivider
+                        SyncFreshnessLabel(date: lastSyncDate, isSyncing: isSyncing)
+                    }
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(Color.borderSubtle.opacity(0.5), lineWidth: 0.5)
-            )
-            .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 3)
-            .frame(maxWidth: 148)
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         }
-        .buttonStyle(.plain)
-        .sheet(isPresented: $showInfo) {
+        .sheet(isPresented: $showHeartInfo) {
             HeartMetricsInfoSheet()
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
     }
+
+    private var cellDivider: some View {
+        RoundedRectangle(cornerRadius: 1)
+            .fill(Color.borderCard)
+            .frame(width: 1, height: 26)
+            .accessibilityHidden(true)
+    }
 }
 
-private struct HeartRow: View {
+/// One icon + label + value column used inside the vitals bar. Colour is always
+/// paired with an icon and the value text, never the sole signal (ADR-006).
+private struct VitalCell: View {
     let icon: String
     let label: String
     let value: String
-    let color: Color
+    var iconColor: Color = .accent
 
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(color)
-                .frame(width: 14)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(iconColor)
+                .frame(width: 15)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 0) {
                 Text(label)
                     .font(.labelSmall)
@@ -278,6 +219,9 @@ private struct HeartRow: View {
                     .foregroundStyle(Color.textPrimary)
             }
         }
+        .fixedSize(horizontal: true, vertical: false)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label): \(value)")
     }
 }
 
@@ -323,10 +267,10 @@ private struct HeartMetricsInfoSheet: View {
     }
 }
 
-// MARK: - Sync freshness (replaces the orphan "Synced X ago" label)
+// MARK: - Sync freshness
 
-/// Compact data-freshness indicator that lives inside the HR/HRV card. Calm grey
-/// when recent, amber "Stale" past a day so it only draws the eye when it should.
+/// Compact data-freshness indicator. Calm grey when recent, amber "Stale" past a
+/// day so it only draws the eye when it should.
 private struct SyncFreshnessLabel: View {
     let date: Date?
     let isSyncing: Bool
@@ -354,6 +298,7 @@ private struct SyncFreshnessLabel: View {
                 .minimumScaleFactor(0.8)
         }
         .foregroundStyle(isStale ? Color.orange : Color.textMuted)
+        .fixedSize(horizontal: true, vertical: false)
         .accessibilityLabel(isSyncing ? "Syncing health data" : "Health data \(text)")
     }
 }
