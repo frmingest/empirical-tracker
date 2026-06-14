@@ -161,3 +161,36 @@ grid view.
 | Show body map in a separate tab | Adds a tab slot and splits the "health overview" concept across two tabs instead of unifying it. |
 | Pull height from a backend `user_profile` table | Adds a schema migration and a round-trip for a single static attribute; deferred until there is a broader profile need. |
 | Colour-code BMI in the stats panel | BMI's limitations (muscle mass, frame size) make red/green colouring potentially misleading for the app's target users (athletes, carnivore dieters). Neutral display is the safer default. |
+
+---
+
+## Amendment (2026-06-14): vitals bar + toolbar filter
+
+**Status:** Accepted — supersedes the overlay-panel layout in §3–§5 above.
+
+The original design overlaid two `ultraThinMaterial` stat cards on the canvas (heart
+metrics top-left, body metrics top-right) plus a "Latest results" filter pill in its
+own band above the figure. In practice this crowded the top third of the silhouette —
+the cards floated directly over the head/chest where the heart and upper biomarker pins
+sit — and spent a full row of chrome on a single toggle.
+
+**Change (decluttering, "Option A"):**
+
+1. **Single vitals bar.** The two floating cards are replaced by one slim, full-width
+   `VitalsSummaryBar` (a `CardView`) anchored *above* the silhouette — not overlaid on
+   it. It carries the same numbers (Resting HR, HRV, Weight, BMI, Height, Waist) as
+   icon + label + value cells on one line, with the sync-freshness indicator trailing.
+   The heart group remains a single tap target that opens the plain-language
+   `HeartMetricsInfoSheet`. On narrow devices the row scrolls horizontally rather than
+   dropping any metric.
+2. **Canvas is overlay-free.** `BodyMapCanvas` now occupies the full remaining height
+   with nothing layered on top, so the markers have room to breathe.
+3. **Filter moved to the toolbar.** The "Latest results" toggle becomes a `.principal`
+   segmented control (`Latest | All`) contributed by `DashboardBodyMapView`. Because
+   that view is only built in `.bodyMap` mode, the control appears only there — it does
+   not leak into the grid view's toolbar.
+
+Rationale: the silhouette is the hero of this screen; chrome dropped from three bands
+to one and no longer occludes the figure, while every metric stays glanceable. The
+bottom strip is still avoided for any control (it sits behind the floating tab bar and
+the `NavigationStack` does not honour the reserved safe-area inset — see PR #128).
