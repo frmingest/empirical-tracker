@@ -29,4 +29,12 @@ public enum APIError: Error, LocalizedError, Sendable {
         default:                     return false
         }
     }
+
+    /// True if this wraps a cancelled task (e.g. SwiftUI tore down the `.task`
+    /// because the view disappeared mid-request). Not a real failure — callers
+    /// should typically swallow it rather than surface an alert.
+    public var isCancellation: Bool {
+        guard case .networkError(let e) = self else { return false }
+        return e is CancellationError || (e as? URLError)?.code == .cancelled
+    }
 }

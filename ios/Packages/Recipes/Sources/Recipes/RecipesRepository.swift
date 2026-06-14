@@ -39,7 +39,10 @@ public final class RecipesRepository {
             if onlyFree { query.append(URLQueryItem(name: "only_free", value: "true")) }
             recipes = try await client.request(.get("/recipes", query: query.isEmpty ? nil : query))
         } catch let e as APIError {
-            error = e
+            if !e.isCancellation { error = e }
+        } catch is CancellationError {
+            // SwiftUI cancelled the owning `.task` (e.g. the view disappeared mid-load) —
+            // not a real failure, so don't surface "cancelled" as an error alert.
         } catch {
             self.error = .networkError(error)
         }

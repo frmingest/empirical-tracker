@@ -137,9 +137,22 @@ struct VitalsSummaryBar: View {
 
     var body: some View {
         CardView(padding: EdgeInsets(top: 10, leading: 14, bottom: 10, trailing: 14)) {
-            ScrollView(.horizontal, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 10) {
+                // Row 1 — body metrics: height, weight, waist, BMI.
                 HStack(spacing: 14) {
-                    // Heart group — one tap target opening the plain-language sheet.
+                    VitalCell(icon: "ruler", label: "Height",
+                              value: heightCm.map { String(format: "%.0f cm", $0) } ?? "--")
+                    VitalCell(icon: "scalemass", label: "Weight",
+                              value: latestWeight.map { String(format: "%.1f kg", $0) } ?? "--")
+                    VitalCell(icon: "circle.dashed", label: "Waist",
+                              value: latestWaist.map { String(format: "%.0f cm", $0) } ?? "--")
+                    VitalCell(icon: "figure.stand", label: "BMI", value: bmiText)
+
+                    Spacer(minLength: 0)
+                }
+
+                // Row 2 — heart group (tappable for the plain-language sheet) + sync freshness.
+                HStack(spacing: 14) {
                     Button { showHeartInfo = true } label: {
                         HStack(spacing: 14) {
                             VitalCell(
@@ -162,23 +175,14 @@ struct VitalsSummaryBar: View {
                     }
                     .buttonStyle(.plain)
 
-                    cellDivider
-
-                    VitalCell(icon: "scalemass", label: "Weight",
-                              value: latestWeight.map { String(format: "%.1f kg", $0) } ?? "--")
-                    VitalCell(icon: "figure.stand", label: "BMI", value: bmiText)
-                    VitalCell(icon: "ruler", label: "Height",
-                              value: heightCm.map { String(format: "%.0f cm", $0) } ?? "--")
-                    VitalCell(icon: "circle.dashed", label: "Waist",
-                              value: latestWaist.map { String(format: "%.0f cm", $0) } ?? "--")
-
                     if isSyncing || lastSyncDate != nil {
                         cellDivider
                         SyncFreshnessLabel(date: lastSyncDate, isSyncing: isSyncing)
                     }
+
+                    Spacer(minLength: 0)
                 }
             }
-            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         }
         .sheet(isPresented: $showHeartInfo) {
             HeartMetricsInfoSheet()
