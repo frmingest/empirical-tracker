@@ -7976,6 +7976,108 @@
         }
       }
     },
+    "recipes.import.action" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importer"
+          }
+        }
+      }
+    },
+    "recipes.import.review.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Imported from the web — check the details below and edit anything that looks off before saving."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importert fra nettet — sjekk detaljene under og rediger alt som ser feil ut før du lagrer."
+          }
+        }
+      }
+    },
+    "recipes.import.review.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Review recipe"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se gjennom oppskrift"
+          }
+        }
+      }
+    },
+    "recipes.import.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import from URL"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importer fra URL"
+          }
+        }
+      }
+    },
+    "recipes.import.url.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paste a link to a recipe page. We’ll try to read the ingredients, steps, and nutrition — you can review and edit everything before saving."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lim inn en lenke til en oppskrift. Vi prøver å lese ingredienser, fremgangsmåte og næringsinnhold — du kan se gjennom og redigere alt før du lagrer."
+          }
+        }
+      }
+    },
+    "recipes.import.url.placeholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "https://example.com/recipe"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "https://example.com/oppskrift"
+          }
+        }
+      }
+    },
     "recipes.ingredients.title" : {
       "extractionState" : "manual",
       "localizations" : {

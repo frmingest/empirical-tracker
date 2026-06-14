@@ -123,7 +123,10 @@ public extension Recipe {
 
 /// Body for creating or updating a recipe. The server derives `isFavorite` /
 /// `isNew`, so they are intentionally absent here.
-public struct RecipePayload: Encodable, Sendable {
+///
+/// Also `Decodable`: `POST /recipes/import-url` returns a preview in this same
+/// shape, which the import flow decodes directly and hands to `RecipeFormView`.
+public struct RecipePayload: Codable, Sendable {
     public let title: String
     public let category: String
     public let imageUrl: String?

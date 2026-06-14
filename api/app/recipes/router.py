@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, field_validator
 
 from app.auth import current_user_id
+from app.rate_limit import rate_limit
 from app.recipes import repository
 
 router = APIRouter(prefix="/recipes", tags=["recipes"])
@@ -42,6 +43,18 @@ class FavoriteIn(BaseModel):
     favorite: bool
 
 
+class ImportUrlIn(BaseModel):
+    url: str
+
+    @field_validator("url")
+    @classmethod
+    def _non_empty(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("url must not be empty")
+        return v
+
+
 # ── Reads ────────────────────────────────────────────────────────────────────────
 
 
@@ -71,6 +84,30 @@ async def get_recipe(
 
 
 # ── Writes ───────────────────────────────────────────────────────────────────────
+
+
+@router.post("/import-url")
+async def import_recipe_url(
+    body: ImportUrlIn,
+    _user_id: str = Depends(rate_limit("import_recipe_url", expensive=True)),
+) -> dict:
+    """Fetch a recipe page and return a `RecipeIn`-shaped preview (not persisted).
+
+    Prefers the page's schema.org/JSON-LD `Recipe` data; falls back to Claude
+    Haiku for pages without it. The caller (iOS) shows the result in the
+    authoring form for the user to review and edit before saving via `POST
+    /recipes`.
+    """
+    from app.recipes.url_parser import parse_recipe_url
+
+    try:
+        return parse_recipe_url(body.url)
+    except ValueError as exc:
+        if "not configured" in str(exc):
+            raise HTTPException(status_code=503, detail="Recipe importer not available") from exc
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Could not import recipe from URL") from exc
 
 
 @router.post("", status_code=201)
