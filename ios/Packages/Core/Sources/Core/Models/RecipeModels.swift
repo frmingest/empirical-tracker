@@ -126,7 +126,7 @@ public extension Recipe {
 ///
 /// Also `Decodable`: `POST /recipes/import-url` returns a preview in this same
 /// shape, which the import flow decodes directly and hands to `RecipeFormView`.
-public struct RecipePayload: Codable, Sendable {
+public struct RecipePayload: Codable, Sendable, Hashable {
     public let title: String
     public let category: String
     public let imageUrl: String?
