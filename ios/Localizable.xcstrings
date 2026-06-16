@@ -7999,7 +7999,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Imported from the web — check the details below and edit anything that looks off before saving."
+            "value" : "Imported from PDF — check the details below and edit anything that looks off before saving."
           }
         },
         "nb" : {
@@ -8033,47 +8033,64 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Import from URL"
+            "value" : "Import from PDF"
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Importer fra URL"
+            "value" : "Importer fra PDF"
           }
         }
       }
     },
-    "recipes.import.url.footer" : {
+    "recipes.import.pdf.access_error" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Paste a link to a recipe page. We’ll try to read the ingredients, steps, and nutrition — you can review and edit everything before saving."
+            "value" : "Could not access the selected file."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lim inn en lenke til en oppskrift. Vi prøver å lese ingredienser, fremgangsmåte og næringsinnhold — du kan se gjennom og redigere alt før du lagrer."
+            "value" : "Kunne ikke åpne den valgte filen."
           }
         }
       }
     },
-    "recipes.import.url.placeholder" : {
+    "recipes.import.pdf.footer" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "https://example.com/recipe"
+            "value" : "Open any recipe in Safari, tap Share → Print, then save as PDF. Pick the PDF here and we’ll read the ingredients, steps, and nutrition — you can review and edit everything before saving."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "https://example.com/oppskrift"
+            "value" : "Åpne en oppskrift i Safari, trykk Del → Skriv ut, og lagre som PDF. Velg PDF-en her, så leser vi ingredienser, fremgangsmåte og næringsinnhold — du kan se gjennom og redigere alt før du lagrer."
+          }
+        }
+      }
+    },
+    "recipes.import.pdf.pick" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose PDF…"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Velg PDF…"
           }
         }
       }

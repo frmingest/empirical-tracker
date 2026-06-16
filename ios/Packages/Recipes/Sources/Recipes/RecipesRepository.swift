@@ -77,14 +77,18 @@ public final class RecipesRepository {
         recipes.removeAll { $0.id == id }
     }
 
-    // MARK: - Import from URL
+    // MARK: - Import from PDF
 
-    /// Fetches a recipe page and returns a `RecipePayload` preview for the
-    /// authoring form — nothing is persisted by this call. The user reviews and
-    /// edits the result, then saves it via `create`/`update` as normal.
-    public func importFromUrl(_ url: String) async throws -> RecipePayload {
-        struct Body: Encodable { let url: String }
-        return try await client.request(.post("/recipes/import-url", body: Body(url: url)))
+    /// Uploads a PDF and returns a `RecipePayload` preview for the authoring form
+    /// — nothing is persisted by this call. The user reviews and edits the result,
+    /// then saves it via `create`/`update` as normal.
+    public func importFromPDF(_ data: Data, fileName: String = "recipe.pdf") async throws -> RecipePayload {
+        return try await client.requestMultipart(
+            path: "/recipes/import-pdf",
+            fileData: data,
+            fileName: fileName,
+            mimeType: "application/pdf"
+        )
     }
 
     // MARK: - Favourite

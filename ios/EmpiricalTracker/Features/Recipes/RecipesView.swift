@@ -84,7 +84,7 @@ struct RecipesView: View {
                 Button {
                     viewModel?.isImportPresented = true
                 } label: {
-                    Label(String(localized: "recipes.import.title"), systemImage: "link")
+                    Label(String(localized: "recipes.import.title"), systemImage: "doc.badge.plus")
                 }
             } label: {
                 Image(systemName: "plus")
