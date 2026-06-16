@@ -115,11 +115,11 @@ final class RecipesViewModel {
         }
     }
 
-    /// Fetches and parses a recipe page; on success sets `importedRecipe`, which
+    /// Uploads a PDF and parses the recipe; on success sets `importedRecipe`, which
     /// presents `RecipeFormView` prefilled with the result.
-    func importRecipe(from url: String) async -> Bool {
+    func importRecipe(fromPDF data: Data, fileName: String = "recipe.pdf") async -> Bool {
         do {
-            importedRecipe = try await repo.importFromUrl(url)
+            importedRecipe = try await repo.importFromPDF(data, fileName: fileName)
             return true
         } catch {
             errorMessage = error.localizedDescription

@@ -85,6 +85,29 @@ public actor APIClient {
         }
     }
 
+    /// Uploads `fileData` as `multipart/form-data` and decodes the JSON response into `T`.
+    /// Used for the recipe PDF import endpoint.
+    public func requestMultipart<T: Decodable & Sendable>(
+        method: HTTPMethod = .post,
+        path: String,
+        fileData: Data,
+        fileName: String,
+        mimeType: String,
+        fieldName: String = "file"
+    ) async throws -> T {
+        do {
+            let req = try await buildMultipartRequest(
+                method: method, path: path,
+                fileData: fileData, fileName: fileName,
+                mimeType: mimeType, fieldName: fieldName
+            )
+            return try await perform(req, decoding: T.self, retriesLeft: config.maxRetries)
+        } catch {
+            await notifyIfUnauthorized(error)
+            throw error
+        }
+    }
+
     /// Performs a request and returns the raw, undecoded response body.
     /// Used for binary downloads such as the GDPR export (JSON document or CSV zip).
     public func requestData(_ endpoint: Endpoint) async throws -> Data {
@@ -105,6 +128,33 @@ public actor APIClient {
         if case APIError.unauthorized = error {
             await onUnauthorized?()
         }
+    }
+
+    private func buildMultipartRequest(
+        method: HTTPMethod,
+        path: String,
+        fileData: Data,
+        fileName: String,
+        mimeType: String,
+        fieldName: String
+    ) async throws -> URLRequest {
+        let url = config.baseURL.appendingPathComponent(path)
+        var req = URLRequest(url: url, timeoutInterval: 60)
+        req.httpMethod = method.rawValue
+        req.setValue("EmpiricalTracker-iOS/1.0", forHTTPHeaderField: "User-Agent")
+        if let token = await tokenProvider.currentToken() {
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        let boundary = "Boundary-\(UUID().uuidString)"
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"\(fieldName)\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        req.httpBody = body
+        return req
     }
 
     private func buildRequest(for endpoint: Endpoint) async throws -> URLRequest {

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel, field_validator
 
 from app.auth import current_user_id
@@ -43,18 +43,6 @@ class FavoriteIn(BaseModel):
     favorite: bool
 
 
-class ImportUrlIn(BaseModel):
-    url: str
-
-    @field_validator("url")
-    @classmethod
-    def _non_empty(cls, v: str) -> str:
-        v = v.strip()
-        if not v:
-            raise ValueError("url must not be empty")
-        return v
-
-
 # ── Reads ────────────────────────────────────────────────────────────────────────
 
 
@@ -86,28 +74,35 @@ async def get_recipe(
 # ── Writes ───────────────────────────────────────────────────────────────────────
 
 
-@router.post("/import-url")
-async def import_recipe_url(
-    body: ImportUrlIn,
-    _user_id: str = Depends(rate_limit("import_recipe_url", expensive=True)),
+@router.post("/import-pdf")
+async def import_recipe_pdf(
+    file: UploadFile = File(...),
+    _user_id: str = Depends(rate_limit("import_recipe_pdf", expensive=True)),
 ) -> dict:
-    """Fetch a recipe page and return a `RecipeIn`-shaped preview (not persisted).
+    """Accept a PDF uploaded by the user and return a `RecipeIn`-shaped preview (not persisted).
 
-    Prefers the page's schema.org/JSON-LD `Recipe` data; falls back to Claude
-    Haiku for pages without it. The caller (iOS) shows the result in the
-    authoring form for the user to review and edit before saving via `POST
-    /recipes`.
+    The user saves any recipe page using their browser's Print → Save as PDF
+    function. We extract the visible text with pypdf and send it to Claude Haiku
+    for parsing. The caller (iOS) shows the result in the authoring form for the
+    user to review and edit before saving via `POST /recipes`.
     """
-    from app.recipes.url_parser import parse_recipe_url
+    from app.recipes.pdf_parser import parse_recipe_pdf
+
+    if file.content_type not in ("application/pdf", "application/octet-stream"):
+        raise HTTPException(status_code=422, detail="Only PDF files are accepted")
+
+    pdf_bytes = await file.read()
+    if len(pdf_bytes) > 20 * 1024 * 1024:  # 20 MB guard
+        raise HTTPException(status_code=413, detail="PDF too large (max 20 MB)")
 
     try:
-        return parse_recipe_url(body.url)
+        return parse_recipe_pdf(pdf_bytes)
     except ValueError as exc:
         if "not configured" in str(exc):
             raise HTTPException(status_code=503, detail="Recipe importer not available") from exc
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=502, detail="Could not import recipe from URL") from exc
+        raise HTTPException(status_code=502, detail="Could not import recipe from PDF") from exc
 
 
 @router.post("", status_code=201)
