@@ -48,14 +48,6 @@ struct RecipesView: View {
                     RecipeImportView(viewModel: vm)
                 }
             }
-            .sheet(isPresented: Binding(
-                get: { viewModel?.importedRecipe != nil },
-                set: { if !$0 { viewModel?.importedRecipe = nil } }
-            )) {
-                if let vm = viewModel, let imported = vm.importedRecipe {
-                    RecipeFormView(viewModel: vm, prefill: imported)
-                }
-            }
             .alert(
                 String(localized: "recipes.error.title"),
                 isPresented: Binding(

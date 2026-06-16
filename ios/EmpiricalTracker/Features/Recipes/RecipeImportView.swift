@@ -4,17 +4,17 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /// Sheet that lets the user pick a PDF saved from a recipe page (via the browser's
-/// Print → Save as PDF action). The PDF is uploaded to the backend, which extracts
-/// the recipe text with pypdf and parses it with Claude. On success, `RecipesView`
-/// presents `RecipeFormView` prefilled with the result so the user can review and
-/// edit before saving.
+/// Print → Save as PDF action). After a successful upload the user is pushed
+/// directly to `RecipeFormView` within the same sheet so they can review and edit
+/// before saving — avoiding the unreliable two-sheet-in-sequence pattern.
 struct RecipeImportView: View {
     let viewModel: RecipesViewModel
 
     @Environment(\.dismiss) private var dismiss
     @State private var isPickerPresented = false
     @State private var isImporting = false
-    @State private var pickedFileName: String?
+    @State private var parsedRecipe: RecipePayload?
+    @State private var errorMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -26,11 +26,12 @@ struct RecipeImportView: View {
                         HStack {
                             Image(systemName: "doc.badge.plus")
                                 .foregroundStyle(Color.accent)
-                            Text(
-                                pickedFileName ?? String(localized: "recipes.import.pdf.pick")
-                            )
-                            .foregroundStyle(pickedFileName != nil ? Color.textPrimary : Color.textSecondary)
+                            Text(String(localized: "recipes.import.pdf.pick"))
+                                .foregroundStyle(Color.textSecondary)
                             Spacer()
+                            if isImporting {
+                                ProgressView().controlSize(.small)
+                            }
                         }
                     }
                     .disabled(isImporting)
@@ -45,11 +46,20 @@ struct RecipeImportView: View {
                     Button(String(localized: "common.cancel")) { dismiss() }
                         .disabled(isImporting)
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    if isImporting {
-                        ProgressView().controlSize(.small)
-                    }
-                }
+            }
+            .navigationDestination(item: $parsedRecipe) { recipe in
+                // Push the review form inside the same sheet so we don't need a
+                // second sheet — SwiftUI drops sequentially-presented sheets
+                // when the first dismisses during its animation.
+                RecipeFormView(viewModel: viewModel, prefill: recipe, onSave: { dismiss() })
+            }
+            .alert(
+                String(localized: "recipes.error.title"),
+                isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })
+            ) {
+                Button(String(localized: "common.ok"), role: .cancel) {}
+            } message: {
+                Text(errorMessage ?? "")
             }
             .fileImporter(
                 isPresented: $isPickerPresented,
@@ -64,24 +74,25 @@ struct RecipeImportView: View {
     @MainActor
     private func handlePicked(_ result: Result<URL, any Error>) async {
         switch result {
-        case .failure:
-            return
+        case .failure(let error):
+            // Suppress user-cancelled (picker dismissed without picking) — not an error.
+            let nsError = error as NSError
+            if nsError.domain == NSCocoaErrorDomain && nsError.code == NSUserCancelledError { return }
+            errorMessage = error.localizedDescription
         case .success(let url):
-            pickedFileName = url.lastPathComponent
             isImporting = true
             defer { isImporting = false }
             guard url.startAccessingSecurityScopedResource() else {
-                viewModel.errorMessage = String(localized: "recipes.import.pdf.access_error")
+                errorMessage = String(localized: "recipes.import.pdf.access_error")
                 return
             }
             defer { url.stopAccessingSecurityScopedResource() }
             do {
                 let data = try Data(contentsOf: url)
-                if await viewModel.importRecipe(fromPDF: data, fileName: url.lastPathComponent) {
-                    dismiss()
-                }
+                let payload = try await viewModel.repo.importFromPDF(data, fileName: url.lastPathComponent)
+                parsedRecipe = payload
             } catch {
-                viewModel.errorMessage = error.localizedDescription
+                errorMessage = error.localizedDescription
             }
         }
     }

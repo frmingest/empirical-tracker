@@ -30,9 +30,6 @@ final class RecipesViewModel {
 
     var isCreatePresented = false
     var isImportPresented = false
-    /// Set once a URL import succeeds — presents `RecipeFormView` prefilled with
-    /// the parsed result for the user to review before saving.
-    var importedRecipe: RecipePayload?
 
     // MARK: - Error surfacing
 
@@ -40,7 +37,7 @@ final class RecipesViewModel {
 
     // MARK: - Dependencies
 
-    private let repo: RecipesRepository
+    let repo: RecipesRepository
 
     init(repo: RecipesRepository) {
         self.repo = repo
@@ -108,18 +105,6 @@ final class RecipesViewModel {
     func createRecipe(_ payload: RecipePayload) async -> Bool {
         do {
             try await repo.create(payload)
-            return true
-        } catch {
-            errorMessage = error.localizedDescription
-            return false
-        }
-    }
-
-    /// Uploads a PDF and parses the recipe; on success sets `importedRecipe`, which
-    /// presents `RecipeFormView` prefilled with the result.
-    func importRecipe(fromPDF data: Data, fileName: String = "recipe.pdf") async -> Bool {
-        do {
-            importedRecipe = try await repo.importFromPDF(data, fileName: fileName)
             return true
         } catch {
             errorMessage = error.localizedDescription

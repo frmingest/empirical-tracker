@@ -11,9 +11,11 @@ struct RecipeFormView: View {
     let viewModel: RecipesViewModel
     /// When set, the form edits this recipe instead of creating a new one.
     let editing: Recipe?
-    /// When set (and `editing` is nil), pre-fills a new recipe from a
-    /// `POST /recipes/import-url` preview for the user to review before saving.
+    /// When set (and `editing` is nil), pre-fills a new recipe from an import preview.
     let prefill: RecipePayload?
+    /// When set, called instead of `dismiss()` after a successful save — used by
+    /// the import flow to close the whole sheet rather than just pop the nav stack.
+    let onSave: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
 
@@ -40,10 +42,11 @@ struct RecipeFormView: View {
 
     @State private var isSaving = false
 
-    init(viewModel: RecipesViewModel, editing: Recipe? = nil, prefill: RecipePayload? = nil) {
+    init(viewModel: RecipesViewModel, editing: Recipe? = nil, prefill: RecipePayload? = nil, onSave: (() -> Void)? = nil) {
         self.viewModel = viewModel
         self.editing = editing
         self.prefill = prefill
+        self.onSave = onSave
         _title       = State(initialValue: editing?.title ?? prefill?.title ?? "")
         _category    = State(initialValue: editing?.category ?? prefill?.category ?? "")
         _imageUrl    = State(initialValue: editing?.imageUrl ?? prefill?.imageUrl ?? "")
@@ -291,7 +294,7 @@ struct RecipeFormView: View {
         } else {
             ok = await viewModel.createRecipe(payload)
         }
-        if ok { dismiss() }
+        if ok { if let onSave { onSave() } else { dismiss() } }
     }
 
     private func cleaned(_ lines: [String]) -> [String] {
